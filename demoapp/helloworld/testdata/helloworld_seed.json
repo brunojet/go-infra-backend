@@ -1,0 +1,17 @@
+[
+  {"mensagem": "Olá, mundo!", "lingua": "Português"},
+  {"mensagem": "Hello, world!", "lingua": "Inglês"},
+  {"mensagem": "¡Hola, mundo!", "lingua": "Espanhol"},
+  {"mensagem": "Bonjour, le monde!", "lingua": "Francês"},
+  {"mensagem": "Hallo, Welt!", "lingua": "Alemão"},
+  {"mensagem": "Ciao, mondo!", "lingua": "Italiano"},
+  {"mensagem": "こんにちは世界！", "lingua": "Japonês"},
+  {"mensagem": "你好，世界！", "lingua": "Chinês"},
+  {"mensagem": "Привет, мир!", "lingua": "Russo"},
+  {"mensagem": "안녕하세요, 세계!", "lingua": "Coreano"},
+  {"mensagem": "مرحبا بالعالم!", "lingua": "Árabe"},
+  {"mensagem": "שלום עולם!", "lingua": "Hebraico"},
+  {"mensagem": "Hej, världen!", "lingua": "Sueco"},
+  {"mensagem": "Hei, maailma!", "lingua": "Finlandês"},
+  {"mensagem": "Salve, mundi!", "lingua": "Latim"}
+]
