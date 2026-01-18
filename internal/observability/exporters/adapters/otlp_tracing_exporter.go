@@ -2,82 +2,95 @@ package adapters
 
 import (
 	"context"
+	"fmt"
 
 	"go.opentelemetry.io/otel"
-	otlptracegrpc "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	sdkresource "go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/attribute"
+	otlptrace "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
-	"google.golang.org/grpc"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/brunojet/go-infra-backend/internal/observability/exporters/contracts"
 )
 
-// OTLPTracingExporter implements contracts.TracingExporter using OpenTelemetry OTLP.
+// OTLPTracingExporter é um adapter que implementa contracts.TracingExporter
+// usando o provider OTLP.
 type OTLPTracingExporter struct {
-	tp   *sdktrace.TracerProvider
-	conn *grpc.ClientConn
+	endpoint  string
+	setGlobal bool
+	tp        interface{} // manter tipo opaco para evitar dependência direta no SDK aqui
+	shutdown  func(context.Context) error
+	client    *OTLPClient
 }
 
-// NewOTLPTracingExporter returns a new exporter configured to send to the given endpoint (host:port).
-func NewOTLPTracingExporter(endpoint string) contracts.TracingExporter {
-	return &OTLPTracingExporter{tp: nil}
+// NewOTLPTracingExporter cria um adapter configurado.
+// NewOTLPTracingExporter cria um adapter que, por conveniência, instancia
+// um `OTLPClient` internamente. Para compartilhar o mesmo client entre
+// múltiplos exporters, use `NewOTLPTracingExporterWithClient`.
+// NewOTLPTracingExporter cria um adapter e conecta internamente ao endpoint OTLP.
+func NewOTLPTracingExporter(ctx context.Context, endpoint string, setGlobal bool) (*OTLPTracingExporter, error) {
+	client, err := NewOTLPClient(ctx, endpoint)
+	if err != nil {
+		return nil, err
+	}
+	return &OTLPTracingExporter{endpoint: endpoint, setGlobal: setGlobal, client: client}, nil
 }
 
-// Start initializes the OTLP tracing exporter and creates a TracerProvider.
+// NewOTLPTracingExporterWithClient cria um adapter usando a instância de client fornecida.
+func NewOTLPTracingExporterWithClient(client *OTLPClient, setGlobal bool) *OTLPTracingExporter {
+	return &OTLPTracingExporter{endpoint: client.endpoint, setGlobal: setGlobal, client: client}
+}
+
+// Start inicializa o TracerProvider via providers.NewOTLPTracerProvider
 func (o *OTLPTracingExporter) Start(ctx context.Context) error {
-	endpoint := EndpointFromEnv()
-	// Try to dial OTLP collector; if it fails, fallback to local provider.
-	cc, err := DialOTLP(ctx, endpoint)
-	res, _ := sdkresource.Merge(sdkresource.Default(), sdkresource.NewWithAttributes(semconv.SchemaURL, semconv.ServiceNameKey.String("go-infra-backend")))
-	if err == nil && cc != nil {
-		exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(cc))
-		if err == nil {
-			tp := sdktrace.NewTracerProvider(
-				sdktrace.WithBatcher(exporter),
-				sdktrace.WithResource(res),
-			)
-			o.tp = tp
-			o.conn = cc
-			otel.SetTracerProvider(tp)
-			return nil
-		}
-		// close conn if exporter creation failed
-		_ = cc.Close()
+	// Cria o exporter OTLP via cliente local (usa a otlptrace.Client compartilhado)
+	exp, err := otlptrace.New(ctx, otlptrace.WithClient(o.client.Client()))
+	if err != nil {
+		return fmt.Errorf("iniciar OTLP tracing exporter: %w", err)
 	}
 
-	// Fallback: local provider without network exporter.
-	tp := sdktrace.NewTracerProvider(sdktrace.WithResource(res))
+	bsp := sdktrace.NewBatchSpanProcessor(exp)
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
+
+	if o.setGlobal {
+		otel.SetTracerProvider(tp)
+	}
+
 	o.tp = tp
-	otel.SetTracerProvider(tp)
+	o.shutdown = func(ctx context.Context) error { return tp.Shutdown(ctx) }
 	return nil
 }
 
-// Shutdown stops the tracer provider.
+// Shutdown encerra o provider/flush
 func (o *OTLPTracingExporter) Shutdown(ctx context.Context) error {
-	if o.tp == nil {
+	if o.shutdown == nil {
 		return nil
 	}
-	if err := o.tp.Shutdown(ctx); err != nil {
-		return err
-	}
-	if o.conn != nil {
-		return o.conn.Close()
-	}
-	return nil
+	return o.shutdown(ctx)
 }
 
-// StartSpan starts a span and returns context and finish function.
-func (o *OTLPTracingExporter) StartSpan(ctx context.Context, name string) (context.Context, func()) {
+// StartSpan cria um span usando o TracerProvider interno.
+func (o *OTLPTracingExporter) StartSpan(ctx context.Context, name string, attrs ...attribute.KeyValue) (context.Context, func()) {
 	if o.tp == nil {
-		// create a noop tracer
-		tracer := otel.Tracer("noop")
-		ctx, span := tracer.Start(ctx, name)
-		return ctx, func() { span.End() }
+		// fallback: usar tracer global
+		tr := otel.Tracer("otlp-exporter/fallback")
+		ctx2, span := tr.Start(ctx, name, trace.WithAttributes(attrs...))
+		return ctx2, func() { span.End() }
 	}
-	tracer := o.tp.Tracer("otlp-exporter")
-	ctx, span := tracer.Start(ctx, name)
-	return ctx, func() { span.End() }
+
+	// tp é *sdktrace.TracerProvider, mas mantemos interface{} para reduzir acoplamento
+	if tp, ok := o.tp.(interface {
+		Tracer(string, ...trace.TracerOption) trace.Tracer
+	}); ok {
+		tr := tp.Tracer("otlp-exporter")
+		ctx2, span := tr.Start(ctx, name, trace.WithAttributes(attrs...))
+		return ctx2, func() { span.End() }
+	}
+
+	tr := otel.Tracer("otlp-exporter/fallback")
+	ctx2, span := tr.Start(ctx, name, trace.WithAttributes(attrs...))
+	return ctx2, func() { span.End() }
 }
 
+// Ensure OTLPTracingExporter implements the contracts.TracingExporter interface
 var _ contracts.TracingExporter = (*OTLPTracingExporter)(nil)
