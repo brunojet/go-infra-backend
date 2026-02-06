@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"io"
-	"log"
+	stdlog "log"
 	"math"
 	"net/http"
 	"net/url"
@@ -343,7 +343,7 @@ func setupBenchmarkDB(b *testing.B) (dbcontracts.Database, *repositories.Generic
 	}
 	db := adapter.GormDB()
 	// Silence standard logger output and GORM logger for cleaner benchmark measurements
-	log.SetOutput(io.Discard)
+	stdlog.SetOutput(io.Discard)
 	db.Logger = gormlogger.Default.LogMode(gormlogger.Silent)
 	gin.SetMode(gin.ReleaseMode)
 	if err := db.AutoMigrate(&ComplexModel{}); err != nil {

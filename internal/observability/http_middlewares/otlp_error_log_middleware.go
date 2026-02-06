@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 	otellog "go.opentelemetry.io/otel/log"
 	otellogglobal "go.opentelemetry.io/otel/log/global"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type ErrorLogOption func(*errorLogConfig)
@@ -72,20 +71,11 @@ func OTLPErrorLogMiddleware(opts ...ErrorLogOption) gin.HandlerFunc {
 		attrs := []otellog.KeyValue{
 			otellog.Int("http.status_code", status),
 			otellog.String("http.method", c.Request.Method),
-			otellog.String("http.route", c.FullPath()),
 			otellog.String("http.target", c.Request.URL.Path),
 			otellog.String("http.user_agent", c.Request.UserAgent()),
 			otellog.String("net.peer.ip", c.ClientIP()),
 			otellog.Int64("http.server.duration_ms", time.Since(start).Milliseconds()),
 			otellog.Int("gin.errors.count", len(c.Errors)),
-		}
-
-		// Optional explicit IDs for backends that don't surface the SDK trace linkage.
-		if sc := trace.SpanContextFromContext(ctx); sc.IsValid() {
-			attrs = append(attrs,
-				otellog.String("trace_id", sc.TraceID().String()),
-				otellog.String("span_id", sc.SpanID().String()),
-			)
 		}
 
 		record.AddAttributes(attrs...)

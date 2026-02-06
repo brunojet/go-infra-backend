@@ -23,7 +23,9 @@ func TestCreateRead_ExportsTrace(t *testing.T) {
 
 	loggerExporter, err := exporters.NewOTLPLoggerExporter(ctx)
 	assert.NoError(t, err)
-	_, shutdown, err := providers.NewOTLPLoggerProvider(ctx, loggerExporter)
+	consoleLoggerExporter, err := exporters.NewConsoleLoggerExporter()
+	assert.NoError(t, err)
+	_, shutdown, err := providers.NewOTLPLoggerProvider(ctx, loggerExporter, consoleLoggerExporter)
 	assert.NoError(t, err)
 	defer shutdown(ctx)
 	metricExporter, err := exporters.NewOTLPMetricExporter(ctx)
