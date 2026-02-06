@@ -7,8 +7,8 @@ import (
 	dbcontracts "github.com/brunojet/go-infra-backend/internal/database/contracts"
 )
 
-func TestNewInMemory_ReturnsDatabase(t *testing.T) {
-	db, err := dbadpt.NewInMemory()
+func TestNewSQLiteInMemory_ReturnsDatabase(t *testing.T) {
+	db, err := dbadpt.NewSQLite("memory")
 	if err != nil {
 		t.Fatalf("unexpected error creating in-memory sqlite: %v", err)
 	}

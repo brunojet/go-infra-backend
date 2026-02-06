@@ -2,6 +2,10 @@ package adapters
 
 import (
 	"database/sql"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	dbcontracts "github.com/brunojet/go-infra-backend/internal/database/contracts"
 	"gorm.io/driver/sqlite"
@@ -9,10 +13,53 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// NewInMemory opens an in-memory sqlite DB and registers provided GORM plugins.
+type sqliteAdapter struct {
+	sqlDB  *sql.DB
+	gormDB *gorm.DB
+}
+
+func buildDSNFromPath(databasePath string) (string, error) {
+	lp := strings.TrimSpace(databasePath)
+
+	// memory by default if empty or contains "memory"
+	if lp == "" || strings.Contains(lp, "memory") {
+		lp = "memory"
+	}
+
+	if lp == "memory" || lp == ":memory:" {
+		return "file::memory:?mode=memory&cache=shared", nil
+	} else if strings.HasSuffix(strings.ToLower(lp), ".db") && !strings.Contains(lp, "file:") {
+		absPath, err := filepath.Abs(lp)
+
+		if err != nil {
+			return "", fmt.Errorf("unable to get absolute path for database file %s: %w", lp, err)
+		}
+
+		dir := filepath.Dir(absPath)
+
+		if _, err := os.Stat(dir); err != nil {
+			if os.IsNotExist(err) {
+				return "", fmt.Errorf("database directory does not exist: %s", dir)
+			}
+			return "", fmt.Errorf("unable to stat database directory %s: %w", dir, err)
+		}
+
+		return "file:" + filepath.ToSlash(absPath), nil
+	} else {
+		return "", fmt.Errorf("unable to configure dsn with databasePath: %s", lp)
+	}
+}
+
+// NewSQLite opens a sqlite DB at the provided path and registers provided GORM plugins.
+// `dataSourceName` can be a filesystem path or a DSN like "file:my.db".
 // Plugins are optional; callers can pass zero or more plugin instances.
-func NewInMemory(plugins ...gorm.Plugin) (dbcontracts.Database, error) {
-	sqlDB, err := sql.Open("sqlite", "file::memory:?mode=memory&cache=shared")
+func NewSQLite(databasePath string, plugins ...gorm.Plugin) (dbcontracts.Database, error) {
+	dsn, err := buildDSNFromPath(databasePath)
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDB, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -36,11 +83,6 @@ func NewInMemory(plugins ...gorm.Plugin) (dbcontracts.Database, error) {
 	}
 
 	return &sqliteAdapter{sqlDB: sqlDB, gormDB: db}, nil
-}
-
-type sqliteAdapter struct {
-	sqlDB  *sql.DB
-	gormDB *gorm.DB
 }
 
 func (s *sqliteAdapter) GormDB() *gorm.DB { return s.gormDB }

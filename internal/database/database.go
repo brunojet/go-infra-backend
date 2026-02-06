@@ -9,6 +9,10 @@ import (
 // NewSQLiteDatabase creates an in-memory SQLite database and registers
 // optional GORM plugins. It returns a dbcontracts.Database which must be
 // closed when no longer needed.
-func NewSQLiteDatabase(plugins ...gorm.Plugin) (dbcontracts.Database, error) {
-	return dbadpt.NewInMemory(plugins...)
+func NewSQLiteDatabase(databasePath string, plugins ...gorm.Plugin) (dbcontracts.Database, error) {
+	if databasePath == "" {
+		databasePath = "memory"
+	}
+
+	return dbadpt.NewSQLite(databasePath, plugins...)
 }

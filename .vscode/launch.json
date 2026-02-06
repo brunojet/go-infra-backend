@@ -23,7 +23,14 @@
                 "OBS_ACCESS_LOG": "true",
                 "OBS_TELEMETRY": "true",
                 "OBS_RECOVERY": "true",
-                "PORT": "8080"
+                "PORT": "8080",
+                "OTEL_SERVICE_NAME": "demo-go-service-no-resource",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "localhost:4317",
+                "OTEL_EXPORTER_OTLP_INSECURE": "true",
+                "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+                "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "localhost:4317",
+                "OTEL_TRACES_EXPORTER": "otlp",
+                "OTEL_RESOURCE_ATTRIBUTES": "service.version=1.2.3,deployment.environment.name=staging",
             }
         },
         {
@@ -45,7 +52,13 @@
                 "OBS_ACCESS_LOG": "true",
                 "OBS_TELEMETRY": "true",
                 "OBS_RECOVERY": "true",
-                "PORT": "8080"
+                "PORT": "8080",
+                "OTEL_SERVICE_NAME": "demo-go-service-no-resource",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "localhost:4317",
+                "OTEL_EXPORTER_OTLP_INSECURE": "true",
+                "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+                    
+                "OTEL_RESOURCE_ATTRIBUTES": "service.version=1.2.3,deployment.environment.name=staging",
             }
         },
         {

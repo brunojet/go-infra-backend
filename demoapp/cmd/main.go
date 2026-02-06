@@ -2,72 +2,38 @@ package main
 
 import (
 	"log"
-	"net/http"
+	"os"
+	"strings"
+	"time"
 
-	"github.com/brunojet/go-infra-backend/demoapp/core"
-	"github.com/brunojet/go-infra-backend/demoapp/helloworld"
-
-	infradatabase "github.com/brunojet/go-infra-backend/infra/database"
-	infrahttp "github.com/brunojet/go-infra-backend/infra/http"
-	infraobs "github.com/brunojet/go-infra-backend/infra/observability"
+	demoapp "github.com/brunojet/go-infra-backend/demoapp/bootstrap"
+	demoapprepo "github.com/brunojet/go-infra-backend/demoapp/repositories"
+	"github.com/brunojet/go-infra-backend/internal/bootstrap"
 )
 
 func main() {
-	cfg := configFromEnv()
+	sm, stop := bootstrap.NewShutdownManagerWithSignals(10 * time.Second)
+	defer stop()
 
-	dbMgr, err := infradatabase.NewDatabaseManager(cfg.Database)
-	if err != nil {
-		log.Fatalf("db init: %v", err)
+	bootstrap.InitObservability(sm)
+
+	databasePath := strings.TrimSpace(os.Getenv("DEMOAPP_SQLITE_PATH"))
+
+	db := bootstrap.NewMySQLDatabaseWithObservability(databasePath, sm)
+
+	if err := db.GormDB().AutoMigrate(&demoapprepo.HelloWorld{}); err != nil {
+		log.Fatalf("failed to migrate: %v", err)
 	}
 
-	db, err := dbMgr.OpenAndMigrate(core.Register)
-	if err != nil {
-		log.Fatalf("db open: %v", err)
+	httpServer := bootstrap.NewHttpServerWithObservability(sm)
+
+	api := httpServer.Router.Group("/")
+
+	if err := demoapp.SetupHelloWorldModule(db.GormDB(), api); err != nil {
+		log.Fatalf("failed to setup demoapp module: %v", err)
 	}
 
-	defer func() {
-		if err := dbMgr.Close(); err != nil {
-			log.Printf("close db: %v", err)
-		}
-	}()
-
-	obsMgr := infraobs.NewObservabilityManager(cfg.Observability)
-	mws, err := obsMgr.Open()
-	if err != nil {
-		log.Fatalf("obs init: %v", err)
+	if err := httpServer.StartAndWaitTermination(); err != nil {
+		log.Printf("http server error: %v", err)
 	}
-	defer func() {
-		if err := obsMgr.Close(); err != nil {
-			log.Printf("close obs: %v", err)
-		}
-	}()
-
-	httpParams := cfg.HTTP
-	httpParams.ObservabilityMiddlewares = mws
-	httpMgr, err := infrahttp.NewHTTPManager(httpParams)
-	if err != nil {
-		log.Fatalf("http init: %v", err)
-	}
-
-	// --- Helloworld Module ---
-	hwModule := helloworld.NewHelloworldModule(db)
-
-	httpRuntime, err := httpMgr.OpenAndRegister(func(r infrahttp.Router) error {
-		r.GET("/health", func(c infrahttp.Context) {
-			c.String(200, "ok")
-		})
-		hwModule.Register(r)
-		return nil
-	})
-	if err != nil {
-		log.Fatalf("http register: %v", err)
-	}
-
-	srv := &http.Server{
-		Addr:              cfg.Server.Addr,
-		Handler:           httpRuntime.Handler,
-		ReadHeaderTimeout: cfg.Server.ReadHeaderTimeout,
-	}
-	log.Printf("server listening on %s", cfg.Server.Addr)
-	log.Fatal(srv.ListenAndServe())
 }

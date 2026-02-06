@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewSQLiteDatabase_DelegatesToAdapter(t *testing.T) {
-	db, err := database.NewSQLiteDatabase()
+	db, err := database.NewSQLiteDatabase("memory")
 	if err != nil {
 		t.Fatalf("unexpected error creating sqlite database: %v", err)
 	}
