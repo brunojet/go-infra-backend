@@ -27,7 +27,10 @@ func MapErrorToStatus(err error) int {
 }
 
 func SetResponseFromError(c *gin.Context, err error) {
-	c.JSON(MapErrorToStatus(err), gin.H{"error": err.Error()})
+	// Record the error on the gin.Context so otelgin can span.RecordError(...) if enabled.
+	_ = c.Error(err)
+	status := MapErrorToStatus(err)
+	c.AbortWithStatusJSON(status, gin.H{"error": err.Error()})
 }
 
 // BindJSONToDTOPtr lê o corpo JSON do request e vincula em um DTO genérico `D`.

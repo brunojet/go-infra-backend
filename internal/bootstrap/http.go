@@ -20,6 +20,7 @@ func NewHttpServerWithObservability(sm contracts.ShutdownManager) *HttpServer {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(middlewares.OtelGinMiddleware())
+	router.Use(middlewares.OTLPErrorLogMiddleware(middlewares.WithMinStatus(http.StatusBadRequest)))
 	srv := http.Server{
 		Addr:    ":8080",
 		Handler: router,
