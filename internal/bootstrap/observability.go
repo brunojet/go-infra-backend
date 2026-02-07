@@ -1,51 +1,146 @@
 package bootstrap
 
 import (
-	"log"
+	"context"
 
 	bootcontracts "github.com/brunojet/go-infra-backend/internal/bootstrap/contracts"
-	obs "github.com/brunojet/go-infra-backend/internal/observability"
-	obsexporters "github.com/brunojet/go-infra-backend/internal/observability/exporters"
-	obsproviders "github.com/brunojet/go-infra-backend/internal/observability/providers"
-	otellog "go.opentelemetry.io/otel/log"
+	"github.com/brunojet/go-infra-backend/internal/observability/exporters"
+	"github.com/brunojet/go-infra-backend/internal/observability/providers"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func InitObservability(sm bootcontracts.ShutdownManager) {
-	ctx := sm.GetContext()
-	spanExporter, err := obsexporters.NewOTLPTracerExporter(ctx)
-	if err != nil {
-		log.Fatalf("failed to create otlp tracer exporter: %v", err)
-	}
-	_, tracerShutdown, err := obsproviders.NewOTLPTracerProvider(ctx, spanExporter)
-	if err != nil {
-		log.Fatalf("failed to create otlp tracer provider: %v", err)
-	}
-	sm.RegisterFunc("otel-tracer", tracerShutdown)
+type loggerExporterFunc func(ctx context.Context) (sdklog.Exporter, error)
+type metricExporterFunc func(ctx context.Context) (sdkmetric.Exporter, error)
+type tracerExporterFunc func(ctx context.Context) (sdktrace.SpanExporter, error)
 
-	metricExporter, err := obsexporters.NewOTLPMetricExporter(ctx)
-	if err != nil {
-		log.Fatalf("failed to create otlp metric exporter: %v", err)
+type loggerProviderFunc func(ctx context.Context, exporters ...sdklog.Exporter) (*sdklog.LoggerProvider, func(context.Context) error, error)
+type metricProviderFunc func(ctx context.Context, exporter sdkmetric.Exporter) (*sdkmetric.MeterProvider, func(context.Context) error, error)
+type tracerProviderFunc func(ctx context.Context, exporter sdktrace.SpanExporter) (*sdktrace.TracerProvider, func(context.Context) error, error)
+
+type InitLoggerFuncs struct {
+	ExporterFunc loggerExporterFunc
+	ProviderFunc loggerProviderFunc
+}
+
+type InitMetricFuncs struct {
+	ExporterFunc metricExporterFunc
+	ProviderFunc metricProviderFunc
+}
+
+type InitTracerFuncs struct {
+	ExporterFunc tracerExporterFunc
+	ProviderFunc tracerProviderFunc
+}
+
+type InitObservabilityFuncs struct {
+	InitLoggerFuncs *InitLoggerFuncs
+	InitMetricFuncs *InitMetricFuncs
+	InitTracerFuncs *InitTracerFuncs
+}
+
+func initLogger(sm bootcontracts.ShutdownManager, loggerFuncs *InitLoggerFuncs) error {
+	if loggerFuncs == nil {
+		return nil
 	}
-	_, metricShutdown, err := obsproviders.NewOTLPMetricProvider(ctx, metricExporter)
+	ctx := sm.GetContext()
+	exporter, err := loggerFuncs.ExporterFunc(ctx)
 	if err != nil {
-		log.Fatalf("failed to create otlp metric provider: %v", err)
+		return err
+	}
+	_, shutdown, err := loggerFuncs.ProviderFunc(ctx, exporter)
+	if err != nil {
+		return err
+	}
+	sm.RegisterFunc("otel-logger", shutdown)
+	return nil
+}
+
+func initMetrics(sm bootcontracts.ShutdownManager, metricFuncs *InitMetricFuncs) error {
+	if metricFuncs == nil {
+		return nil
+	}
+	ctx := sm.GetContext()
+
+	metricExporter, err := metricFuncs.ExporterFunc(ctx)
+	if err != nil {
+		return err
+	}
+	_, metricShutdown, err := metricFuncs.ProviderFunc(ctx, metricExporter)
+	if err != nil {
+		return err
 	}
 	sm.RegisterFunc("otel-metric", metricShutdown)
+	return nil
+}
 
-	otlpLoggerExporter, err := obsexporters.NewOTLPLoggerExporter(ctx)
-	if err != nil {
-		log.Fatalf("failed to create otlp logger exporter: %v", err)
+func initTracing(sm bootcontracts.ShutdownManager, tracerFuncs *InitTracerFuncs) error {
+	if tracerFuncs == nil {
+		return nil
 	}
-	consoleLoggerExporter, err := obsexporters.NewConsoleLoggerExporter()
+	ctx := sm.GetContext()
+
+	spanExporter, err := tracerFuncs.ExporterFunc(ctx)
 	if err != nil {
-		log.Fatalf("failed to create console logger exporter: %v", err)
+		return err
 	}
-	_, loggerShutdown, err := obsproviders.NewOTLPLoggerProvider(ctx, otlpLoggerExporter, consoleLoggerExporter)
+	_, tracerShutdown, err := tracerFuncs.ProviderFunc(ctx, spanExporter)
 	if err != nil {
-		log.Fatalf("failed to create otlp logger provider: %v", err)
+		return err
 	}
-	// Redirect all stdlib log.Printf/log.Println output to the OTel logger pipeline.
-	// This makes packages that still use `import "log"` automatically emit via OTel.
-	obs.RedirectStdLog("stdlib", otellog.SeverityInfo)
-	sm.RegisterFunc("otel-logger", loggerShutdown)
+	sm.RegisterFunc("otel-tracer", tracerShutdown)
+	return nil
+}
+
+func initObservability(sm bootcontracts.ShutdownManager, initFuncs InitObservabilityFuncs) error {
+	if err := initLogger(sm, initFuncs.InitLoggerFuncs); err != nil {
+		return err
+	}
+	if err := initMetrics(sm, initFuncs.InitMetricFuncs); err != nil {
+		return err
+	}
+	if err := initTracing(sm, initFuncs.InitTracerFuncs); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func InitLogger(sm bootcontracts.ShutdownManager) error {
+	return initLogger(sm, &InitLoggerFuncs{
+		ExporterFunc: exporters.NewOTLPLoggerExporter,
+		ProviderFunc: providers.NewOTLPLoggerProvider,
+	})
+}
+
+func InitMetrics(sm bootcontracts.ShutdownManager) error {
+	return initMetrics(sm, &InitMetricFuncs{
+		ExporterFunc: exporters.NewOTLPMetricExporter,
+		ProviderFunc: providers.NewOTLPMetricProvider,
+	})
+}
+
+func InitTracing(sm bootcontracts.ShutdownManager) error {
+	return initTracing(sm, &InitTracerFuncs{
+		ExporterFunc: exporters.NewOTLPTracerExporter,
+		ProviderFunc: providers.NewOTLPTracerProvider,
+	})
+}
+
+func InitObservability(sm bootcontracts.ShutdownManager) error {
+	return initObservability(sm, InitObservabilityFuncs{
+		InitLoggerFuncs: &InitLoggerFuncs{
+			ExporterFunc: exporters.NewOTLPLoggerExporter,
+			ProviderFunc: providers.NewOTLPLoggerProvider,
+		},
+		InitMetricFuncs: &InitMetricFuncs{
+			ExporterFunc: exporters.NewOTLPMetricExporter,
+			ProviderFunc: providers.NewOTLPMetricProvider,
+		},
+		InitTracerFuncs: &InitTracerFuncs{
+			ExporterFunc: exporters.NewOTLPTracerExporter,
+			ProviderFunc: providers.NewOTLPTracerProvider,
+		},
+	})
 }

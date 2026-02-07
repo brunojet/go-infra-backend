@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brunojet/go-infra-backend/internal/observability"
+	obslog "github.com/brunojet/go-infra-backend/internal/observability/stdlog"
 	otellog "go.opentelemetry.io/otel/log"
 	otellogglobal "go.opentelemetry.io/otel/log/global"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
@@ -39,7 +39,7 @@ func main() {
 	otellogglobal.SetLoggerProvider(lp)
 	defer func() { _ = lp.Shutdown(context.Background()) }()
 
-	restore := observability.RedirectStdLog("stdlib", otellog.SeverityInfo)
+	restore := obslog.RedirectStdLog("stdlib", otellog.SeverityInfo)
 	defer restore()
 
 	start := time.Now()

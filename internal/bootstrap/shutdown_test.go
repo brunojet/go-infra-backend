@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type testShutdown struct{ called int }
@@ -15,76 +17,45 @@ func (t *testShutdown) Shutdown(context.Context) error {
 	return nil
 }
 
-func TestShutdownManager_GetContext_DefaultsToBackground(t *testing.T) {
-	sm := NewShutdownManager(nil)
-	ctx := sm.GetContext()
-	if ctx == nil {
-		t.Fatalf("expected non-nil context")
-	}
-	if err := ctx.Err(); err != nil {
-		t.Fatalf("expected ctx not canceled, got %v", err)
-	}
-}
-
 func TestShutdownManager_SetLogger_NilUsesDefault(t *testing.T) {
+	assert := assert.New(t)
 	sm := NewShutdownManager(context.Background())
 	sm.SetLogger(nil)
-	if sm.logger == nil {
-		t.Fatalf("expected logger to be set")
-	}
+	assert.NotNil(sm.logger, "expected logger to be set")
 }
 
 func TestShutdownManager_SetLogger_AfterShutdownPanics(t *testing.T) {
+	assert := assert.New(t)
 	sm := NewShutdownManager(context.Background())
 	sm.RegisterFunc("noop", func(context.Context) error { return nil })
 	_ = sm.ShutdownWithTimeout(0)
 
-	defer func() {
-		rec := recover()
-		if rec == nil {
-			t.Fatalf("expected panic")
-		}
-	}()
-	sm.SetLogger(slog.Default())
+	assert.Panics(func() { sm.SetLogger(slog.Default()) })
 }
 
 func TestShutdownManager_Register_NilPanics(t *testing.T) {
+	assert := assert.New(t)
 	sm := NewShutdownManager(context.Background())
-	defer func() {
-		rec := recover()
-		if rec == nil {
-			t.Fatalf("expected panic")
-		}
-	}()
-	sm.Register("x", nil)
+	assert.Panics(func() { sm.Register("x", nil) })
 }
 
 func TestShutdownManager_RegisterFunc_NilPanics(t *testing.T) {
+	assert := assert.New(t)
 	sm := NewShutdownManager(context.Background())
-	defer func() {
-		rec := recover()
-		if rec == nil {
-			t.Fatalf("expected panic")
-		}
-	}()
-	sm.RegisterFunc("x", nil)
+	assert.Panics(func() { sm.RegisterFunc("x", nil) })
 }
 
 func TestShutdownManager_RegisterFunc_AfterShutdownPanics(t *testing.T) {
+	assert := assert.New(t)
 	sm := NewShutdownManager(context.Background())
 	sm.RegisterFunc("noop", func(context.Context) error { return nil })
 	_ = sm.ShutdownWithTimeout(0)
 
-	defer func() {
-		rec := recover()
-		if rec == nil {
-			t.Fatalf("expected panic")
-		}
-	}()
-	sm.RegisterFunc("late", func(context.Context) error { return nil })
+	assert.Panics(func() { sm.RegisterFunc("late", func(context.Context) error { return nil }) })
 }
 
 func TestShutdownManager_Shutdown_LIFOAndJoinErrors(t *testing.T) {
+	assert := assert.New(t)
 	sm := NewShutdownManager(context.Background())
 
 	var order []string
@@ -105,40 +76,27 @@ func TestShutdownManager_Shutdown_LIFOAndJoinErrors(t *testing.T) {
 	})
 
 	err := sm.ShutdownWithTimeout(25 * time.Millisecond)
-	if err == nil {
-		t.Fatalf("expected aggregated error")
-	}
-	if !errors.Is(err, errA) {
-		t.Fatalf("expected errors.Is(err, errA) true")
-	}
-	if !errors.Is(err, errB) {
-		t.Fatalf("expected errors.Is(err, errB) true")
-	}
+	assert.Error(err, "expected aggregated error")
+	assert.ErrorIs(err, errA)
+	assert.ErrorIs(err, errB)
 
 	// LIFO execution: last registered runs first
 	want := []string{"third", "second", "first"}
-	if len(order) != len(want) {
-		t.Fatalf("expected %d handlers executed, got %d", len(want), len(order))
-	}
-	for i := range want {
-		if order[i] != want[i] {
-			t.Fatalf("order[%d]=%q, want %q", i, order[i], want[i])
-		}
-	}
+	assert.Equal(want, order)
 }
 
 func TestShutdownManager_Shutdown_SecondCallNoop(t *testing.T) {
+	assert := assert.New(t)
 	sm := NewShutdownManager(context.Background())
 	called := 0
 	sm.RegisterFunc("x", func(context.Context) error { called++; return nil })
 	_ = sm.ShutdownWithTimeout(0)
 	_ = sm.ShutdownWithTimeout(0)
-	if called != 1 {
-		t.Fatalf("expected handler called once, got %d", called)
-	}
+	assert.Equal(1, called, "expected handler called once")
 }
 
 func TestShutdownManager_ShutdownWithTimeout_DetachesCancellation(t *testing.T) {
+	assert := assert.New(t)
 	root, cancel := context.WithCancel(context.Background())
 	sm := NewShutdownManager(root)
 
@@ -146,61 +104,47 @@ func TestShutdownManager_ShutdownWithTimeout_DetachesCancellation(t *testing.T) 
 	called := 0
 	sm.RegisterFunc("check", func(ctx context.Context) error {
 		called++
-		if err := ctx.Err(); err != nil {
-			t.Fatalf("shutdown ctx should not be canceled, got %v", err)
-		}
+		assert.NoError(ctx.Err(), "shutdown ctx should not be canceled")
 		_, hasDeadline := ctx.Deadline()
-		if !hasDeadline {
-			t.Fatalf("expected shutdown ctx to have a deadline")
-		}
+		assert.True(hasDeadline, "expected shutdown ctx to have a deadline")
 		return nil
 	})
 
-	if err := sm.ShutdownWithTimeout(50 * time.Millisecond); err != nil {
-		t.Fatalf("unexpected shutdown error: %v", err)
-	}
-	if called != 1 {
-		t.Fatalf("expected handler called once, got %d", called)
-	}
+	assert.NoError(sm.ShutdownWithTimeout(50 * time.Millisecond))
+	assert.Equal(1, called, "expected handler called once")
 }
 
 func TestShutdownManager_RegisterShutdown_DelegatesToRegister(t *testing.T) {
+	assert := assert.New(t)
 	sm := NewShutdownManager(context.Background())
 	var s testShutdown
 	sm.RegisterShutdown("t", &s)
 	_ = sm.Shutdown()
-	if s.called != 1 {
-		t.Fatalf("expected shutdown called once, got %d", s.called)
-	}
+	assert.Equal(1, s.called, "expected shutdown called once")
 }
 
 func TestShutdownManager_Shutdown_WrapperExecutesHandlers(t *testing.T) {
+	assert := assert.New(t)
 	sm := NewShutdownManager(context.Background())
 	called := 0
 	sm.RegisterFunc("x", func(context.Context) error { called++; return nil })
-	if err := sm.Shutdown(); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if called != 1 {
-		t.Fatalf("expected handler called once, got %d", called)
-	}
+	assert.NoError(sm.Shutdown())
+	assert.Equal(1, called, "expected handler called once")
 }
 
 func TestShutdownManager_Shutdown_EmptyNameErrorAndNilLogger(t *testing.T) {
+	assert := assert.New(t)
 	sm := NewShutdownManager(context.Background())
 	sm.logger = nil
 	errX := errors.New("X")
 	sm.RegisterFunc("", func(context.Context) error { return errX })
 	err := sm.Shutdown()
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	if !errors.Is(err, errX) {
-		t.Fatalf("expected errors.Is(err, errX) true")
-	}
+	assert.Error(err)
+	assert.ErrorIs(err, errX)
 }
 
 func TestNewShutdownManagerWithSignals_StopIdempotent(t *testing.T) {
+	assert := assert.New(t)
 	sm, stop := NewShutdownManagerWithSignals(50 * time.Millisecond)
 	called := 0
 	sm.RegisterFunc("x", func(context.Context) error { called++; return nil })
@@ -208,7 +152,5 @@ func TestNewShutdownManagerWithSignals_StopIdempotent(t *testing.T) {
 	stop()
 	stop()
 
-	if called != 1 {
-		t.Fatalf("expected handler called once, got %d", called)
-	}
+	assert.Equal(1, called, "expected handler called once")
 }

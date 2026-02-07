@@ -77,8 +77,8 @@ func NewShutdownManagerWithSignals(shutdownTimeout time.Duration, signalsToWatch
 		signalsToWatch = []os.Signal{os.Interrupt, syscall.SIGTERM}
 	}
 
-	rootCtx, cancel := signal.NotifyContext(ctx, signalsToWatch...)
-	sm = NewShutdownManager(rootCtx)
+	ctx, cancel := signal.NotifyContext(ctx, signalsToWatch...)
+	sm = NewShutdownManager(ctx)
 
 	var once sync.Once
 	stop = func() {
