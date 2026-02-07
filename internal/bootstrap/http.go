@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/brunojet/go-infra-backend/internal/bootstrap/contracts"
+	"github.com/brunojet/go-infra-backend/internal/config"
 	middlewares "github.com/brunojet/go-infra-backend/internal/observability/http_middlewares"
 	"github.com/gin-gonic/gin"
 )
@@ -21,8 +22,9 @@ func NewHttpServerWithObservability(sm contracts.ShutdownManager) *HttpServer {
 	router.Use(gin.Recovery())
 	router.Use(middlewares.OtelGinMiddleware())
 	router.Use(middlewares.OTLPErrorLogMiddleware(middlewares.WithMinStatus(http.StatusBadRequest)))
+	addr := config.Get("HTTP_ADDR", ":8080")
 	srv := http.Server{
-		Addr:    ":8080",
+		Addr:    addr,
 		Handler: router,
 	}
 	return &HttpServer{
