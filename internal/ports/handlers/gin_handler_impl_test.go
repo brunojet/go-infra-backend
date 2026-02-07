@@ -201,3 +201,36 @@ func TestRegister_Handler(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 	require.Equal(t, true, body["pong"])
 }
+
+func TestCreate_Handler_InvalidJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
+	h := NewGenericHandler[SimpleEntity](ms)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString("not-json"))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	h.Create(c)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestUpdate_Handler_InvalidJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
+	h := NewGenericHandler[SimpleEntity](ms)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPut, "/", bytes.NewBufferString("not-json"))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Params = gin.Params{{Key: "id", Value: "the-id"}}
+
+	h.Update(c)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}

@@ -9,8 +9,10 @@ import (
 
 	dbadapters "github.com/brunojet/go-infra-backend/internal/database/adapters"
 	dbcontracts "github.com/brunojet/go-infra-backend/internal/database/contracts"
+	"github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
 	repoContracts "github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
 )
@@ -33,20 +35,25 @@ func pi(i int) *int       { return &i }
 
 func (t TestEntity) TableName() string { return "test_entities" }
 
-func openMemoryDB(t *testing.T) (dbcontracts.Database, func()) {
+func mustGormDB(t *testing.T, db dbcontracts.DatabaseAdapter) *gorm.DB {
+	t.Helper()
+	gdb, err := db.GormDB()
+	require.NoError(t, err)
+	require.NotNil(t, gdb)
+	return gdb
+}
+
+func openMemoryDB(t *testing.T) (dbcontracts.DatabaseAdapter, func()) {
 	t.Helper()
 	db, err := dbadapters.NewSQLite("memory")
-	if err != nil {
-		t.Fatalf("failed to open sqlite memory: %v", err)
-	}
+	require.NoError(t, err)
 	// enable SQL logging at Info level for tests so queries are logged even on success
-	if db != nil && db.GormDB() != nil {
-		db.GormDB().Config.Logger = gormLogger.Default.LogMode(gormLogger.Info)
-	}
+	gdb := mustGormDB(t, db)
+	gdb.Config.Logger = gormLogger.Default.LogMode(gormLogger.Info)
 	// migrate test model
-	if err := db.GormDB().AutoMigrate(&TestEntity{}); err != nil {
+	if err := gdb.AutoMigrate(&TestEntity{}); err != nil {
 		_ = db.Close()
-		t.Fatalf("auto migrate failed: %v", err)
+		require.NoError(t, err)
 	}
 	return db, func() { _ = db.Close() }
 }
@@ -54,16 +61,14 @@ func TestGormrepositories_InvalidIDAndNotFound(t *testing.T) {
 	db, cleanup := openMemoryDB(t)
 	defer cleanup()
 
-	repo := NewGormRepository[TestEntity](db.GormDB())
+	repo := NewGormRepository[TestEntity](db)
 	ctx := context.Background()
 
 	// repository now expects callers to provide a primary-key map; validate BuildPKeyMap behaviour
 	// repository expects callers to provide a primary-key map; invalid id should be handled upstream
 	_, err := repo.GetByID(ctx, map[string]any{})
 	// generic repos may map empty id to ErrInvalidID or return a DB error; assert error
-	if err == nil {
-		t.Fatalf("expected error for empty id map")
-	}
+	assert.Error(t, err)
 
 	// missing id should return ErrNotFound when using a valid pk map
 	pk := map[string]any{"id": "missing-id"}
@@ -75,7 +80,7 @@ func TestGormrepositories_CreateAndGet(t *testing.T) {
 	db, cleanup := openMemoryDB(t)
 	defer cleanup()
 
-	repo := NewGormRepository[TestEntity](db.GormDB())
+	repo := NewGormRepository[TestEntity](db)
 	ctx := context.Background()
 
 	e := &TestEntity{ID: "id-create", Name: ps("bob"), Age: pi(22)}
@@ -108,7 +113,7 @@ func TestGormrepositories_List(t *testing.T) {
 	db, cleanup := openMemoryDB(t)
 	defer cleanup()
 
-	repo := NewGormRepository[TestEntity](db.GormDB())
+	repo := NewGormRepository[TestEntity](db)
 	ctx := context.Background()
 
 	// create multiple
@@ -124,7 +129,7 @@ func TestGormrepositories_Update(t *testing.T) {
 	db, cleanup := openMemoryDB(t)
 	defer cleanup()
 
-	repo := NewGormRepository[TestEntity](db.GormDB())
+	repo := NewGormRepository[TestEntity](db)
 	ctx := context.Background()
 
 	// create initial entity with pointers
@@ -144,7 +149,7 @@ func TestGormrepositories_Delete(t *testing.T) {
 	db, cleanup := openMemoryDB(t)
 	defer cleanup()
 
-	repo := NewGormRepository[TestEntity](db.GormDB())
+	repo := NewGormRepository[TestEntity](db)
 	ctx := context.Background()
 
 	assert.NoError(t, repo.Create(ctx, &TestEntity{ID: "d-1", Name: ps("to-del"), Age: pi(5)}))
@@ -154,15 +159,14 @@ func TestGormrepositories_Delete(t *testing.T) {
 
 	// ensure soft-delete: Unscoped query should find the record and DeletedAt should be set
 	var out TestEntity
-	err = db.GormDB().Unscoped().First(&out, "id = ?", "d-1").Error
+	gdb := mustGormDB(t, db)
+	err = gdb.Unscoped().First(&out, "id = ?", "d-1").Error
 	assert.NoError(t, err)
-	if assert.NotNil(t, out.DeletedAt) {
-		assert.False(t, out.DeletedAt.Time.IsZero())
-	}
+	assert.False(t, out.DeletedAt.Time.IsZero())
 
 	// hard delete the record and ensure it's gone
-	assert.NoError(t, db.GormDB().Unscoped().Delete(&out).Error)
-	err = db.GormDB().Unscoped().First(&out, "id = ?", "d-1").Error
+	assert.NoError(t, gdb.Unscoped().Delete(&out).Error)
+	err = gdb.Unscoped().First(&out, "id = ?", "d-1").Error
 	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 }
 
@@ -170,7 +174,7 @@ func TestGormrepositories_Update_NilInputAndDeletedAfterUpdate(t *testing.T) {
 	db, cleanup := openMemoryDB(t)
 	defer cleanup()
 
-	repo := NewGormRepository[TestEntity](db.GormDB())
+	repo := NewGormRepository[TestEntity](db)
 	ctx := context.Background()
 
 	// nil input should return ErrInvalidEntity
@@ -194,7 +198,7 @@ func TestGetListUpdate_DBErrors(t *testing.T) {
 	// open and immediately close DB to simulate low-level DB errors
 	db, cleanup := openMemoryDB(t)
 	// create repositories while DB is still open
-	repo := NewGormRepository[TestEntity](db.GormDB())
+	repo := NewGormRepository[TestEntity](db)
 	ctx := context.Background()
 
 	// close underlying DB to force errors
@@ -202,48 +206,46 @@ func TestGetListUpdate_DBErrors(t *testing.T) {
 
 	// GetByID should return an error (not ErrNotFound)
 	_, err := repo.GetByID(ctx, map[string]any{"id": "any"})
-	if err == nil || errors.Is(err, ErrNotFound) {
-		t.Fatalf("expected DB error (not ErrNotFound), got %v", err)
-	}
+	assert.Error(t, err)
+	assert.False(t, errors.Is(err, ErrNotFound))
 
 	// List should return error
 	_, _, err = repo.List(ctx, repoContracts.ListParams{Page: 1, Size: 10, OrderBy: "", Order: ""})
-	if err == nil {
-		t.Fatalf("expected error from List when DB closed")
-	}
+	assert.Error(t, err)
 
 	// Update should return error when DB closed
 	in := &TestEntity{ID: "x"}
 	err = repo.Update(ctx, map[string]any{"id": "any"}, in)
-	if err == nil {
-		t.Fatalf("expected error from Update when DB closed")
-	}
+	assert.Error(t, err)
 }
 
 func TestRepositories_ClosedDB_MapsToErrDBUnavailable(t *testing.T) {
 	db, cleanup := openMemoryDB(t)
 	defer cleanup()
 
-	repo := NewGormRepository[TestEntity](db.GormDB())
+	repo := NewGormRepository[TestEntity](db)
 
 	// close underlying DB
-	if sqlDB, err := db.GormDB().DB(); err == nil {
-		_ = sqlDB.Close()
-	}
+	gdb, err := db.GormDB()
+	require.NoError(t, err)
+	sqlDB, err := gdb.DB()
+	require.NoError(t, err)
+	_ = sqlDB.Close()
 
 	ctx := context.Background()
 
-	_, err := repo.GetByID(ctx, map[string]any{"id": "any"})
+	_, err = repo.GetByID(ctx, map[string]any{"id": "any"})
 	assert.ErrorIs(t, err, ErrDBUnavailable)
 
 	_, _, err = repo.List(ctx, repoContracts.ListParams{Page: 1, Size: 1, OrderBy: "", Order: ""})
-	if err == nil {
-		t.Fatalf("expected error from List when DB closed")
-	}
 	// Accept either ErrDBUnavailable (DB closed) or ordering validation error depending on implementation
-	if !errors.Is(err, ErrDBUnavailable) && !strings.Contains(err.Error(), "both orderBy and order must be provided together") {
-		t.Fatalf("expected ErrDBUnavailable or orderBy validation error, got: %v", err)
-	}
+	assert.Error(t, err)
+	assert.True(
+		t,
+		errors.Is(err, ErrDBUnavailable) || strings.Contains(err.Error(), "both orderBy and order must be provided together"),
+		"expected ErrDBUnavailable or orderBy validation error, got: %v",
+		err,
+	)
 
 	in := &TestEntity{ID: "x"}
 	err = repo.Update(ctx, map[string]any{"id": "x"}, in)
@@ -253,3 +255,106 @@ func TestRepositories_ClosedDB_MapsToErrDBUnavailable(t *testing.T) {
 type testEntity struct{}
 
 func (t testEntity) TableName() string { return "test_entities" }
+
+type RepoTestModel struct {
+	ID   int64 `gorm:"primaryKey;autoIncrement"`
+	Name string
+}
+
+func (r RepoTestModel) TableName() string { return "repo_test_models" }
+
+func TestSetPagination_ErrorsAndSuccess(t *testing.T) {
+	db, close := openMemoryDB(t) // ensure DB can be opened before proceeding with List tests
+	defer close()
+	q := mustGormDB(t, db).Model(&RepoTestModel{})
+
+	// invalid page
+	err := setPagination(q, 0, 10)
+	assert.Error(t, err)
+
+	// invalid pageSize
+	err = setPagination(q, 1, 0)
+	assert.Error(t, err)
+
+	// valid
+	err = setPagination(q, 2, 5)
+	assert.NoError(t, err)
+}
+
+func TestSetOrderBy_ErrorsAndSuccess(t *testing.T) {
+	db, close := openMemoryDB(t) // ensure DB can be opened before proceeding with List tests
+	defer close()
+	q := mustGormDB(t, db).Model(&RepoTestModel{})
+
+	// missing orderBy/order
+	err := setOrderBy(q, "", "")
+	assert.Error(t, err)
+
+	// valid asc
+	err = setOrderBy(q, "id", "asc")
+	assert.NoError(t, err)
+
+	// valid desc
+	err = setOrderBy(q, "id", "desc")
+	assert.NoError(t, err)
+}
+
+func TestGetListSize_Branches(t *testing.T) {
+	// total 10, page1 size3 -> capacity 3
+	cap := getListSize(10, 1, 3)
+	assert.Equal(t, 3, cap)
+
+	// total 10, page4 size3 -> offset 9 remaining 1 -> capacity 1
+	cap = getListSize(10, 4, 3)
+	assert.Equal(t, 1, cap)
+
+	// total 5, page3 size3 -> offset 6 remaining -1 -> capacity 0
+	cap = getListSize(5, 3, 3)
+	assert.Equal(t, 0, cap)
+}
+
+func TestList_ErrorsAndSuccess(t *testing.T) {
+	db, close := openMemoryDB(t) // ensure DB can be opened before proceeding with List tests
+	defer close()
+
+	gdb := mustGormDB(t, db)
+	if err := gdb.AutoMigrate(&RepoTestModel{}); err != nil {
+		_ = db.Close()
+		require.NoError(t, err)
+	}
+
+	repo := NewGormRepository[RepoTestModel](db)
+	ctx := context.Background()
+
+	// empty table -> Count rowsAffected == 0 -> MapTxError returns ErrNotFound
+	_, _, err := repo.List(ctx, contracts.ListParams{Page: 1, Size: 10, OrderBy: "id", Order: "asc"})
+	assert.Error(t, err)
+
+	// create records
+	for i := 0; i < 5; i++ {
+		m := RepoTestModel{Name: "n"}
+		err := repo.Create(ctx, &m)
+		assert.NoError(t, err)
+	}
+
+	// missing orderBy -> should error
+	_, _, err = repo.List(ctx, contracts.ListParams{Page: 1, Size: 2, OrderBy: "", Order: "asc"})
+	assert.Error(t, err)
+
+	// invalid pagination -> should error
+	_, _, err = repo.List(ctx, contracts.ListParams{Page: 0, Size: 2, OrderBy: "id", Order: "asc"})
+	assert.Error(t, err)
+
+	// success: page 2 size 2 -> expect 2 items
+	items, total, err := repo.List(ctx, contracts.ListParams{Page: 2, Size: 2, OrderBy: "id", Order: "asc"})
+	assert.NoError(t, err)
+	assert.Equal(t, 5, total)
+	assert.Len(t, items, 2)
+}
+
+func TestGetDB(t *testing.T) {
+	db, close := openMemoryDB(t)
+	defer close()
+	repo := NewGormRepository[TestEntity](db)
+	assert.Same(t, mustGormDB(t, db), repo.GormDB())
+}

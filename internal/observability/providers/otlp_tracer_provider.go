@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"log"
 
 	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -20,15 +19,9 @@ func NewOTLPTracerProvider(ctx context.Context, exporter sdktrace.SpanExporter) 
 
 	shutdown := func(ctx context.Context) error {
 		if ff, ok := interface{}(tp).(interface{ ForceFlush(context.Context) error }); ok {
-			if err := ff.ForceFlush(ctx); err != nil {
-				log.Printf("otel tracer force flush error: %v", err)
-			}
+			ff.ForceFlush(ctx)
 		}
-
-		if err := tp.Shutdown(ctx); err != nil {
-			log.Printf("otel tracer shutdown error: %v", err)
-			return err
-		}
+		tp.Shutdown(ctx)
 		return nil
 	}
 

@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"log"
 
 	"go.opentelemetry.io/otel"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -22,15 +21,9 @@ func NewOTLPMetricProvider(ctx context.Context, exporter sdkmetric.Exporter) (*s
 
 	shutdown := func(ctx context.Context) error {
 		if ff, ok := interface{}(mp).(interface{ ForceFlush(context.Context) error }); ok {
-			if err := ff.ForceFlush(ctx); err != nil {
-				log.Printf("otel metric force flush error: %v", err)
-			}
+			ff.ForceFlush(ctx)
 		}
-
-		if err := mp.Shutdown(ctx); err != nil {
-			log.Printf("otel metric shutdown error: %v", err)
-			return err
-		}
+		mp.Shutdown(ctx)
 		return nil
 	}
 

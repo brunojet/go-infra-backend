@@ -66,18 +66,15 @@ func (mr *MockServiceMapperMockRecorder[D, E]) ToDTO(model, dto interface{}) *go
 }
 
 // ToModel mocks base method.
-func (m *MockServiceMapper[D, E]) ToModel(dto *D) (E, error) {
+func (m *MockServiceMapper[D, E]) ToModel(dto *D, model *E) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ToModel", dto)
-	ret0, _ := ret[0].(E)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	m.ctrl.Call(m, "ToModel", dto, model)
 }
 
 // ToModel indicates an expected call of ToModel.
-func (mr *MockServiceMapperMockRecorder[D, E]) ToModel(dto interface{}) *gomock.Call {
+func (mr *MockServiceMapperMockRecorder[D, E]) ToModel(dto, model interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ToModel", reflect.TypeOf((*MockServiceMapper[D, E])(nil).ToModel), dto)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ToModel", reflect.TypeOf((*MockServiceMapper[D, E])(nil).ToModel), dto, model)
 }
 
 // MockService is a mock of Service interface.

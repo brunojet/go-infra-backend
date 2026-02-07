@@ -23,9 +23,7 @@ func TestCreateRead_ExportsTrace(t *testing.T) {
 
 	loggerExporter, err := exporters.NewOTLPLoggerExporter(ctx)
 	assert.NoError(t, err)
-	consoleLoggerExporter, err := exporters.NewConsoleLoggerExporter()
-	assert.NoError(t, err)
-	_, shutdown, err := providers.NewOTLPLoggerProvider(ctx, loggerExporter, consoleLoggerExporter)
+	_, shutdown, err := providers.NewOTLPLoggerProvider(ctx, loggerExporter...)
 	assert.NoError(t, err)
 	defer shutdown(ctx)
 	metricExporter, err := exporters.NewOTLPMetricExporter(ctx)
@@ -39,24 +37,22 @@ func TestCreateRead_ExportsTrace(t *testing.T) {
 	assert.NoError(t, err)
 	defer shutdown(ctx)
 
-	p, err := plugins.NewOtelGormPlugin()
+	db, err := NewSQLiteDatabase("memory", plugins.NewOtelGormPlugin())
+	assert.NoError(t, err)
+	defer db.Shutdown(ctx)
+
+	gdb, err := db.DatabaseAdapter().GormDB()
 	assert.NoError(t, err)
 
-	db, err := NewSQLiteDatabase("memory", p)
-	assert.NoError(t, err)
-	defer func() {
-		_ = db.Close()
-	}()
-
-	err = db.GormDB().AutoMigrate(&testEntity{})
+	err = gdb.AutoMigrate(&testEntity{})
 	assert.NoError(t, err)
 
 	e := testEntity{Name: "trace-test"}
-	err = db.GormDB().Create(&e).Error
+	err = gdb.Create(&e).Error
 	assert.NoError(t, err)
 
 	// Read
 	var got testEntity
-	err = db.GormDB().First(&got, "name = ?", "trace-test").Error
+	err = gdb.First(&got, "name = ?", "trace-test").Error
 	assert.NoError(t, err)
 }

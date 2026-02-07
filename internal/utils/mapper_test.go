@@ -2,11 +2,18 @@ package utils
 
 import (
 	"database/sql"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+type errMarshaler struct{}
+
+func (e errMarshaler) MarshalJSON() ([]byte, error) { return nil, errors.New("marshal error") }
+
+type sample struct{ A string }
 
 func TestInt64String_Roundtrip(t *testing.T) {
 	a := assert.New(t)
@@ -61,34 +68,90 @@ func TestNullIntBoolFloat(t *testing.T) {
 	a.Equal(1.23, FromNullFloat(nf))
 }
 
-func TestJSONHelpers(t *testing.T) {
-	a := assert.New(t)
-	// ToJSONBytes nil
-	b, err := ToJSONBytes(nil)
-	a.NoError(err)
-	a.Nil(b)
+func TestFromNullBool_Branches(t *testing.T) {
+	// valid true
+	nb := ToNullBool(true)
+	assert.True(t, FromNullBool(nb))
+	// invalid
+	var nb2 sql.NullBool
+	nb2.Valid = false
+	assert.False(t, FromNullBool(nb2))
+}
 
-	// ToJSONBytes valid
-	m := map[string]string{"x": "y"}
-	jb, err := ToJSONBytes(m)
-	a.NoError(err)
-	a.NotNil(jb)
+func TestFromNullFloat_Branches(t *testing.T) {
+	nf := ToNullFloat(3.14)
+	assert.Equal(t, 3.14, FromNullFloat(nf))
 
-	var out map[string]string
-	a.NoError(FromJSONBytes(jb, &out))
-	a.Equal("y", out["x"])
+	var nf2 sql.NullFloat64
+	nf2.Valid = false
+	assert.Equal(t, 0.0, FromNullFloat(nf2))
+}
 
-	// FromNullJSON
-	ns := sql.NullString{String: string(jb), Valid: true}
-	var out2 map[string]string
-	a.NoError(FromNullJSON(ns, &out2))
-	a.Equal("y", out2["x"])
-
-	// ToNullJSON nil
+func TestToNullJSON_ErrorsAndNil(t *testing.T) {
+	// nil input -> invalid
 	nn := ToNullJSON(nil)
-	a.False(nn.Valid)
+	assert.False(t, nn.Valid)
 
-	// ToNullJSON value
-	nn2 := ToNullJSON(m)
-	a.True(nn2.Valid)
+	// marshaler error -> invalid
+	nn = ToNullJSON(errMarshaler{})
+	assert.False(t, nn.Valid)
+
+	// valid struct -> valid
+	n := ToNullJSON(sample{A: "x"})
+	assert.True(t, n.Valid)
+	assert.Contains(t, n.String, "x")
+}
+
+func TestToJSONBytes_Topaths(t *testing.T) {
+	// nil input
+	b, err := ToJSONBytes(nil)
+	assert.NoError(t, err)
+	assert.Nil(t, b)
+
+	// pointer nil marshals to null -> returns nil
+	var p *int = nil
+	b, err = ToJSONBytes(p)
+	assert.NoError(t, err)
+	assert.Nil(t, b)
+
+	// marshaler error
+	b, err = ToJSONBytes(errMarshaler{})
+	assert.Error(t, err)
+
+	// valid
+	b, err = ToJSONBytes(sample{A: "y"})
+	assert.NoError(t, err)
+	assert.NotNil(t, b)
+}
+
+func TestFromJSONBytes_Branches(t *testing.T) {
+	var dst sample
+	// empty input -> no-op
+	assert.NoError(t, FromJSONBytes([]byte{}, &dst))
+
+	// invalid json -> error
+	err := FromJSONBytes([]byte("{invalid}"), &dst)
+	assert.Error(t, err)
+
+	// valid
+	b, _ := ToJSONBytes(sample{A: "z"})
+	assert.NoError(t, FromJSONBytes(b, &dst))
+	assert.Equal(t, "z", dst.A)
+}
+
+func TestFromNullJSON_Branches(t *testing.T) {
+	var dst sample
+	// invalid nullstring -> no-op
+	var ns sql.NullString
+	ns.Valid = false
+	assert.NoError(t, FromNullJSON(ns, &dst))
+
+	// invalid json inside -> error
+	ns = sql.NullString{String: "{bad}", Valid: true}
+	assert.Error(t, FromNullJSON(ns, &dst))
+
+	// valid
+	ns = ToNullJSON(sample{A: "ok"})
+	assert.NoError(t, FromNullJSON(ns, &dst))
+	assert.Equal(t, "ok", dst.A)
 }

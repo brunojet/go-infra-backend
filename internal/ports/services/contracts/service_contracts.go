@@ -8,7 +8,7 @@ import (
 
 type ServiceMapper[D any, E repoContracts.Entity] interface {
 	GetModelKey(id string) (map[string]any, error)
-	ToModel(dto *D) (E, error)
+	ToModel(dto *D, model *E)
 	ToDTO(model *E, dto *D)
 }
 

@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewOTLPMetricExporterWithEndpoint(t *testing.T) {
-	os.Setenv(OTLPEndpointEnv, OTLPEndpointDefault)
+	os.Setenv(OTLPEndpointEnv, otlpEndpointDefault)
 	defer os.Unsetenv(OTLPEndpointEnv)
 	ctx := context.Background()
 	exp, err := NewOTLPMetricExporter(ctx)

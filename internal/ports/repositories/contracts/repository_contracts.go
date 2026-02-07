@@ -23,6 +23,6 @@ type Repository[E Entity] interface {
 	List(ctx context.Context, listParams ListParams) ([]E, int, error)
 	Update(ctx context.Context, id map[string]any, inOut *E) error
 	Delete(ctx context.Context, id map[string]any) error
-	DB() *gorm.DB
+	GormDB() *gorm.DB
 	WithTx(ctx context.Context, fn func(ctx context.Context) error) error
 }

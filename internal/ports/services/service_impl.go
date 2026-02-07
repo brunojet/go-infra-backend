@@ -17,10 +17,8 @@ func NewServiceImpl[D any, E repoContracts.Entity](r repoContracts.Repository[E]
 }
 
 func (s *serviceImpl[D, E]) Create(ctx context.Context, dto *D) error {
-	model, err := s.mapper.ToModel(dto)
-	if err != nil {
-		return err
-	}
+	var model E
+	s.mapper.ToModel(dto, &model)
 	if err := s.repo.Create(ctx, &model); err != nil {
 		return err
 	}
@@ -58,10 +56,8 @@ func (s *serviceImpl[D, E]) List(ctx context.Context, size int) ([]D, error) {
 }
 
 func (s *serviceImpl[D, E]) Update(ctx context.Context, id string, dto *D) error {
-	model, err := s.mapper.ToModel(dto)
-	if err != nil {
-		return err
-	}
+	var model E
+	s.mapper.ToModel(dto, &model)
 	key, err := s.mapper.GetModelKey(id)
 	if err != nil {
 		return err

@@ -11,7 +11,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-type loggerExporterFunc func(ctx context.Context) (sdklog.Exporter, error)
+type loggerExporterFunc func(ctx context.Context) ([]sdklog.Exporter, error)
 type metricExporterFunc func(ctx context.Context) (sdkmetric.Exporter, error)
 type tracerExporterFunc func(ctx context.Context) (sdktrace.SpanExporter, error)
 
@@ -45,11 +45,11 @@ func initLogger(sm bootcontracts.ShutdownManager, loggerFuncs *InitLoggerFuncs) 
 		return nil
 	}
 	ctx := sm.GetContext()
-	exporter, err := loggerFuncs.ExporterFunc(ctx)
+	exportersSlice, err := loggerFuncs.ExporterFunc(ctx)
 	if err != nil {
 		return err
 	}
-	_, shutdown, err := loggerFuncs.ProviderFunc(ctx, exporter)
+	_, shutdown, err := loggerFuncs.ProviderFunc(ctx, exportersSlice...)
 	if err != nil {
 		return err
 	}

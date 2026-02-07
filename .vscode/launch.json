@@ -31,6 +31,7 @@
                 "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "localhost:4317",
                 "OTEL_TRACES_EXPORTER": "otlp",
                 "OTEL_RESOURCE_ATTRIBUTES": "service.version=1.2.3,deployment.environment.name=staging",
+                "CONSOLE_LOGGER_REDIRECT_ENABLE": "true"
             }
         },
         {
@@ -57,8 +58,8 @@
                 "OTEL_EXPORTER_OTLP_ENDPOINT": "localhost:4317",
                 "OTEL_EXPORTER_OTLP_INSECURE": "true",
                 "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
-                    
                 "OTEL_RESOURCE_ATTRIBUTES": "service.version=1.2.3,deployment.environment.name=staging",
+                "CONSOLE_LOGGER_REDIRECT_ENABLE": "true"
             }
         },
         {

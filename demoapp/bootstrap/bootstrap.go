@@ -4,12 +4,12 @@ import (
 	hnd "github.com/brunojet/go-infra-backend/demoapp/handlers"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
 	svc "github.com/brunojet/go-infra-backend/demoapp/services"
+	dbcontracts "github.com/brunojet/go-infra-backend/internal/database/contracts"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func SetupHelloWorldModule(gormDB *gorm.DB, rg *gin.RouterGroup) error {
-	helloWorldRepo := repo.NewHelloWorldRepo(gormDB)
+func SetupHelloWorldModule(db dbcontracts.DatabaseAdapter, rg *gin.RouterGroup) error {
+	helloWorldRepo := repo.NewHelloWorldRepo(db)
 	helloWorldService := svc.NewHelloWorldService(helloWorldRepo)
 	helloWorldHandler := hnd.NewHelloWorldHandler(helloWorldService)
 	helloWorldHandler.Register(rg, "POST", "/helloworlds/", helloWorldHandler.Create)

@@ -6,26 +6,18 @@ import (
 	"testing"
 
 	"github.com/brunojet/go-infra-backend/internal/observability/exporters"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewOTLPMetricProvider(t *testing.T) {
 	os.Unsetenv(exporters.OTLPEndpointEnv)
 	ctx := context.Background()
 	exporter, err := exporters.NewOTLPMetricExporter(ctx)
-	if err != nil {
-		t.Fatalf("NewOTLPMetricExporter error: %v", err)
-	}
+	require.NoError(t, err)
 	mp, shutdown, err := NewOTLPMetricProvider(ctx, exporter)
-	if err != nil {
-		t.Fatalf("NewOTLPMetricProvider error: %v", err)
-	}
-	if mp == nil {
-		t.Fatalf("expected meter provider, got nil")
-	}
-	if shutdown == nil {
-		t.Fatalf("expected shutdown function, got nil")
-	}
-	if err := shutdown(ctx); err != nil {
-		t.Fatalf("shutdown error: %v", err)
-	}
+	require.NoError(t, err)
+	assert.NotNil(t, mp)
+	require.NotNil(t, shutdown)
+	assert.NoError(t, shutdown(ctx))
 }

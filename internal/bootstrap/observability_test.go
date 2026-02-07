@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -55,12 +56,27 @@ func TestInitObservability_All_NoErrors(t *testing.T) {
 	assert.NoError(sm.ShutdownWithTimeout(2 * time.Second))
 }
 
+func TestInitLogger_NilFuncs_NoError(t *testing.T) {
+	sm := NewShutdownManager(context.Background())
+	require.NoError(t, initLogger(sm, nil))
+}
+
+func TestInitMetrics_NilFuncs_NoError(t *testing.T) {
+	sm := NewShutdownManager(context.Background())
+	require.NoError(t, initMetrics(sm, nil))
+}
+
+func TestInitTracing_NilFuncs_NoError(t *testing.T) {
+	sm := NewShutdownManager(context.Background())
+	require.NoError(t, initTracing(sm, nil))
+}
+
 func TestInitLogger_ExporterError(t *testing.T) {
 	assert := assert.New(t)
 	sm := NewShutdownManager(context.Background())
 
 	bad := &InitLoggerFuncs{
-		ExporterFunc: func(ctx context.Context) (sdklog.Exporter, error) {
+		ExporterFunc: func(ctx context.Context) ([]sdklog.Exporter, error) {
 			return nil, errors.New("exporter-fail")
 		},
 		ProviderFunc: func(ctx context.Context, exporters ...sdklog.Exporter) (*sdklog.LoggerProvider, func(context.Context) error, error) {
@@ -150,7 +166,7 @@ func TestInitLogger_ProviderError(t *testing.T) {
 	sm := NewShutdownManager(context.Background())
 
 	bad := &InitLoggerFuncs{
-		ExporterFunc: func(ctx context.Context) (sdklog.Exporter, error) {
+		ExporterFunc: func(ctx context.Context) ([]sdklog.Exporter, error) {
 			return nil, nil
 		},
 		ProviderFunc: func(ctx context.Context, exporters ...sdklog.Exporter) (*sdklog.LoggerProvider, func(context.Context) error, error) {
@@ -172,7 +188,7 @@ func TestInitObservability_LoggerErrorStopsSequence(t *testing.T) {
 
 	initFuncs := InitObservabilityFuncs{
 		InitLoggerFuncs: &InitLoggerFuncs{
-			ExporterFunc: func(ctx context.Context) (sdklog.Exporter, error) {
+			ExporterFunc: func(ctx context.Context) ([]sdklog.Exporter, error) {
 				return nil, errors.New("logger-fail")
 			},
 			ProviderFunc: func(ctx context.Context, exporters ...sdklog.Exporter) (*sdklog.LoggerProvider, func(context.Context) error, error) {
@@ -214,7 +230,7 @@ func TestInitObservability_MetricErrorStopsSequence(t *testing.T) {
 
 	initFuncs := InitObservabilityFuncs{
 		InitLoggerFuncs: &InitLoggerFuncs{
-			ExporterFunc: func(ctx context.Context) (sdklog.Exporter, error) {
+			ExporterFunc: func(ctx context.Context) ([]sdklog.Exporter, error) {
 				return nil, nil
 			},
 			ProviderFunc: func(ctx context.Context, exporters ...sdklog.Exporter) (*sdklog.LoggerProvider, func(context.Context) error, error) {
@@ -252,7 +268,7 @@ func TestInitObservability_TracerErrorReported(t *testing.T) {
 
 	initFuncs := InitObservabilityFuncs{
 		InitLoggerFuncs: &InitLoggerFuncs{
-			ExporterFunc: func(ctx context.Context) (sdklog.Exporter, error) {
+			ExporterFunc: func(ctx context.Context) ([]sdklog.Exporter, error) {
 				return nil, nil
 			},
 			ProviderFunc: func(ctx context.Context, exporters ...sdklog.Exporter) (*sdklog.LoggerProvider, func(context.Context) error, error) {

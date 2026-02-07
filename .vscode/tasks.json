@@ -30,6 +30,10 @@
 		{
 			"label": "go: vet",
 			"type": "shell",
+			"dependsOn": [
+				"go: fmt"
+			],
+			"dependsOrder": "sequence",
 			"command": "go",
 			"args": [
 				"vet",
@@ -54,8 +58,12 @@
 			}
 		},
 		{
-			"label": "go: test + coverage",
+			"label": "go: test",
 			"type": "shell",
+			"dependsOn": [
+				"go: vet"
+			],
+			"dependsOrder": "sequence",
 			"group": {
 				"kind": "build",
 				"isDefault": false
@@ -65,6 +73,12 @@
 				"reveal": "always",
 				"panel": "shared"
 			},
+			"command": "go",
+			"args": [
+				"test",
+				"-tags=debug",
+				"./..."
+			],
 			"options": {
 				"cwd": "${workspaceFolder}",
 				"shell": {
@@ -73,60 +87,145 @@
 						"/C"
 					]
 				}
+			}
+		},
+		{
+			"label": "go: coverage dir",
+			"type": "shell",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"panel": "shared"
 			},
 			"command": "cmd",
 			"args": [
 				"/C",
-				"go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out"
+				"if not exist coverage\\ mkdir coverage"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"shell": {
+					"executable": "cmd",
+					"args": [
+						"/C"
+					]
+				}
+			}
+		},
+		{
+			"label": "go: coverage profile",
+			"type": "shell",
+			"dependsOn": [
+				"go: coverage dir",
+				"go: vet"
+			],
+			"dependsOrder": "sequence",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"command": "go",
+			"args": [
+				"test",
+				"-tags=debug",
+				"./...",
+				"-coverprofile=coverage\\coverage.out"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"shell": {
+					"executable": "cmd",
+					"args": [
+						"/C"
+					]
+				}
+			}
+		},
+		{
+			"label": "go: coverage func",
+			"type": "shell",
+			"dependsOn": [
+				"go: coverage profile"
+			],
+			"dependsOrder": "sequence",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"command": "go",
+			"args": [
+				"tool",
+				"cover",
+				"-func=coverage\\coverage.out"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"shell": {
+					"executable": "cmd",
+					"args": [
+						"/C"
+					]
+				}
+			}
+		},
+		{
+			"label": "go: coverage html",
+			"type": "shell",
+			"dependsOn": [
+				"go: coverage profile"
+			],
+			"dependsOrder": "sequence",
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"command": "go",
+			"args": [
+				"tool",
+				"cover",
+				"-html=coverage\\coverage.out",
+				"-o",
+				"coverage\\coverage.html"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"shell": {
+					"executable": "cmd",
+					"args": [
+						"/C"
+					]
+				}
+			}
+		},
+		{
+			"label": "go: coverage",
+			"type": "shell",
+			"dependsOn": [
+				"go: coverage profile",
+				"go: coverage func"
+			],
+			"dependsOrder": "sequence",
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"command": "cmd",
+			"args": [
+				"/C",
+				"echo done"
 			]
-		},
-		{
-			"label": "go: test bootstrap + coverage (cmd)",
-			"type": "shell",
-			"command": "cmd",
-			"args": [
-				"/C",
-				"go test ./internal/bootstrap -coverprofile=bootstrap.cover.out && go tool cover -func=bootstrap.cover.out"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "build"
-		},
-		{
-			"label": "go: cover bootstrap to file (cmd)",
-			"type": "shell",
-			"command": "cmd",
-			"args": [
-				"/C",
-				"go test ./internal/bootstrap -coverprofile=bootstrap.cover.out && go tool cover -func=bootstrap.cover.out > bootstrap.cover.txt"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "build"
-		},
-		{
-			"label": "go: cover bootstrap single test (cmd)",
-			"type": "shell",
-			"command": "cmd",
-			"args": [
-				"/C",
-				"go test ./internal/bootstrap -run TestShutdownManager_Shutdown_WrapperExecutesHandlers -count=1 -coverprofile=bootstrap.single.cover.out && go tool cover -func=bootstrap.single.cover.out > bootstrap.single.cover.txt"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "build"
-		},
-		{
-			"label": "go: cover bootstrap to file (cmd, no cache)",
-			"type": "shell",
-			"command": "cmd",
-			"args": [
-				"/C",
-				"go test ./internal/bootstrap -count=1 -coverprofile=bootstrap.cover.out && go tool cover -func=bootstrap.cover.out > bootstrap.cover.txt"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "build"
 		}
 	]
 }

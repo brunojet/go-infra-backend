@@ -4,16 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"regexp"
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/brunojet/go-infra-backend/internal/database"
-	dbcontracts "github.com/brunojet/go-infra-backend/internal/database/contracts"
-	"github.com/brunojet/go-infra-backend/internal/ports/repositories"
+	"github.com/brunojet/go-infra-backend/debugassert"
+
 	repoContracts "github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
 	"github.com/brunojet/go-infra-backend/internal/ports/services/contracts"
 	"github.com/brunojet/go-infra-backend/internal/utils"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 )
@@ -64,31 +65,25 @@ type TestDTO struct {
 type TestMapper struct{}
 
 func (m TestMapper) GetModelKey(id string) (map[string]any, error) {
+	matched, _ := regexp.MatchString(`^\d+$`, id)
+	if !matched {
+		return nil, errors.New("invalid id")
+	}
 	return map[string]any{"id": id}, nil
 }
 
-func (m TestMapper) ToModel(d *TestDTO) (TestModel, error) {
-	if d == nil {
-		return TestModel{}, nil
-	}
-	var mdl TestModel
-	mdl.Name = utils.ToNullString(d.Name)
-	return mdl, nil
+func (m TestMapper) ToModel(dto *TestDTO, model *TestModel) {
+	debugassert.Assert(dto != nil, "ToModel: dto is nil")
+	debugassert.Assert(model != nil, "ToModel: model is nil")
+	model.Name = utils.ToNullString(dto.Name)
 }
 
-func (m TestMapper) ToDTO(mdl *TestModel, dto *TestDTO) {
-	if dto == nil {
-		return
-	}
-	if mdl == nil {
-		*dto = TestDTO{}
-		return
-	}
-	dto.ID = utils.Int64ToString(mdl.ID)
-	if mdl.Name.Valid {
-		dto.Name = utils.FromNullString(mdl.Name)
-	}
-	dto.auditDto.ToDTOPtr(&mdl.AuditedEntity)
+func (m TestMapper) ToDTO(model *TestModel, dto *TestDTO) {
+	debugassert.Assert(model != nil, "ToDTO: model is nil")
+	debugassert.Assert(dto != nil, "ToDTO: dto is nil")
+	dto.ID = utils.Int64ToString(model.ID)
+	dto.Name = utils.FromNullString(model.Name)
+	dto.auditDto.ToDTOPtr(&model.AuditedEntity)
 }
 
 func testCreateDTO(t *testing.T, svc contracts.Service[TestDTO, TestModel], ctx context.Context, in TestDTO) TestDTO {
@@ -109,37 +104,46 @@ func testCreateDTO(t *testing.T, svc contracts.Service[TestDTO, TestModel], ctx 
 	return out
 }
 
-func openMemoryDB(t *testing.T) (dbcontracts.Database, func()) {
-	t.Helper()
-	db, err := database.NewSQLiteDatabase("memory")
-	assert.NoError(t, err)
-
-	err = db.GormDB().AutoMigrate(&TestModel{})
-	assert.NoError(t, err)
-
-	return db, func() { _ = db.Close() }
-}
-
 func TestGenericService_Create(t *testing.T) {
-	db, cleanup := openMemoryDB(t)
-	defer cleanup()
-	repo := repositories.NewGormRepository[TestModel](db.GormDB())
-	svc := NewServiceImpl(repoContracts.Repository[TestModel](repo), TestMapper{})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repo := NewMockRepository[TestModel](ctrl)
+	svc := NewServiceImpl(repo, TestMapper{})
 	ctx := context.Background()
+
+	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *TestModel) error {
+		inOut.ID = 1
+		now := time.Now().UTC()
+		inOut.CreatedAt = now
+		inOut.UpdatedAt = now
+		return nil
+	})
 
 	in := TestDTO{Name: "one"}
 	testCreateDTO(t, svc, ctx, in)
 }
 
 func TestGenericService_GetByID(t *testing.T) {
-	db, cleanup := openMemoryDB(t)
-	defer cleanup()
-	repo := repositories.NewGormRepository[TestModel](db.GormDB())
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repo := NewMockRepository[TestModel](ctrl)
 	svc := NewServiceImpl(repoContracts.Repository[TestModel](repo), TestMapper{})
 	ctx := context.Background()
 
+	var createdModel TestModel
+	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *TestModel) error {
+		inOut.ID = 2
+		now := time.Now().UTC()
+		inOut.CreatedAt = now
+		inOut.UpdatedAt = now
+		createdModel = *inOut
+		return nil
+	})
+
 	in := TestDTO{Name: "two"}
 	out := testCreateDTO(t, svc, ctx, in)
+
+	repo.EXPECT().GetByID(gomock.Any(), gomock.Any()).Return(createdModel, nil)
 
 	got, err := svc.GetByID(ctx, out.ID)
 	assert.NoError(t, err)
@@ -147,9 +151,9 @@ func TestGenericService_GetByID(t *testing.T) {
 }
 
 func TestGenericService_List(t *testing.T) {
-	db, cleanup := openMemoryDB(t)
-	defer cleanup()
-	repo := repositories.NewGormRepository[TestModel](db.GormDB())
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repo := NewMockRepository[TestModel](ctrl)
 	svc := NewServiceImpl(repoContracts.Repository[TestModel](repo), TestMapper{})
 	ctx := context.Background()
 
@@ -158,12 +162,19 @@ func TestGenericService_List(t *testing.T) {
 		{Name: "List Created 2"},
 	}
 
+	models := make([]TestModel, 0, len(inTestData))
 	outTestData := make(map[string]any, len(inTestData))
-
-	for _, in := range inTestData {
-		out := testCreateDTO(t, svc, ctx, in)
-		outTestData[out.ID] = out
+	for i, in := range inTestData {
+		id := int64(i + 1)
+		now := time.Now().UTC()
+		m := TestModel{ID: id, Name: utils.ToNullString(in.Name), AuditedEntity: AuditedEntity{CreatedAt: now, UpdatedAt: now}}
+		models = append(models, m)
+		var dto TestDTO
+		TestMapper{}.ToDTO(&m, &dto)
+		outTestData[dto.ID] = dto
 	}
+
+	repo.EXPECT().List(gomock.Any(), gomock.Any()).Return(models, len(models), nil)
 
 	list, err := svc.List(ctx, len(inTestData))
 	assert.NoError(t, err)
@@ -174,15 +185,33 @@ func TestGenericService_List(t *testing.T) {
 }
 
 func TestGenericService_Update(t *testing.T) {
-	db, cleanup := openMemoryDB(t)
-	defer cleanup()
-	repo := repositories.NewGormRepository[TestModel](db.GormDB())
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repo := NewMockRepository[TestModel](ctrl)
 	svc := NewServiceImpl(repoContracts.Repository[TestModel](repo), TestMapper{})
 	ctx := context.Background()
 
+	var created TestModel
+	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *TestModel) error {
+		inOut.ID = 10
+		now := time.Now().UTC()
+		inOut.CreatedAt = now
+		inOut.UpdatedAt = now
+		created = *inOut
+		return nil
+	})
+
 	in := TestDTO{Name: "Update_Created"}
 	out := testCreateDTO(t, svc, ctx, in)
-	time.Sleep(1 * time.Second)
+
+	repo.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, id map[string]any, inOut *TestModel) error {
+		// simulate update: keep ID and CreatedAt, change Name and UpdatedAt
+		inOut.ID = created.ID
+		inOut.CreatedAt = created.CreatedAt
+		now := created.CreatedAt.Add(2 * time.Second)
+		inOut.UpdatedAt = now
+		return nil
+	})
 
 	upd := TestDTO{Name: "Update_Updated"}
 	err := svc.Update(ctx, out.ID, &upd)
@@ -193,14 +222,24 @@ func TestGenericService_Update(t *testing.T) {
 }
 
 func TestGenericService_Delete(t *testing.T) {
-	db, cleanup := openMemoryDB(t)
-	defer cleanup()
-	repo := repositories.NewGormRepository[TestModel](db.GormDB())
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repo := NewMockRepository[TestModel](ctrl)
 	svc := NewServiceImpl(repoContracts.Repository[TestModel](repo), TestMapper{})
 	ctx := context.Background()
 
+	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *TestModel) error {
+		inOut.ID = 20
+		now := time.Now().UTC()
+		inOut.CreatedAt = now
+		inOut.UpdatedAt = now
+		return nil
+	})
+
 	in := TestDTO{Name: "Delete_ToBeDeleted"}
 	out := testCreateDTO(t, svc, ctx, in)
+
+	repo.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(nil)
 
 	err := svc.Delete(ctx, out.ID)
 	assert.NoError(t, err)
@@ -230,27 +269,80 @@ func (e *errRepo) WithTx(ctx context.Context, fn func(ctx context.Context) error
 }
 
 func TestGenericService_Errors(t *testing.T) {
-	svc := NewServiceImpl(&errRepo{}, TestMapper{})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repo := NewMockRepository[TestModel](ctrl)
+	svc := NewServiceImpl(repo, TestMapper{})
 	ctx := context.Background()
 
-	// Create error
+	// Create repo error
 	got := TestDTO{Name: "x"}
+	repo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
 	err := svc.Create(ctx, &got)
 	assert.Error(t, err)
 
-	// GetByID error
+	// GetByID mapper error (non-numeric id)
 	_, err = svc.GetByID(ctx, "nope")
 	assert.Error(t, err)
 
-	// List error
+	// List repo error
+	repo.EXPECT().List(gomock.Any(), gomock.Any()).Return(nil, 0, errors.New("repo error"))
 	_, err = svc.List(ctx, 0)
 	assert.Error(t, err)
 
-	// Update error
+	// Update: mapper GetModelKey error when id non-numeric
 	var u TestDTO
 	err = svc.Update(ctx, "nope", &u)
 	assert.Error(t, err)
 
-	// Delete error
+	// Update: repo error when id numeric
+	repo.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
+	err = svc.Update(ctx, "1", &u)
+	assert.Error(t, err)
+
+	// Delete: mapper error for non-numeric id
 	assert.Error(t, svc.Delete(ctx, "nope"))
+
+	// Delete: repo error for numeric id
+	repo.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
+	assert.Error(t, svc.Delete(ctx, "1"))
+}
+
+func TestGenericService_GetByID_RepoError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repo := NewMockRepository[TestModel](ctrl)
+	svc := NewServiceImpl(repo, TestMapper{})
+	ctx := context.Background()
+
+	repo.EXPECT().GetByID(gomock.Any(), gomock.Any()).Return(TestModel{}, errors.New("repo error"))
+
+	_, err := svc.GetByID(ctx, "1")
+	assert.Error(t, err)
+}
+
+func TestGenericService_Update_RepoError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repo := NewMockRepository[TestModel](ctrl)
+	svc := NewServiceImpl(repo, TestMapper{})
+	ctx := context.Background()
+
+	repo.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
+
+	err := svc.Update(ctx, "1", &TestDTO{Name: "u"})
+	assert.Error(t, err)
+}
+
+func TestGenericService_Delete_RepoError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repo := NewMockRepository[TestModel](ctrl)
+	svc := NewServiceImpl(repo, TestMapper{})
+	ctx := context.Background()
+
+	repo.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
+
+	err := svc.Delete(ctx, "1")
+	assert.Error(t, err)
 }

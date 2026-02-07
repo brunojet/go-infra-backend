@@ -19,9 +19,18 @@ func main() {
 
 	databasePath := strings.TrimSpace(os.Getenv("DEMOAPP_SQLITE_PATH"))
 
-	db := bootstrap.NewMySQLDatabaseWithObservability(databasePath, sm)
+	db, err := bootstrap.NewSQLiteDatabaseWithObservability(databasePath, sm)
 
-	if err := db.GormDB().AutoMigrate(&demoapprepo.HelloWorld{}); err != nil {
+	if err != nil {
+		log.Fatalf("failed to create database: %v", err)
+	}
+
+	gormDb, err := db.GormDB()
+	if err != nil {
+		log.Fatalf("failed to get gorm DB: %v", err)
+	}
+
+	if err := gormDb.AutoMigrate(&demoapprepo.HelloWorld{}); err != nil {
 		log.Fatalf("failed to migrate: %v", err)
 	}
 
@@ -29,7 +38,7 @@ func main() {
 
 	api := httpServer.Router.Group("/")
 
-	if err := demoapp.SetupHelloWorldModule(db.GormDB(), api); err != nil {
+	if err := demoapp.SetupHelloWorldModule(db, api); err != nil {
 		log.Fatalf("failed to setup demoapp module: %v", err)
 	}
 

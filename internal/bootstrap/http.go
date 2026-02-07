@@ -29,7 +29,7 @@ func NewHttpServerWithObservability(sm contracts.ShutdownManager) *HttpServer {
 	router.Use(gin.Recovery())
 	router.Use(middlewares.OtelGinMiddleware())
 	router.Use(middlewares.OTLPErrorLogMiddleware(middlewares.WithMinStatus(http.StatusBadRequest)))
-	addr := config.Get(httpAddrEnv, defaultHTTPAddr)
+	addr := config.GetEnv(httpAddrEnv, defaultHTTPAddr)
 	srv := http.Server{
 		Addr:    addr,
 		Handler: router,

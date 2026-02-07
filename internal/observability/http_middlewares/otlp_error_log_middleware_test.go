@@ -2,13 +2,16 @@ package middlewares
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
+	otellog "go.opentelemetry.io/otel/log"
 	otellogglobal "go.opentelemetry.io/otel/log/global"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -67,17 +70,110 @@ func TestOTLPErrorLogMiddleware_EmitsLogWithTraceContext(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("unexpected status: %d", w.Code)
-	}
+	require.Equal(t, http.StatusBadRequest, w.Code)
 
 	recs := logExp.snapshot()
-	if len(recs) == 0 {
-		t.Fatalf("expected at least one log record, got 0")
-	}
+	require.NotEmpty(t, recs, "expected at least one log record")
 
 	// The SDK can link logs to trace/span via ctx. We assert TraceID is set.
-	if !recs[0].TraceID().IsValid() {
-		t.Fatalf("expected log record to have valid TraceID")
-	}
+	require.True(t, recs[0].TraceID().IsValid(), "expected log record to have valid TraceID")
+}
+
+func TestSeverityForHTTPStatus_AllCases(t *testing.T) {
+	require.Equal(t, otellog.SeverityInfo, severityForHTTPStatus(200))
+	require.Equal(t, otellog.SeverityWarn, severityForHTTPStatus(400))
+	require.Equal(t, otellog.SeverityError, severityForHTTPStatus(500))
+}
+
+func TestOTLPErrorLogMiddleware_EmitsWhenGinErrorsEvenIfStatusBelowMin(t *testing.T) {
+	prevProvider := otellogglobal.GetLoggerProvider()
+	defer otellogglobal.SetLoggerProvider(prevProvider)
+
+	logExp := &memoryLogExporter{}
+	lp := sdklog.NewLoggerProvider(sdklog.WithProcessor(sdklog.NewSimpleProcessor(logExp)))
+	otellogglobal.SetLoggerProvider(lp)
+	defer lp.Shutdown(context.Background())
+
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(OtelGinMiddleware())
+	r.Use(OTLPErrorLogMiddleware()) // default minStatus = 500
+
+	r.GET("/ok-with-error", func(c *gin.Context) {
+		c.Error(errors.New("boom-error"))
+		c.String(http.StatusOK, "ok")
+	})
+
+	req := httptest.NewRequest("GET", "/ok-with-error", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	recs := logExp.snapshot()
+	require.NotEmpty(t, recs, "expected at least one log record")
+
+	// body should include the gin error text
+	require.Contains(t, recs[0].Body().AsString(), "boom-error")
+
+	// severity for status 200 should be Info
+	require.Equal(t, otellog.SeverityInfo, recs[0].Severity())
+}
+
+func TestOTLPErrorLogMiddleware_DefaultMinStatus_EmitsOn500(t *testing.T) {
+	prevProvider := otellogglobal.GetLoggerProvider()
+	defer otellogglobal.SetLoggerProvider(prevProvider)
+
+	logExp := &memoryLogExporter{}
+	lp := sdklog.NewLoggerProvider(sdklog.WithProcessor(sdklog.NewSimpleProcessor(logExp)))
+	otellogglobal.SetLoggerProvider(lp)
+	defer lp.Shutdown(context.Background())
+
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(OtelGinMiddleware())
+	r.Use(OTLPErrorLogMiddleware()) // default minStatus = 500
+
+	r.GET("/internal", func(c *gin.Context) {
+		c.AbortWithStatus(http.StatusInternalServerError)
+	})
+
+	req := httptest.NewRequest("GET", "/internal", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+
+	recs := logExp.snapshot()
+	require.NotEmpty(t, recs, "expected at least one log record")
+
+	require.Equal(t, otellog.SeverityError, recs[0].Severity())
+}
+
+func TestOTLPErrorLogMiddleware_ReturnsWhenBelowMinStatusAndNoErrors(t *testing.T) {
+	prevProvider := otellogglobal.GetLoggerProvider()
+	defer otellogglobal.SetLoggerProvider(prevProvider)
+
+	logExp := &memoryLogExporter{}
+	lp := sdklog.NewLoggerProvider(sdklog.WithProcessor(sdklog.NewSimpleProcessor(logExp)))
+	otellogglobal.SetLoggerProvider(lp)
+	defer lp.Shutdown(context.Background())
+
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(OtelGinMiddleware())
+	r.Use(OTLPErrorLogMiddleware()) // default minStatus = 500
+
+	r.GET("/ok", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
+	})
+
+	req := httptest.NewRequest("GET", "/ok", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	recs := logExp.snapshot()
+	require.Empty(t, recs, "expected 0 log records")
 }

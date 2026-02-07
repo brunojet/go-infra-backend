@@ -20,23 +20,11 @@ func (helloWorldMapper) GetModelKey(id string) (map[string]any, error) {
 	return map[string]any{"id": id}, nil
 }
 
-func (helloWorldMapper) ToModel(dto *HelloWorldDTO) (helloWorldRepo.HelloWorld, error) {
-	if dto == nil {
-		return helloWorldRepo.HelloWorld{}, nil
-	}
-	var mdl helloWorldRepo.HelloWorld
-	mdl.Message = utils.ToNullString(dto.Message)
-	return mdl, nil
+func (helloWorldMapper) ToModel(dto *HelloWorldDTO, model *helloWorldRepo.HelloWorld) {
+	model.Message = utils.ToNullString(dto.Message)
 }
 
 func (helloWorldMapper) ToDTO(mdl *helloWorldRepo.HelloWorld, dto *HelloWorldDTO) {
-	if dto == nil {
-		return
-	}
-	if mdl == nil {
-		*dto = HelloWorldDTO{}
-		return
-	}
 	dto.ID = mdl.ID
 	dto.Message = utils.FromNullString(mdl.Message)
 }

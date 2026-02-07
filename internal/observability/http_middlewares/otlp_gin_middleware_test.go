@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -28,13 +29,8 @@ func TestTracingMiddleware_CreatesSpan(t *testing.T) {
 	req := httptest.NewRequest("GET", "/ping", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-
-	if w.Code != 200 {
-		t.Fatalf("unexpected status: %d", w.Code)
-	}
+	assert.Equal(t, 200, w.Code)
 
 	spans := exp.GetSpans()
-	if len(spans) == 0 {
-		t.Fatalf("expected at least one span, got 0")
-	}
+	assert.NotEmpty(t, spans)
 }

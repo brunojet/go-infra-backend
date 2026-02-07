@@ -12,6 +12,6 @@ import (
 
 // NewOtelGormPlugin returns the GORM OpenTelemetry tracing plugin instance.
 // Callers should register it with `db.Use(...)` on their `*gorm.DB`.
-func NewOtelGormPlugin() (gorm.Plugin, error) {
-	return tracing.NewPlugin(), nil
+func NewOtelGormPlugin() gorm.Plugin {
+	return tracing.NewPlugin()
 }

@@ -8,7 +8,7 @@ import (
 
 const (
 	// OTELServiceNameEnv is the env var key for overriding the OTel service name
-	oTELServiceNameEnv = "OTEL_SERVICE_NAME"
+	otelServiceNameEnv = "OTEL_SERVICE_NAME"
 	// defaultServiceName is the fallback service name used when env var is not set
 	defaultServiceName = "github.com/brunojet/go-infra-backend"
 )
@@ -17,6 +17,6 @@ const (
 // The service name can be configured via OTEL_SERVICE_NAME env var. Default keeps
 // the previous hardcoded service name.
 func OtelGinMiddleware() gin.HandlerFunc {
-	svc := config.Get(oTELServiceNameEnv, defaultServiceName)
+	svc := config.GetEnv(otelServiceNameEnv, defaultServiceName)
 	return otelgin.Middleware(svc)
 }

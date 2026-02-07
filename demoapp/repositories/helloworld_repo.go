@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 
+	dbcontracts "github.com/brunojet/go-infra-backend/internal/database/contracts"
 	"github.com/brunojet/go-infra-backend/internal/ports/repositories"
 	"github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
-	"gorm.io/gorm"
 )
 
 type HelloWorld struct {
@@ -22,12 +22,12 @@ type HelloWorldRepo struct {
 	contracts.Repository[HelloWorld]
 }
 
-func NewHelloWorldRepo(db *gorm.DB) contracts.Repository[HelloWorld] {
+func NewHelloWorldRepo(db dbcontracts.DatabaseAdapter) contracts.Repository[HelloWorld] {
 	return &HelloWorldRepo{
 		Repository: repositories.NewGormRepository[HelloWorld](db),
 	}
 }
 
 func (h *HelloWorldRepo) FindByMessage(ctx context.Context, message string, out *HelloWorld) error {
-	return repositories.MapDbError(h.DB().WithContext(ctx).Where("message = ?", message).First(out).Error)
+	return repositories.MapDbError(h.GormDB().WithContext(ctx).Where("message = ?", message).First(out).Error)
 }
