@@ -11,6 +11,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	// HTTPAddrEnv is the env var key to override the HTTP listen address.
+	httpAddrEnv = "HTTP_ADDR"
+	// defaultHTTPAddr is the fallback address used when env var is not set.
+	defaultHTTPAddr = ":8080"
+)
+
 type HttpServer struct {
 	Router *gin.Engine
 	srv    *http.Server
@@ -22,7 +29,7 @@ func NewHttpServerWithObservability(sm contracts.ShutdownManager) *HttpServer {
 	router.Use(gin.Recovery())
 	router.Use(middlewares.OtelGinMiddleware())
 	router.Use(middlewares.OTLPErrorLogMiddleware(middlewares.WithMinStatus(http.StatusBadRequest)))
-	addr := config.Get("HTTP_ADDR", ":8080")
+	addr := config.Get(httpAddrEnv, defaultHTTPAddr)
 	srv := http.Server{
 		Addr:    addr,
 		Handler: router,

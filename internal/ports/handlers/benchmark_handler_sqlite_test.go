@@ -24,6 +24,7 @@ import (
 	"github.com/brunojet/go-infra-backend/internal/ports/repositories"
 	svcimpl "github.com/brunojet/go-infra-backend/internal/ports/services"
 	svc "github.com/brunojet/go-infra-backend/internal/ports/services/contracts"
+	"github.com/brunojet/go-infra-backend/internal/utils"
 	"github.com/gin-gonic/gin"
 	gormlogger "gorm.io/gorm/logger"
 )
@@ -231,7 +232,7 @@ func (m *complexMapper) GetModelKey(id string) (map[string]any, error) {
 	if id == "" {
 		return map[string]any{}, nil
 	}
-	parsed, err := svcimpl.StringToInt64(id)
+	parsed, err := utils.StringToInt64(id)
 	if err != nil {
 		return map[string]any{}, err
 	}
@@ -244,27 +245,27 @@ func (m *complexMapper) ToModel(dto *ComplexDTO) (ComplexModel, error) {
 	}
 	var id int64
 	if dto.ID != "" {
-		parsed, err := svcimpl.StringToInt64(dto.ID)
+		parsed, err := utils.StringToInt64(dto.ID)
 		if err != nil {
 			return ComplexModel{}, err
 		}
 		id = parsed
 	}
 
-	tagsJSON, err := svcimpl.ToJSONBytes(dto.Tags)
+	tagsJSON, err := utils.ToJSONBytes(dto.Tags)
 	if err != nil {
 		return ComplexModel{}, err
 	}
 
-	nm := svcimpl.ToNullString(dto.Name)
-	bio := svcimpl.ToNullString(dto.Bio)
-	age := svcimpl.ToNullInt(dto.Age)
-	active := svcimpl.ToNullBool(dto.Active)
-	score := svcimpl.ToNullFloat(dto.Score)
-	street := svcimpl.ToNullString(dto.Address.Street)
-	city := svcimpl.ToNullString(dto.Address.City)
-	zip := svcimpl.ToNullString(dto.Address.Zip)
-	created := svcimpl.ToNullTime(&dto.CreatedAt)
+	nm := utils.ToNullString(dto.Name)
+	bio := utils.ToNullString(dto.Bio)
+	age := utils.ToNullInt(dto.Age)
+	active := utils.ToNullBool(dto.Active)
+	score := utils.ToNullFloat(dto.Score)
+	street := utils.ToNullString(dto.Address.Street)
+	city := utils.ToNullString(dto.Address.City)
+	zip := utils.ToNullString(dto.Address.Zip)
+	created := utils.ToNullTime(&dto.CreatedAt)
 
 	return ComplexModel{
 		ID:         id,
@@ -291,19 +292,19 @@ func (m *complexMapper) ToDTO(model *ComplexModel, dto *ComplexDTO) {
 	}
 	var tags []string
 	if len(model.TagsJSON) > 0 {
-		_ = svcimpl.FromJSONBytes(model.TagsJSON, &tags)
+		_ = utils.FromJSONBytes(model.TagsJSON, &tags)
 	}
-	dto.ID = svcimpl.Int64ToString(model.ID)
-	dto.Name = svcimpl.FromNullString(model.Name)
-	dto.Bio = svcimpl.FromNullString(model.Bio)
-	dto.Age = svcimpl.FromNullInt(model.Age)
-	dto.Active = svcimpl.FromNullBool(model.Active)
-	dto.Score = svcimpl.FromNullFloat(model.Score)
+	dto.ID = utils.Int64ToString(model.ID)
+	dto.Name = utils.FromNullString(model.Name)
+	dto.Bio = utils.FromNullString(model.Bio)
+	dto.Age = utils.FromNullInt(model.Age)
+	dto.Active = utils.FromNullBool(model.Active)
+	dto.Score = utils.FromNullFloat(model.Score)
 	dto.Tags = tags
 	if model.AddrStreet.Valid || model.AddrCity.Valid || model.AddrZip.Valid {
-		dto.Address = AddressDTO{Street: svcimpl.FromNullString(model.AddrStreet), City: svcimpl.FromNullString(model.AddrCity), Zip: svcimpl.FromNullString(model.AddrZip)}
+		dto.Address = AddressDTO{Street: utils.FromNullString(model.AddrStreet), City: utils.FromNullString(model.AddrCity), Zip: utils.FromNullString(model.AddrZip)}
 	}
-	if t := svcimpl.FromNullTime(model.CreatedAt); t != nil {
+	if t := utils.FromNullTime(model.CreatedAt); t != nil {
 		dto.CreatedAt = *t
 	}
 }

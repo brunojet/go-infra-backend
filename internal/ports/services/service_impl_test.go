@@ -13,6 +13,7 @@ import (
 	"github.com/brunojet/go-infra-backend/internal/ports/repositories"
 	repoContracts "github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
 	"github.com/brunojet/go-infra-backend/internal/ports/services/contracts"
+	"github.com/brunojet/go-infra-backend/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 )
@@ -71,7 +72,7 @@ func (m TestMapper) ToModel(d *TestDTO) (TestModel, error) {
 		return TestModel{}, nil
 	}
 	var mdl TestModel
-	mdl.Name = ToNullString(d.Name)
+	mdl.Name = utils.ToNullString(d.Name)
 	return mdl, nil
 }
 
@@ -83,9 +84,9 @@ func (m TestMapper) ToDTO(mdl *TestModel, dto *TestDTO) {
 		*dto = TestDTO{}
 		return
 	}
-	dto.ID = Int64ToString(mdl.ID)
+	dto.ID = utils.Int64ToString(mdl.ID)
 	if mdl.Name.Valid {
-		dto.Name = FromNullString(mdl.Name)
+		dto.Name = utils.FromNullString(mdl.Name)
 	}
 	dto.auditDto.ToDTOPtr(&mdl.AuditedEntity)
 }

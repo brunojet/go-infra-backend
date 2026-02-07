@@ -249,3 +249,7 @@ func TestRepositories_ClosedDB_MapsToErrDBUnavailable(t *testing.T) {
 	err = repo.Update(ctx, map[string]any{"id": "x"}, in)
 	assert.ErrorIs(t, err, ErrDBUnavailable)
 }
+
+type testEntity struct{}
+
+func (t testEntity) TableName() string { return "test_entities" }

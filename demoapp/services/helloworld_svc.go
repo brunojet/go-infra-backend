@@ -5,6 +5,7 @@ import (
 	repoContracts "github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
 	svc "github.com/brunojet/go-infra-backend/internal/ports/services"
 	svcContracts "github.com/brunojet/go-infra-backend/internal/ports/services/contracts"
+	"github.com/brunojet/go-infra-backend/internal/utils"
 )
 
 type HelloWorldDTO struct {
@@ -24,7 +25,7 @@ func (helloWorldMapper) ToModel(dto *HelloWorldDTO) (helloWorldRepo.HelloWorld, 
 		return helloWorldRepo.HelloWorld{}, nil
 	}
 	var mdl helloWorldRepo.HelloWorld
-	mdl.Message = svc.ToNullString(dto.Message)
+	mdl.Message = utils.ToNullString(dto.Message)
 	return mdl, nil
 }
 
@@ -37,7 +38,7 @@ func (helloWorldMapper) ToDTO(mdl *helloWorldRepo.HelloWorld, dto *HelloWorldDTO
 		return
 	}
 	dto.ID = mdl.ID
-	dto.Message = svc.FromNullString(mdl.Message)
+	dto.Message = utils.FromNullString(mdl.Message)
 }
 
 type HelloWorldService struct {

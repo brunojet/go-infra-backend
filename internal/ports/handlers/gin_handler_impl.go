@@ -27,12 +27,10 @@ func (h *GinHandler[E, D]) Create(c *gin.Context) {
 	if err != nil {
 		return
 	}
-
 	if err := h.service.Create(c.Request.Context(), dto); err != nil {
 		SetResponseFromError(c, err)
 		return
 	}
-
 	c.JSON(http.StatusCreated, dto)
 }
 
@@ -53,6 +51,7 @@ func (h *GinHandler[E, D]) List(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, list)
+
 }
 
 func (h *GinHandler[E, D]) Update(c *gin.Context) {
@@ -61,12 +60,10 @@ func (h *GinHandler[E, D]) Update(c *gin.Context) {
 	if err != nil {
 		return
 	}
-
 	if err := h.service.Update(c.Request.Context(), id, dto); err != nil {
 		SetResponseFromError(c, err)
 		return
 	}
-
 	c.JSON(http.StatusOK, dto)
 }
 
@@ -76,6 +73,6 @@ func (h *GinHandler[E, D]) Delete(c *gin.Context) {
 		SetResponseFromError(c, err)
 		return
 	}
-
 	c.Status(http.StatusNoContent)
+	c.Writer.WriteHeaderNow()
 }
