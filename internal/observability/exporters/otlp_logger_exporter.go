@@ -9,9 +9,9 @@ import (
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 )
 
-// NewOTLPLoggerExporter cria um otlplog.Exporter a partir de um OTLPClient.
+// NewOTLPLoggerExporters cria um otlplog.Exporter a partir de um OTLPClient.
 // Retorna como sdklog.Exporter para desacoplar callers do tipo concreto.
-func NewOTLPLoggerExporter(ctx context.Context) ([]sdklog.Exporter, error) {
+func NewOTLPLoggerExporters(ctx context.Context) ([]sdklog.Exporter, error) {
 	exporterConfig := GetExporterConfigFromEnv().loggerConfig
 
 	exporters := make([]sdklog.Exporter, 0, 1)

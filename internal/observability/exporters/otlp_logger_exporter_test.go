@@ -13,7 +13,7 @@ func TestNewOTLPLoggerExporterWithEndpoint(t *testing.T) {
 	os.Setenv(OTLPEndpointEnv, otlpEndpointDefault)
 	defer os.Unsetenv(OTLPEndpointEnv)
 	ctx := context.Background()
-	exp, err := NewOTLPLoggerExporter(ctx)
+	exp, err := NewOTLPLoggerExporters(ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, exp)
 }
@@ -21,7 +21,7 @@ func TestNewOTLPLoggerExporterWithEndpoint(t *testing.T) {
 func TestNewOTLPLoggerExporterWithoutEndpoint(t *testing.T) {
 	os.Unsetenv(OTLPEndpointEnv)
 	ctx := context.Background()
-	exp, err := NewOTLPLoggerExporter(ctx)
+	exp, err := NewOTLPLoggerExporters(ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, exp)
 }
@@ -33,7 +33,7 @@ func TestNewOTLPLoggerExporterWithoutEndpointAndConsoleDisabled_ReturnsNoop(t *t
 	t.Setenv(consoleLoggerRedirectEnv, "false")
 
 	ctx := context.Background()
-	exp, err := NewOTLPLoggerExporter(ctx)
+	exp, err := NewOTLPLoggerExporters(ctx)
 	assert.NoError(t, err)
 	assert.Len(t, exp, 1)
 	assert.IsType(t, &noopLoggerExporter{}, exp[0])

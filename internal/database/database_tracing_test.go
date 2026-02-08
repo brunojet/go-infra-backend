@@ -21,7 +21,7 @@ type testEntity struct {
 func TestCreateRead_ExportsTrace(t *testing.T) {
 	ctx := context.Background()
 
-	loggerExporter, err := exporters.NewOTLPLoggerExporter(ctx)
+	loggerExporter, err := exporters.NewOTLPLoggerExporters(ctx)
 	assert.NoError(t, err)
 	_, shutdown, err := providers.NewOTLPLoggerProvider(ctx, loggerExporter...)
 	assert.NoError(t, err)
