@@ -62,8 +62,8 @@ func TestStartAndWaitTermination_ListenError(t *testing.T) {
 
 	select {
 	case err := <-done:
-		// StartAndWaitTermination always returns nil, but we ensure it completes
-		assert.NoError(err)
+		assert.Error(err)
+		assert.Contains(err.Error(), "invalid port")
 	case <-time.After(2 * time.Second):
 		assert.Fail("timeout waiting for server to report error")
 	}

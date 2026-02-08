@@ -4,7 +4,7 @@ import (
 	helloworldRepo "github.com/brunojet/go-infra-backend/demoapp/repositories"
 	helloworldSvc "github.com/brunojet/go-infra-backend/demoapp/services"
 	hnd "github.com/brunojet/go-infra-backend/internal/ports/handlers"
-	svcContracts "github.com/brunojet/go-infra-backend/internal/ports/services/contracts"
+	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
 type HelloWorldHandler struct {

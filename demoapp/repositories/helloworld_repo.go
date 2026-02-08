@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 
-	dbcontracts "github.com/brunojet/go-infra-backend/internal/database/contracts"
 	"github.com/brunojet/go-infra-backend/internal/ports/repositories"
-	"github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 )
 
 type HelloWorld struct {

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	dbadpt "github.com/brunojet/go-infra-backend/internal/database/adapters"
-	"github.com/brunojet/go-infra-backend/internal/database/contracts"
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
 	"gorm.io/gorm"
 )
 
@@ -13,10 +13,10 @@ import (
 // closed when no longer needed.
 
 type databaseManagerImpl struct {
-	db contracts.DatabaseAdapter
+	db dbcontracts.DatabaseAdapter
 }
 
-func (d *databaseManagerImpl) DatabaseAdapter() contracts.DatabaseAdapter {
+func (d *databaseManagerImpl) DatabaseAdapter() dbcontracts.DatabaseAdapter {
 	return d.db
 }
 
@@ -32,7 +32,7 @@ func (d *databaseManagerImpl) Shutdown(ctx context.Context) error {
 	return d.db.Close()
 }
 
-func NewDatabaseManager(adapter contracts.DatabaseAdapter, plugins ...gorm.Plugin) (contracts.DatabaseManager, error) {
+func NewDatabaseManager(adapter dbcontracts.DatabaseAdapter, plugins ...gorm.Plugin) (dbcontracts.DatabaseManager, error) {
 	if len(plugins) > 0 {
 		gormDb, err := adapter.GormDB()
 		if err != nil {
@@ -54,7 +54,7 @@ func NewDatabaseManager(adapter contracts.DatabaseAdapter, plugins ...gorm.Plugi
 	return &databaseManagerImpl{db: adapter}, nil
 }
 
-func NewSQLiteDatabase(databasePath string, plugins ...gorm.Plugin) (contracts.DatabaseManager, error) {
+func NewSQLiteDatabase(databasePath string, plugins ...gorm.Plugin) (dbcontracts.DatabaseManager, error) {
 	db, err := dbadpt.NewSQLite(databasePath)
 	if err != nil {
 		return nil, err

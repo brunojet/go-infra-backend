@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/brunojet/go-infra-backend/debugassert"
-	dbcontracts "github.com/brunojet/go-infra-backend/internal/database/contracts"
-	"github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

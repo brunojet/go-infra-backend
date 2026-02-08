@@ -3,9 +3,9 @@ package bootstrap
 import (
 	"context"
 
-	bootcontracts "github.com/brunojet/go-infra-backend/internal/bootstrap/contracts"
 	"github.com/brunojet/go-infra-backend/internal/observability/exporters"
 	"github.com/brunojet/go-infra-backend/internal/observability/providers"
+	bootcontracts "github.com/brunojet/go-infra-backend/pkg/bootstrap/contracts"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"

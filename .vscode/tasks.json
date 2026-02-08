@@ -226,6 +226,19 @@
 				"/C",
 				"echo done"
 			]
+		},
+		{
+			"label": "go: test (debug tag)",
+			"type": "shell",
+			"command": "go",
+			"args": [
+				"test",
+				"-tags=debug",
+				"./..."
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
 		}
 	]
 }

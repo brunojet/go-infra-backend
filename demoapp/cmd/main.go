@@ -8,7 +8,7 @@ import (
 
 	demoapp "github.com/brunojet/go-infra-backend/demoapp/bootstrap"
 	demoapprepo "github.com/brunojet/go-infra-backend/demoapp/repositories"
-	"github.com/brunojet/go-infra-backend/internal/bootstrap"
+	"github.com/brunojet/go-infra-backend/pkg/bootstrap"
 )
 
 func main() {

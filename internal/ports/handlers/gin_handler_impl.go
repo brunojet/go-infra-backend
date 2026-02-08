@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	repocontracts "github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
-	svc "github.com/brunojet/go-infra-backend/internal/ports/services/contracts"
+	repocontracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	svc "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
 type GinHandler[E repocontracts.Entity, D any] struct {

@@ -11,7 +11,7 @@ import (
 
 	"github.com/brunojet/go-infra-backend/internal/database"
 	dbadpt "github.com/brunojet/go-infra-backend/internal/database/adapters"
-	"github.com/brunojet/go-infra-backend/internal/database/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/database/contracts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"

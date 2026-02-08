@@ -72,5 +72,8 @@
                 "CONSOLE_LOGGER_REDIRECT_ENABLE": "true"
 			}
 		}
+	},
+	"chat.tools.terminal.autoApprove": {
+		"go": true
 	}
 }

@@ -1,9 +1,28 @@
 package contracts
 
-import internalcontracts "github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
+import (
+	"context"
 
-type ListParams = internalcontracts.ListParams
+	"gorm.io/gorm"
+)
 
-type Entity = internalcontracts.Entity
+type ListParams struct {
+	Page    int
+	Size    int
+	OrderBy string
+	Order   string
+}
 
-type Repository[E Entity] = internalcontracts.Repository[E]
+type Entity interface {
+	TableName() string
+}
+
+type Repository[E Entity] interface {
+	Create(ctx context.Context, inOut *E) error
+	GetByID(ctx context.Context, id map[string]any) (E, error)
+	List(ctx context.Context, listParams ListParams) ([]E, int, error)
+	Update(ctx context.Context, id map[string]any, inOut *E) error
+	Delete(ctx context.Context, id map[string]any) error
+	GormDB() *gorm.DB
+	WithTx(ctx context.Context, fn func(ctx context.Context) error) error
+}

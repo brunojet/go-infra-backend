@@ -1,14 +1,55 @@
 package contracts
 
-import internalcontracts "github.com/brunojet/go-infra-backend/internal/database/contracts"
+import (
+	"context"
+	"database/sql"
 
-// Minimal public database contracts re-exported from internal.
-//
-// Transitional strategy:
-// - external apps import pkg/database/*
-// - pkg/database/* delegates to internal/database/*
-// - internal/database/* remains the implementation source for now
+	"gorm.io/gorm"
+)
 
-type DatabaseAdapter = internalcontracts.DatabaseAdapter
+const (
+	DB_DRIVER_ENV               = "DB_DRIVER"
+	DB_ENDPOINT_ENV             = "DB_ENDPOINT"
+	DB_SCHEMA_ENV               = "DB_SCHEMA"
+	DB_NAME_ENV                 = "DB_NAME"
+	DB_MAX_OPEN_CONNECTIONS_ENV = "DB_MAX_OPEN_CONNECTIONS"
+	DB_MAX_IDLE_CONNECTIONS_ENV = "DB_MAX_IDLE_CONNECTIONS"
+	DB_CONN_MAX_LIFETIME_ENV    = "DB_CONN_MAX_LIFETIME"
+	DB_CONN_MAX_IDLE_TIME_ENV   = "DB_CONN_MAX_IDLE_TIME"
+)
 
-type DatabaseManager = internalcontracts.DatabaseManager
+type DatabaseDriver string
+
+const (
+	DatabaseDriverSQLiteMemory DatabaseDriver = "sqlite_memory"
+	DatabaseDriverSQLiteDisk   DatabaseDriver = "sqlite_disk"
+	DatabaseDriverPostgres     DatabaseDriver = "postgres"
+	DatabaseDriverMySQL        DatabaseDriver = "mysql"
+)
+
+// DatabaseConfig is a generic database configuration object.
+// Specific adapters may interpret Schema/Name differently.
+type DatabaseConfig struct {
+	Driver              DatabaseDriver
+	Endpoint            string
+	Schema              string
+	Name                string
+	MaxOpenConnections  int
+	MaxIdleConnections  int
+	ConnMaxLifetimeSecs int
+	ConnMaxIdleTimeSecs int
+}
+
+// DatabaseAdapter represents a lifecycle-managed database instance.
+// Implementations should provide access to GORM and to the underlying SQL DB.
+type DatabaseAdapter interface {
+	GormDB() (*gorm.DB, error)
+	SqlDB() (*sql.DB, error)
+	Close() error
+}
+
+type DatabaseManager interface {
+	DatabaseAdapter() DatabaseAdapter
+	Shutdown(ctx context.Context) error
+	HealthCheck(ctx context.Context) error
+}

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	dbcontracts "github.com/brunojet/go-infra-backend/internal/database/contracts"
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

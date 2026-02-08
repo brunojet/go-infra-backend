@@ -11,12 +11,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/brunojet/go-infra-backend/internal/bootstrap/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/bootstrap/contracts"
+	bootcontracts "github.com/brunojet/go-infra-backend/pkg/bootstrap/contracts"
 )
 
 type shutdownEntry struct {
 	name string
-	fn   contracts.ShutdownFunc
+	fn   bootcontracts.ShutdownFunc
 }
 
 // shutdownManager stores graceful shutdown handlers.
@@ -32,7 +33,7 @@ type shutdownManager struct {
 	logger  *slog.Logger
 }
 
-var _ contracts.ShutdownManager = (*shutdownManager)(nil)
+var _ bootcontracts.ShutdownManager = (*shutdownManager)(nil)
 
 func NewShutdownManager(ctx context.Context) *shutdownManager {
 	return &shutdownManager{ctx: ctx, logger: slog.Default()}
@@ -57,19 +58,18 @@ func (m *shutdownManager) SetLogger(logger *slog.Logger) {
 	m.logger = logger
 }
 
-// NewShutdownManagerWithSignals creates a shutdownManager and a root context cancelled
-// on OS signals, returning a stop function that also triggers graceful shutdown (LIFO)
+// NewShutdownManagerWithSignals creates a shutdownManager whose context is cancelled
+// on OS signals. It returns a stop function that also triggers graceful shutdown (LIFO)
 // for all registered handlers.
 //
 // Typical usage:
 //
-//	rootCtx, sm, stop := bootstrap.NewShutdownManagerWithSignals(nil, 10*time.Second)
+//	sm, stop := bootstrap.NewShutdownManagerWithSignals(10*time.Second)
 //	defer stop()
 //	...
-//	<-rootCtx.Done()
+//	<-sm.GetContext().Done()
 //	return // deferred stop() runs shutdown
 //
-// If parent is nil, context.Background() is used.
 // If no signals are provided, defaults to os.Interrupt and syscall.SIGTERM.
 func NewShutdownManagerWithSignals(shutdownTimeout time.Duration, signalsToWatch ...os.Signal) (sm *shutdownManager, stop func()) {
 	ctx := context.Background()

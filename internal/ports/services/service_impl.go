@@ -3,8 +3,8 @@ package services
 import (
 	"context"
 
-	repoContracts "github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
-	"github.com/brunojet/go-infra-backend/internal/ports/services/contracts"
+	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
 type serviceImpl[D any, E repoContracts.Entity] struct {

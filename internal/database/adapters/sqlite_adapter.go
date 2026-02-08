@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	dbcontracts "github.com/brunojet/go-infra-backend/internal/database/contracts"
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	_ "modernc.org/sqlite"

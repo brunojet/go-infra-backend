@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/brunojet/go-infra-backend/internal/bootstrap/contracts"
 	"github.com/brunojet/go-infra-backend/internal/config"
 	middlewares "github.com/brunojet/go-infra-backend/internal/observability/http_middlewares"
+	bootcontracts "github.com/brunojet/go-infra-backend/pkg/bootstrap/contracts"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,10 +21,10 @@ const (
 type HttpServer struct {
 	Router *gin.Engine
 	srv    *http.Server
-	sm     contracts.ShutdownManager
+	sm     bootcontracts.ShutdownManager
 }
 
-func NewHttpServerWithObservability(sm contracts.ShutdownManager) *HttpServer {
+func NewHttpServerWithObservability(sm bootcontracts.ShutdownManager) *HttpServer {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(middlewares.OtelGinMiddleware())
@@ -47,7 +47,7 @@ func (h *HttpServer) StartAndWaitTermination() error {
 	h.sm.Register("http-server", h.srv)
 
 	go func() {
-		log.Println("http server listening on : ", h.srv.Addr)
+		log.Printf("http server listening on %s", h.srv.Addr)
 		if err := h.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErrCh <- err
 			return
@@ -61,6 +61,7 @@ func (h *HttpServer) StartAndWaitTermination() error {
 	case err := <-serverErrCh:
 		if err != nil {
 			log.Printf("http server error: %v", err)
+			return err
 		}
 	}
 	return nil

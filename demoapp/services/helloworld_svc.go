@@ -2,10 +2,10 @@ package services
 
 import (
 	helloWorldRepo "github.com/brunojet/go-infra-backend/demoapp/repositories"
-	repoContracts "github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
 	svc "github.com/brunojet/go-infra-backend/internal/ports/services"
-	svcContracts "github.com/brunojet/go-infra-backend/internal/ports/services/contracts"
 	"github.com/brunojet/go-infra-backend/internal/utils"
+	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
 type HelloWorldDTO struct {

@@ -11,9 +11,9 @@ import (
 
 	"github.com/brunojet/go-infra-backend/debugassert"
 
-	repoContracts "github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
-	"github.com/brunojet/go-infra-backend/internal/ports/services/contracts"
 	"github.com/brunojet/go-infra-backend/internal/utils"
+	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"

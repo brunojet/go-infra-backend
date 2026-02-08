@@ -8,9 +8,9 @@ import (
 	"time"
 
 	dbadapters "github.com/brunojet/go-infra-backend/internal/database/adapters"
-	dbcontracts "github.com/brunojet/go-infra-backend/internal/database/contracts"
-	"github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
-	repoContracts "github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"

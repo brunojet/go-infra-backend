@@ -2,22 +2,25 @@ package handlers
 
 import (
 	internalhandlers "github.com/brunojet/go-infra-backend/internal/ports/handlers"
-	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
-	svccontracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	repo "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
+	svc "github.com/brunojet/go-infra-backend/pkg/ports/services"
 	"github.com/gin-gonic/gin"
 )
 
-type GinHandler[E contracts.Entity, D any] = internalhandlers.GinHandler[E, D]
+type GinHandler[E repo.Entity, D any] = internalhandlers.GinHandler[E, D]
 
 var (
 	ErrInvalidJSONBody   = internalhandlers.ErrInvalidJSONBody
 	MapErrorToStatus     = internalhandlers.MapErrorToStatus
 	SetResponseFromError = internalhandlers.SetResponseFromError
-	BindJSONToDTOPtr     = internalhandlers.BindJSONToDTOPtr
 )
 
-func NewGenericHandler[E contracts.Entity, D any](s svccontracts.Service[D, E]) *GinHandler[E, D] {
+func NewGenericHandler[E repo.Entity, D any](s svc.Service[D, E]) *GinHandler[E, D] {
 	return internalhandlers.NewGenericHandler[E, D](s)
+}
+
+func BindJSONToDTOPtr[D any](c *gin.Context) (*D, error) {
+	return internalhandlers.BindJSONToDTOPtr[D](c)
 }
 
 // Register is inherited from the aliased GinHandler type, but keeping gin import here

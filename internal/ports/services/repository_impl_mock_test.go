@@ -4,7 +4,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	contracts "github.com/brunojet/go-infra-backend/internal/ports/repositories/contracts"
+	contracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	gomock "github.com/golang/mock/gomock"
 	gorm "gorm.io/gorm"
 )
