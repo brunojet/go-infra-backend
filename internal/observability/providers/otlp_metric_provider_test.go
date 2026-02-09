@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/brunojet/go-infra-backend/internal/observability/exporters"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestNewOTLPMetricProvider(t *testing.T) {
-	os.Unsetenv(exporters.OTLPEndpointEnv)
+	t.Setenv(exporters.OTLPEndpointEnv, "")
 	ctx := context.Background()
 	exporter, err := exporters.NewOTLPMetricExporter(ctx)
 	require.NoError(t, err)

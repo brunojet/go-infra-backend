@@ -107,27 +107,6 @@ func initObservability(sm bootcontracts.ShutdownManager, initFuncs InitObservabi
 	return nil
 }
 
-func InitLogger(sm bootcontracts.ShutdownManager) error {
-	return initLogger(sm, &InitLoggerFuncs{
-		ExporterFunc: exporters.NewOTLPLoggerExporters,
-		ProviderFunc: providers.NewOTLPLoggerProvider,
-	})
-}
-
-func InitMetrics(sm bootcontracts.ShutdownManager) error {
-	return initMetrics(sm, &InitMetricFuncs{
-		ExporterFunc: exporters.NewOTLPMetricExporter,
-		ProviderFunc: providers.NewOTLPMetricProvider,
-	})
-}
-
-func InitTracing(sm bootcontracts.ShutdownManager) error {
-	return initTracing(sm, &InitTracerFuncs{
-		ExporterFunc: exporters.NewOTLPTracerExporter,
-		ProviderFunc: providers.NewOTLPTracerProvider,
-	})
-}
-
 func InitObservability(sm bootcontracts.ShutdownManager) error {
 	return initObservability(sm, InitObservabilityFuncs{
 		InitLoggerFuncs: &InitLoggerFuncs{

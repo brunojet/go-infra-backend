@@ -3,9 +3,11 @@ package bootstrap
 import (
 	"io"
 	"log/slog"
+	"path/filepath"
 	"testing"
 	"time"
 
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,24 +33,15 @@ func TestSetShutdownLogger_DoesNotPanic(t *testing.T) {
 	})
 }
 
-func TestInitObservability_HappyPath(t *testing.T) {
-	// Keep OTLP disabled (uses console/noop exporters depending on env defaults)
-	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
-	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT_LOGGER", "")
-	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT_METRIC", "")
-	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT_TRACE", "")
+func TestNewDatabaseWithObservability_UsesEnvConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv(dbcontracts.DB_DRIVER_ENV, string(dbcontracts.DbDriverSQLiteDisk))
+	t.Setenv(dbcontracts.DB_NAME_ENV, filepath.Join(tmpDir, "app.db"))
 
 	sm, stop := NewShutdownManagerWithSignals(2 * time.Second)
 	defer stop()
 
-	require.NoError(t, InitObservability(sm))
-}
-
-func TestNewSQLiteDatabaseWithObservability_Memory(t *testing.T) {
-	sm, stop := NewShutdownManagerWithSignals(2 * time.Second)
-	defer stop()
-
-	db, err := NewSQLiteDatabaseWithObservability("memory", sm)
+	db, err := NewDatabaseWithObservability(sm)
 	require.NoError(t, err)
 	require.NotNil(t, db)
 
@@ -97,23 +90,6 @@ func TestNewHttpServerWithObservability_StartAndShutdown_HappyPath(t *testing.T)
 	case err := <-done:
 		require.NoError(t, err)
 	case <-time.After(3 * time.Second):
-		t.Fatal("timeout waiting for http server termination")
+		require.FailNow(t, "timeout waiting for http server termination")
 	}
-}
-
-func TestInitLoggerMetricsTracing_IndividualCalls(t *testing.T) {
-	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
-	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT_LOGGER", "")
-	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT_METRIC", "")
-	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT_TRACE", "")
-
-	sm, stop := NewShutdownManagerWithSignals(2 * time.Second)
-	defer stop()
-
-	require.NoError(t, InitLogger(sm))
-	require.NoError(t, InitMetrics(sm))
-	require.NoError(t, InitTracing(sm))
-
-	// Ensure shutdown hooks can run successfully.
-	require.NoError(t, sm.ShutdownWithTimeout(2*time.Second))
 }

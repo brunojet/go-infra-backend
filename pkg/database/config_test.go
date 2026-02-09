@@ -1,31 +1,69 @@
 package database
 
-import "testing"
+import (
+	"context"
+	"path/filepath"
+	"testing"
 
-func TestNewDatabaseConfigFromEnv_HappyPath(t *testing.T) {
-	t.Setenv(DB_DRIVER_ENV, string(DatabaseDriverSQLiteMemory))
-	t.Setenv(DB_ENDPOINT_ENV, ":0")
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
+	"github.com/stretchr/testify/require"
+)
+
+func TestNewDatabaseManagerFromEnv_HappyPath_SQLiteDisk(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	t.Setenv(DB_DRIVER_ENV, string(DatabaseDriverSQLiteDisk))
+	t.Setenv(DB_NAME_ENV, filepath.Join(tmpDir, "app.db"))
 	t.Setenv(DB_SCHEMA_ENV, "")
-	t.Setenv(DB_NAME_ENV, "app.db")
 
-	cfg, err := NewDatabaseConfigFromEnv()
-	if err != nil {
-		t.Fatalf("expected success, got err=%v", err)
-	}
-	if cfg == nil {
-		t.Fatalf("expected non-nil cfg")
-	}
+	db, err := NewDatabaseManagerFromEnv()
+	require.NoError(t, err)
+	require.NotNil(t, db)
+
+	require.NoError(t, db.HealthCheck(context.Background()))
+	require.NoError(t, db.Shutdown(context.Background()))
 }
 
-func TestNewDatabaseConfigFromEnv_InvalidEndpoint(t *testing.T) {
-	t.Setenv(DB_DRIVER_ENV, string(DatabaseDriverSQLiteMemory))
-	t.Setenv(DB_ENDPOINT_ENV, ":99999")
+func TestNewDatabaseManagerFromEnv_InvalidPort_Postgres(t *testing.T) {
+	t.Setenv(DB_DRIVER_ENV, string(DatabaseDriverPostgres))
+	t.Setenv(DB_HOST_ENV, "localhost")
+	t.Setenv(DB_PORT_ENV, "99999")
 
-	cfg, err := NewDatabaseConfigFromEnv()
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	if cfg != nil {
-		t.Fatalf("expected nil cfg")
-	}
+	db, err := NewDatabaseManagerFromEnv()
+	require.Error(t, err)
+	require.Nil(t, db)
+}
+
+func TestNewDatabaseManagerFromEnv_UnsupportedDriver(t *testing.T) {
+	t.Setenv(DB_DRIVER_ENV, "unsupported")
+
+	db, err := NewDatabaseManagerFromEnv()
+	require.Error(t, err)
+	require.Nil(t, db)
+}
+
+func TestNewDatabaseManagerFromEnv_SQLiteMemory_Unsupported(t *testing.T) {
+	t.Setenv(DB_DRIVER_ENV, string(DatabaseDriverSQLiteMemory))
+
+	db, err := NewDatabaseManagerFromEnv()
+	require.Error(t, err)
+	require.Nil(t, db)
+}
+
+func TestNewDatabaseManagerFromEnv_SQLiteDisk_MemoryDSN(t *testing.T) {
+	// Current implementation supports in-memory sqlite via sqlite_disk + Name containing "memory".
+	t.Setenv(DB_DRIVER_ENV, string(DatabaseDriverSQLiteDisk))
+	t.Setenv(DB_NAME_ENV, "memory")
+
+	db, err := NewDatabaseManagerFromEnv()
+	require.NoError(t, err)
+	require.NotNil(t, db)
+	require.NoError(t, db.Shutdown(context.Background()))
+}
+
+func TestEnvConstants_AreFromContracts(t *testing.T) {
+	// Guardrail: make sure the pkg/database re-exports match contracts.
+	require.Equal(t, dbcontracts.DB_DRIVER_ENV, DB_DRIVER_ENV)
+	require.Equal(t, dbcontracts.DB_HOST_ENV, DB_HOST_ENV)
+	require.Equal(t, dbcontracts.DB_PORT_ENV, DB_PORT_ENV)
 }

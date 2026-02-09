@@ -15,11 +15,15 @@ func main() {
 	sm, stop := bootstrap.NewShutdownManagerWithSignals(10 * time.Second)
 	defer stop()
 
-	bootstrap.InitObservability(sm)
-
 	databasePath := strings.TrimSpace(os.Getenv("DEMOAPP_SQLITE_PATH"))
+	if databasePath != "" {
+		_ = os.Setenv("DB_DRIVER", "sqlite_disk")
+		_ = os.Setenv("DB_NAME", databasePath)
+	} else {
+		_ = os.Setenv("DB_DRIVER", "sqlite_disk")
+	}
 
-	db, err := bootstrap.NewSQLiteDatabaseWithObservability(databasePath, sm)
+	db, err := bootstrap.NewDatabaseWithObservability(sm)
 
 	if err != nil {
 		log.Fatalf("failed to create database: %v", err)

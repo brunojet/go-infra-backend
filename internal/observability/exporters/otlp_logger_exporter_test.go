@@ -4,25 +4,23 @@ import (
 	"context"
 	"testing"
 
-	"os"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewOTLPLoggerExporterWithEndpoint(t *testing.T) {
-	os.Setenv(OTLPEndpointEnv, otlpEndpointDefault)
-	defer os.Unsetenv(OTLPEndpointEnv)
+	t.Setenv(OTLPEndpointEnv, otlpEndpointDefault)
 	ctx := context.Background()
 	exp, err := NewOTLPLoggerExporters(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, exp)
 }
 
 func TestNewOTLPLoggerExporterWithoutEndpoint(t *testing.T) {
-	os.Unsetenv(OTLPEndpointEnv)
+	t.Setenv(OTLPEndpointEnv, "")
 	ctx := context.Background()
 	exp, err := NewOTLPLoggerExporters(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, exp)
 }
 

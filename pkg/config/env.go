@@ -23,3 +23,23 @@ func IsValidEndpoint(endpoint string) bool {
 func ValidateEndpoint(endpoint string) error {
 	return internalconfig.ValidateEndpoint(endpoint)
 }
+
+// IsValidHost reports whether host is a valid hostname, IPv4, or IPv6.
+func IsValidHost(host string) bool {
+	return internalconfig.IsValidHost(host)
+}
+
+// ValidateHost validates host (hostname, IPv4, or IPv6).
+func ValidateHost(host string) error {
+	return internalconfig.ValidateHost(host)
+}
+
+// IsValidPort reports whether port is numeric and within 0..65535.
+func IsValidPort(port string) bool {
+	return internalconfig.IsValidPort(port)
+}
+
+// ValidatePort validates port (0..65535).
+func ValidatePort(port string) error {
+	return internalconfig.ValidatePort(port)
+}

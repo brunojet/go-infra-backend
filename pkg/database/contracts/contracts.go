@@ -3,13 +3,18 @@ package contracts
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"gorm.io/gorm"
 )
 
 const (
-	DB_DRIVER_ENV               = "DB_DRIVER"
+	DB_DRIVER_ENV = "DB_DRIVER"
+	// DB_ENDPOINT_ENV is kept for backwards compatibility.
+	// Deprecated: prefer DB_HOST_ENV + DB_PORT_ENV.
 	DB_ENDPOINT_ENV             = "DB_ENDPOINT"
+	DB_HOST_ENV                 = "DB_HOST"
+	DB_PORT_ENV                 = "DB_PORT"
 	DB_SCHEMA_ENV               = "DB_SCHEMA"
 	DB_NAME_ENV                 = "DB_NAME"
 	DB_MAX_OPEN_CONNECTIONS_ENV = "DB_MAX_OPEN_CONNECTIONS"
@@ -21,17 +26,30 @@ const (
 type DatabaseDriver string
 
 const (
-	DatabaseDriverSQLiteMemory DatabaseDriver = "sqlite_memory"
-	DatabaseDriverSQLiteDisk   DatabaseDriver = "sqlite_disk"
-	DatabaseDriverPostgres     DatabaseDriver = "postgres"
-	DatabaseDriverMySQL        DatabaseDriver = "mysql"
+	DbDriverSQLiteMemory DatabaseDriver = "sqlite_memory"
+	DbDriverSQLiteDisk   DatabaseDriver = "sqlite_disk"
+	DbDriverPostgres     DatabaseDriver = "postgres"
+	DbDriverMySQL        DatabaseDriver = "mysql"
+)
+
+const (
+	DbDriverDefault              = DbDriverSQLiteMemory
+	DbMaxOpenConnectionsDefault  = -1
+	DbMaxIdleConnectionsDefault  = -1
+	DbConnMaxLifetimeSecsDefault = -1
+	DbConnMaxIdleTimeSecsDefault = -1
+)
+
+var (
+	ErrUnsupportedDriver = fmt.Errorf("unsupported database driver")
 )
 
 // DatabaseConfig is a generic database configuration object.
 // Specific adapters may interpret Schema/Name differently.
 type DatabaseConfig struct {
 	Driver              DatabaseDriver
-	Endpoint            string
+	Host                string
+	Port                string
 	Schema              string
 	Name                string
 	MaxOpenConnections  int
@@ -50,6 +68,6 @@ type DatabaseAdapter interface {
 
 type DatabaseManager interface {
 	DatabaseAdapter() DatabaseAdapter
-	Shutdown(ctx context.Context) error
 	HealthCheck(ctx context.Context) error
+	Shutdown(ctx context.Context) error
 }

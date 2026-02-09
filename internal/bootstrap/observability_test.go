@@ -3,7 +3,6 @@ package bootstrap
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -14,40 +13,10 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func unsetOTLPEndpoint(t *testing.T) func() {
-	t.Helper()
-	key := "OTEL_EXPORTER_OTLP_ENDPOINT"
-	old, ok := os.LookupEnv(key)
-	if ok {
-		_ = os.Unsetenv(key)
-	}
-	return func() {
-		if ok {
-			_ = os.Setenv(key, old)
-		} else {
-			_ = os.Unsetenv(key)
-		}
-	}
-}
-
-func TestInitLoggerMetricsTracing_NoErrors(t *testing.T) {
-	restore := unsetOTLPEndpoint(t)
-	defer restore()
-
-	sm := NewShutdownManager(context.Background())
-
-	assert := assert.New(t)
-
-	assert.NoError(InitLogger(sm))
-	assert.NoError(InitMetrics(sm))
-	assert.NoError(InitTracing(sm))
-
-	assert.NoError(sm.ShutdownWithTimeout(2 * time.Second))
-}
-
 func TestInitObservability_All_NoErrors(t *testing.T) {
-	restore := unsetOTLPEndpoint(t)
-	defer restore()
+	// For these unit tests, force exporters to use noop behavior.
+	// internal/config.GetEnv treats empty values as unset.
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
 
 	sm := NewShutdownManager(context.Background())
 

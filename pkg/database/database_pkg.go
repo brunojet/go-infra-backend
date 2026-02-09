@@ -1,7 +1,8 @@
 package database
 
 import (
-	internaldb "github.com/brunojet/go-infra-backend/internal/database"
+	"github.com/brunojet/go-infra-backend/internal/database"
+	"github.com/brunojet/go-infra-backend/internal/database/adapters"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
 	"gorm.io/gorm"
 )
@@ -18,7 +19,8 @@ type DatabaseConfig = dbcontracts.DatabaseConfig
 
 const (
 	DB_DRIVER_ENV               = dbcontracts.DB_DRIVER_ENV
-	DB_ENDPOINT_ENV             = dbcontracts.DB_ENDPOINT_ENV
+	DB_HOST_ENV                 = dbcontracts.DB_HOST_ENV
+	DB_PORT_ENV                 = dbcontracts.DB_PORT_ENV
 	DB_SCHEMA_ENV               = dbcontracts.DB_SCHEMA_ENV
 	DB_NAME_ENV                 = dbcontracts.DB_NAME_ENV
 	DB_MAX_OPEN_CONNECTIONS_ENV = dbcontracts.DB_MAX_OPEN_CONNECTIONS_ENV
@@ -28,20 +30,21 @@ const (
 )
 
 const (
-	DatabaseDriverSQLiteMemory = dbcontracts.DatabaseDriverSQLiteMemory
-	DatabaseDriverSQLiteDisk   = dbcontracts.DatabaseDriverSQLiteDisk
-	DatabaseDriverPostgres     = dbcontracts.DatabaseDriverPostgres
-	DatabaseDriverMySQL        = dbcontracts.DatabaseDriverMySQL
+	DatabaseDriverSQLiteMemory = dbcontracts.DbDriverSQLiteMemory
+	DatabaseDriverSQLiteDisk   = dbcontracts.DbDriverSQLiteDisk
+	DatabaseDriverPostgres     = dbcontracts.DbDriverPostgres
+	DatabaseDriverMySQL        = dbcontracts.DbDriverMySQL
 )
 
 // ---- Constructors (delegating to internal) ----
-
-// NewDatabaseManager delegates to the internal implementation.
-func NewDatabaseManager(adapter DatabaseAdapter, plugins ...gorm.Plugin) (DatabaseManager, error) {
-	return internaldb.NewDatabaseManager(adapter, plugins...)
+func NewSQLite(databasePath string) (dbcontracts.DatabaseAdapter, error) {
+	return adapters.NewSQLite(databasePath)
 }
 
-// NewSQLiteDatabase delegates to the internal implementation.
-func NewSQLiteDatabase(databasePath string, plugins ...gorm.Plugin) (DatabaseManager, error) {
-	return internaldb.NewSQLiteDatabase(databasePath, plugins...)
+func NewDatabaseManager(adapter DatabaseAdapter, plugins ...gorm.Plugin) (DatabaseManager, error) {
+	return database.NewDatabaseManager(adapter, plugins...)
+}
+
+func NewDatabaseManagerFromEnv(plugins ...gorm.Plugin) (DatabaseManager, error) {
+	return database.NewDatabaseManagerFromEnv(plugins...)
 }

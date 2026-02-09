@@ -42,21 +42,8 @@ func NewHttpServerWithObservability(sm ShutdownManager) *HttpServer {
 	return internalbootstrap.NewHttpServerWithObservability(sm)
 }
 
-// ---- Observability ----
-
-func InitLogger(sm ShutdownManager) error { return internalbootstrap.InitLogger(sm) }
-
-func InitMetrics(sm ShutdownManager) error { return internalbootstrap.InitMetrics(sm) }
-
-func InitTracing(sm ShutdownManager) error { return internalbootstrap.InitTracing(sm) }
-
-func InitObservability(sm ShutdownManager) error {
-	return internalbootstrap.InitObservability(sm)
-}
-
 // ---- Database ----
-
-// NewSQLiteDatabaseWithObservability delegates to the internal bootstrap helper.
-func NewSQLiteDatabaseWithObservability(databasePath string, sm ShutdownManager) (db.DatabaseAdapter, error) {
-	return internalbootstrap.NewSQLiteDatabaseWithObservability(databasePath, sm)
+// NewDatabaseWithObservability delegates to the internal bootstrap helper.
+func NewDatabaseWithObservability(sm ShutdownManager) (db.DatabaseAdapter, error) {
+	return internalbootstrap.NewDatabaseWithObservability(sm)
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/brunojet/go-infra-backend/internal/observability/exporters"
 	plugins "github.com/brunojet/go-infra-backend/internal/observability/gorm_plugins"
 	"github.com/brunojet/go-infra-backend/internal/observability/providers"
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,7 +38,7 @@ func TestCreateRead_ExportsTrace(t *testing.T) {
 	assert.NoError(t, err)
 	defer shutdown(ctx)
 
-	db, err := NewSQLiteDatabase("memory", plugins.NewOtelGormPlugin())
+	db, err := newDatabaseManagerFromConfig(&dbcontracts.DatabaseConfig{Driver: dbcontracts.DbDriverSQLiteMemory}, plugins.NewOtelGormPlugin())
 	assert.NoError(t, err)
 	defer db.Shutdown(ctx)
 

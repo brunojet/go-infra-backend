@@ -1,4 +1,4 @@
-package database_test
+package database
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brunojet/go-infra-backend/internal/database"
 	dbadpt "github.com/brunojet/go-infra-backend/internal/database/adapters"
 	"github.com/brunojet/go-infra-backend/pkg/database/contracts"
 	"github.com/stretchr/testify/assert"
@@ -18,14 +17,14 @@ import (
 )
 
 func TestNewSQLiteDatabase_DelegatesToAdapter(t *testing.T) {
-	db, err := database.NewSQLiteDatabase("memory")
+	db, err := newDatabaseManagerFromConfig(&contracts.DatabaseConfig{Driver: contracts.DbDriverSQLiteMemory})
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 	assert.NoError(t, db.Shutdown(context.Background()))
 }
 
 func TestDatabaseManager_HealthCheck(t *testing.T) {
-	db, err := database.NewSQLiteDatabase("memory")
+	db, err := newDatabaseManagerFromConfig(&contracts.DatabaseConfig{Driver: contracts.DbDriverSQLiteMemory})
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 	// HealthCheck should call Ping and return nil on a healthy in-memory DB
@@ -34,7 +33,7 @@ func TestDatabaseManager_HealthCheck(t *testing.T) {
 }
 
 func TestDatabaseManager_HealthCheckReturnsError(t *testing.T) {
-	db, err := database.NewSQLiteDatabase("memory")
+	db, err := newDatabaseManagerFromConfig(&contracts.DatabaseConfig{Driver: contracts.DbDriverSQLiteMemory})
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 	// HealthCheck should call Ping and return nil on a healthy in-memory DB
@@ -43,7 +42,10 @@ func TestDatabaseManager_HealthCheckReturnsError(t *testing.T) {
 }
 
 func TestNewSQLiteDatabase_NonexistentDirReturnsError(t *testing.T) {
-	_, err := database.NewSQLiteDatabase("nonexistent_dir/subdir.db")
+	_, err := newDatabaseManagerFromConfig(&contracts.DatabaseConfig{
+		Driver: contracts.DbDriverSQLiteDisk,
+		Name:   "nonexistent_dir/subdir.db",
+	})
 	if assert.Error(t, err) {
 		assert.True(t, strings.Contains(err.Error(), "unable to stat database directory"))
 	}
@@ -55,7 +57,10 @@ func TestNewSQLiteDatabase_FilePathCreatesDB(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	dbPath := filepath.Join(tmpDir, "mydb.db")
-	db, err := database.NewSQLiteDatabase(dbPath)
+	db, err := newDatabaseManagerFromConfig(&contracts.DatabaseConfig{
+		Driver: contracts.DbDriverSQLiteDisk,
+		Name:   dbPath,
+	})
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 	// ensure file was created
@@ -82,7 +87,7 @@ func (f *fakeAdapter) Close() error {
 func TestNewDatabaseManager_ReturnsErrorWhenAdapterGormDBFails(t *testing.T) {
 	fa := &fakeAdapter{}
 
-	m, err := database.NewDatabaseManager(fa, &failingPlugin{})
+	m, err := NewDatabaseManager(fa, &failingPlugin{})
 	require.Error(t, err)
 	require.Nil(t, m)
 	require.True(t, fa.closed, "adapter.Close should be called on GormDB error")
@@ -124,7 +129,7 @@ func TestNewDatabaseManager_ClosesAdapterWhenPluginInitFails(t *testing.T) {
 
 	wa := &wrapperAdapter{inner: real}
 
-	m, err := database.NewDatabaseManager(wa, &failingPlugin{})
+	m, err := NewDatabaseManager(wa, &failingPlugin{})
 	require.Error(t, err)
 	require.Nil(t, m)
 	require.True(t, wa.closed, "wrapper adapter Close should be called when plugin init fails")
@@ -137,7 +142,7 @@ func TestNewDatabaseManager_SucceedsWithNilAndValidPlugin(t *testing.T) {
 	called := false
 	gp := &goodPlugin{called: &called}
 
-	m, err := database.NewDatabaseManager(real, nil, gp)
+	m, err := NewDatabaseManager(real, nil, gp)
 	require.NoError(t, err)
 	require.NotNil(t, m)
 	require.True(t, called, "expected plugin Initialize to be called")
@@ -146,7 +151,7 @@ func TestNewDatabaseManager_SucceedsWithNilAndValidPlugin(t *testing.T) {
 func TestDatabaseManager_HealthCheck_ReturnsAdapterGormDBError(t *testing.T) {
 	fa := &fakeAdapter{}
 	// create manager without plugins so NewDatabaseManager doesn't call GormDB
-	m, err := database.NewDatabaseManager(fa)
+	m, err := NewDatabaseManager(fa)
 	require.NoError(t, err)
 	require.NotNil(t, m)
 
@@ -164,7 +169,7 @@ func (e *emptyGormAdapter) Close() error              { return nil }
 
 func TestDatabaseManager_HealthCheck_ReturnsWhenGormDBDBFails(t *testing.T) {
 	ea := &emptyGormAdapter{}
-	m, err := database.NewDatabaseManager(ea)
+	m, err := NewDatabaseManager(ea)
 	require.NoError(t, err)
 	require.NotNil(t, m)
 
