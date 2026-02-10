@@ -19,10 +19,21 @@ type sqliteAdapter struct {
 
 func buildDSNFromPath(databasePath string) (string, error) {
 	lp := strings.TrimSpace(databasePath)
+	const fkPragma = "_pragma=foreign_keys(1)"
+	appendForeignKeysPragma := func(dsn string) string {
+		if strings.Contains(dsn, fkPragma) {
+			return dsn
+		}
+		sep := "?"
+		if strings.Contains(dsn, "?") {
+			sep = "&"
+		}
+		return dsn + sep + fkPragma
+	}
 
 	// memory by default if empty or contains "memory"
 	if lp == "" || strings.Contains(lp, "memory") {
-		return "file::memory:?mode=memory&cache=shared", nil
+		return appendForeignKeysPragma("file::memory:?mode=memory&cache=shared"), nil
 	} else if strings.HasSuffix(strings.ToLower(lp), ".db") && !strings.Contains(lp, "file:") {
 		absPath, err := filepath.Abs(lp)
 
@@ -36,7 +47,7 @@ func buildDSNFromPath(databasePath string) (string, error) {
 			return "", fmt.Errorf("unable to stat database directory %s: %w", dir, err)
 		}
 
-		return "file:" + filepath.ToSlash(absPath), nil
+		return appendForeignKeysPragma("file:" + filepath.ToSlash(absPath)), nil
 	} else {
 		return "", fmt.Errorf("unable to configure dsn with databasePath: %s", lp)
 	}

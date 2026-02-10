@@ -26,6 +26,7 @@ func newDatabaseConfigFromEnv() (*dbcontracts.DatabaseConfig, error) {
 	}
 
 	switch cfg.Driver {
+	case dbcontracts.DbDriverSQLiteMemory:
 	case dbcontracts.DbDriverSQLiteDisk:
 		if cfg.Name == "" {
 			return nil, fmt.Errorf("invalid database name: cannot be empty for disk-based SQLite")

@@ -68,6 +68,7 @@ type DatabaseAdapter interface {
 
 type DatabaseManager interface {
 	DatabaseAdapter() DatabaseAdapter
+	Migrate(dst ...interface{}) error
 	HealthCheck(ctx context.Context) error
 	Shutdown(ctx context.Context) error
 }

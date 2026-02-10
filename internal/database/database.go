@@ -17,6 +17,14 @@ func (d *databaseManagerImpl) DatabaseAdapter() dbcontracts.DatabaseAdapter {
 	return d.db
 }
 
+func (d *databaseManagerImpl) Migrate(dst ...interface{}) error {
+	gormDB, err := d.db.GormDB()
+	if err != nil {
+		return err
+	}
+	return gormDB.AutoMigrate(dst...)
+}
+
 func (d *databaseManagerImpl) HealthCheck(ctx context.Context) error {
 	sqlDB, err := d.db.SqlDB()
 	if err != nil {
