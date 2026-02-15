@@ -17,4 +17,7 @@ func TestMigrations(t *testing.T) {
 
 	err = db.Migrate(&Application{}, &TerminalModel{}, &TerminalModelConfiguration{})
 	require.NoError(t, err)
+
+	err = db.Migrate(&AuditEvent{}, &AuditFieldChange{})
+	require.NoError(t, err)
 }

@@ -17,6 +17,7 @@ const (
 	DB_PORT_ENV                 = "DB_PORT"
 	DB_SCHEMA_ENV               = "DB_SCHEMA"
 	DB_NAME_ENV                 = "DB_NAME"
+	DB_MODE_ENV                 = "DB_MODE"
 	DB_MAX_OPEN_CONNECTIONS_ENV = "DB_MAX_OPEN_CONNECTIONS"
 	DB_MAX_IDLE_CONNECTIONS_ENV = "DB_MAX_IDLE_CONNECTIONS"
 	DB_CONN_MAX_LIFETIME_ENV    = "DB_CONN_MAX_LIFETIME"
@@ -30,6 +31,14 @@ const (
 	DbDriverSQLiteDisk   DatabaseDriver = "sqlite_disk"
 	DbDriverPostgres     DatabaseDriver = "postgres"
 	DbDriverMySQL        DatabaseDriver = "mysql"
+)
+
+type DatabaseMode string
+
+const (
+	DatabaseModeMemory  DatabaseMode = "memory"
+	DatabaseModeDisk    DatabaseMode = "disk"
+	DatabaseModeDefault DatabaseMode = DatabaseModeMemory
 )
 
 const (
@@ -52,6 +61,7 @@ type DatabaseConfig struct {
 	Port                string
 	Schema              string
 	Name                string
+	Mode                DatabaseMode
 	MaxOpenConnections  int
 	MaxIdleConnections  int
 	ConnMaxLifetimeSecs int

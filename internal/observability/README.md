@@ -7,19 +7,13 @@ Este diretório contém utilitários para instrumentação observability (traces
 - **O que faz:** configura recursos (service name/version), cria exporters a partir de variáveis de ambiente, registra providers globais e fornece middlewares/plugins para instrumentar requests e queries.
 
 ## Estrutura
-- `exporters/` — cria exporters OTLP (traces, metrics, logger) ou noop se `OTLP_ENDPOINT` estiver vazio. Veja [exporters](exporters/).
-- `providers/` — cria `TracerProvider`, `MeterProvider`, `LoggerProvider` e o `Resource` com `SERVICE_NAME`/`SERVICE_VERSION`. Veja [providers](providers/).
-- `http_middlewares/` — middlewares para Gin (instrumentação de requests). Veja [http_middlewares](http_middlewares/).
-- `gorm_plugins/` — plugin para GORM que ativa instrumentação OpenTelemetry em queries. Veja [gorm_plugins](gorm_plugins/).
+- `adapters/` — implementações concretas para criar exporters/providers e helpers (tracer, metric, logger, config e redirection).
+- `http_middlewares/` — middlewares para Gin (instrumentação de requests).
+- `gorm_plugins/` — plugin para GORM que ativa instrumentação OpenTelemetry em queries.
 
 Arquivos principais:
 - [providers/otlp_resource.go](providers/otlp_resource.go) — cria `Resource` baseado em `SERVICE_NAME` e `SERVICE_VERSION`.
-- [providers/otlp_tracer_provider.go](providers/otlp_tracer_provider.go) — `NewOTLPTracerProvider(ctx, exporter)` registra `otel.SetTracerProvider(...)` e retorna `shutdown`.
-- [providers/otlp_metric_provider.go](providers/otlp_metric_provider.go) — `NewOTLPMetricProvider(ctx, exporter)` registra `otel.SetMeterProvider(...)`.
-- [providers/otlp_logger_provider.go](providers/otlp_logger_provider.go) — `NewOTLPLoggerProvider(ctx, exporter)` registra provider de logs.
-- [exporters/otlp_tracer_exporter.go](exporters/otlp_tracer_exporter.go) — cria `otlptracegrpc` exporter ou noop quando `OTLP_ENDPOINT` vazio.
-- [http_middlewares/otlp_tracer_gin_middleware.go](http_middlewares/otlp_tracer_gin_middleware.go) — `TracingMiddleware()` usando `otelgin.Middleware(providers.GetServiceName())`.
-- [gorm_plugins/otelgorm_plugin.go](gorm_plugins/otelgorm_plugin.go) — `NewOtelGormPlugin()` retorna plugin GORM de tracing.
+-- NOTE: concrete implementations live under `internal/observability/adapters/` in this repository (see `adapters/otlp_tracer.go`, `adapters/otlp_metric.go`, `adapters/otlp_logger.go`, `adapters/otlp_config.go`, `adapters/log_redirect.go`).
 
 ## Como usar
 
@@ -36,24 +30,23 @@ OTLP_ENDPOINT=otel-collector:4317 # se vazio, exporters retornam noop
 ```go
 ctx := context.Background()
 
-// criar exporter (ou noop se OTLP_ENDPOINT não configurado)
-spanExporter, err := exporters.NewOTLPTracerExporter(ctx)
+// criar provider/exporter a partir do ambiente (ou noop se não configurado)
+tp, err := adapters.NewOTLPTracerFromEnv(ctx)
 if err != nil {
-    // tratar erro
+  // tratar erro
 }
+defer func() {
+  if tp != nil {
+    tp.Shutdown(ctx)
+  }
+}()
 
-tp, tpShutdown, err := providers.NewOTLPTracerProvider(ctx, spanExporter)
-// lembrar de chamar tpShutdown(ctx) na finalização
-
-metricExporter, _ := exporters.NewOTLPMetricExporter(ctx)
-mp, mpShutdown, _ := providers.NewOTLPMetricProvider(ctx, metricExporter)
-
-// opcional: logger provider
-// loggerExporter := exporters.NewOTLPLoggerExporter(ctx) // se existir
-// lp, lpShutdown, _ := providers.NewOTLPLoggerProvider(ctx, loggerExporter)
-
-defer tpShutdown(ctx)
-defer mpShutdown(ctx)
+mp, _ := adapters.NewOTLPMetricFromEnv(ctx)
+defer func() {
+  if mp != nil {
+    mp.Shutdown(ctx)
+  }
+}()
 ```
 
 3) Registrar middlewares e plugins:
@@ -61,7 +54,7 @@ defer mpShutdown(ctx)
 ```go
 r := gin.New()
 // middleware de tracing para requests HTTP
-r.Use(middlewares.TracingMiddleware())
+r.Use(middlewares.OtelGinMiddleware())
 
 // ao criar DB (GORM)
 // db, _ := gorm.Open(sqlite.Open(...))

@@ -31,8 +31,20 @@ func buildDSNFromPath(databasePath string) (string, error) {
 		return dsn + sep + fkPragma
 	}
 
-	// memory by default if empty or contains "memory"
-	if lp == "" || strings.Contains(lp, "memory") {
+	// If empty -> default to shared in-memory database
+	if lp == "" {
+		return appendForeignKeysPragma("file::memory:?mode=memory&cache=shared"), nil
+	}
+
+	// If a DSN starting with file: is provided, accept it as-is (allows
+	// file:NAME?mode=memory to be used when user supplies a name for an
+	// in-memory DB).
+	if strings.HasPrefix(lp, "file:") {
+		return appendForeignKeysPragma(lp), nil
+	}
+
+	// memory keyword anywhere (legacy) -> use default in-memory DSN
+	if strings.Contains(lp, "memory") {
 		return appendForeignKeysPragma("file::memory:?mode=memory&cache=shared"), nil
 	} else if strings.HasSuffix(strings.ToLower(lp), ".db") && !strings.Contains(lp, "file:") {
 		absPath, err := filepath.Abs(lp)

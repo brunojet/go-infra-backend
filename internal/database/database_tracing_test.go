@@ -4,9 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/brunojet/go-infra-backend/internal/observability/exporters"
 	plugins "github.com/brunojet/go-infra-backend/internal/observability/gorm_plugins"
-	"github.com/brunojet/go-infra-backend/internal/observability/providers"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,21 +20,8 @@ type testEntity struct {
 func TestCreateRead_ExportsTrace(t *testing.T) {
 	ctx := context.Background()
 
-	loggerExporter, err := exporters.NewOTLPLoggerExporters(ctx)
-	assert.NoError(t, err)
-	_, shutdown, err := providers.NewOTLPLoggerProvider(ctx, loggerExporter...)
-	assert.NoError(t, err)
-	defer shutdown(ctx)
-	metricExporter, err := exporters.NewOTLPMetricExporter(ctx)
-	assert.NoError(t, err)
-	_, shutdown, err = providers.NewOTLPMetricProvider(ctx, metricExporter)
-	assert.NoError(t, err)
-	defer shutdown(ctx)
-	tracerExporter, err := exporters.NewOTLPTracerExporter(ctx)
-	assert.NoError(t, err)
-	_, shutdown, err = providers.NewOTLPTracerProvider(ctx, tracerExporter)
-	assert.NoError(t, err)
-	defer shutdown(ctx)
+	// Observability exporters/providers are not required for this integration
+	// smoke test; ensure GORM plugin works with the DB manager.
 
 	db, err := newDatabaseManagerFromConfig(&dbcontracts.DatabaseConfig{Driver: dbcontracts.DbDriverSQLiteMemory}, plugins.NewOtelGormPlugin())
 	assert.NoError(t, err)

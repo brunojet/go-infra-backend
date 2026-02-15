@@ -66,13 +66,27 @@ func newDatabaseAdapterFromConfig(cfg *dbcontracts.DatabaseConfig) (dbcontracts.
 	if cfg == nil {
 		return nil, fmt.Errorf("config is nil")
 	}
-	switch cfg.Driver {
-	case dbcontracts.DbDriverSQLiteMemory:
+	// Prefer configured Mode for SQLite selection. This allows DB driver to
+	// remain 'sqlite' while Mode selects between memory and disk.
+	switch cfg.Mode {
+	case dbcontracts.DatabaseModeMemory:
+		if cfg.Name != "" {
+			// allow user-provided name to be included in the in-memory DSN
+			return dbadpt.NewSQLite("file:" + cfg.Name + "?mode=memory&cache=shared")
+		}
 		return dbadpt.NewSQLite(":memory:")
-	case dbcontracts.DbDriverSQLiteDisk:
+	case dbcontracts.DatabaseModeDisk:
 		return dbadpt.NewSQLite(cfg.Name)
 	default:
-		return nil, dbcontracts.ErrUnsupportedDriver
+		// fallback: support legacy driver enum values
+		switch cfg.Driver {
+		case dbcontracts.DbDriverSQLiteMemory:
+			return dbadpt.NewSQLite(":memory:")
+		case dbcontracts.DbDriverSQLiteDisk:
+			return dbadpt.NewSQLite(cfg.Name)
+		default:
+			return nil, dbcontracts.ErrUnsupportedDriver
+		}
 	}
 }
 

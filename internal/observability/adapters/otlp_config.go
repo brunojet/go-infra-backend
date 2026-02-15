@@ -1,8 +1,9 @@
-package exporters
+package adapters
 
 import (
+	"net"
 	"net/url"
-	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/brunojet/go-infra-backend/internal/config"
@@ -18,18 +19,20 @@ const (
 	consoleLoggerRedirectEnv = "CONSOLE_LOGGER_REDIRECT_ENABLE"
 )
 
-var reHostPort = regexp.MustCompile(
-	`^(?:` +
-		`(` +
-		`localhost` +
-		`|(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(?:\.(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*` + // hostname
-		`|(?:\d{1,3}\.){3}\d{1,3}` + // IPv4 (range não validado aqui)
-		`|\[[0-9A-Fa-f:]+\]` + // IPv6 entre colchetes (ex.: [::1])
-		`)?` +
-		`:` +
-		`)?` +
-		`(\d{1,5})$`,
-)
+func isHostPort(s string) bool {
+	// First try net.SplitHostPort which handles host:port and [ipv6]:port
+	if _, port, err := net.SplitHostPort(s); err == nil {
+		if p, err := strconv.Atoi(port); err == nil && p > 0 && p <= 65535 {
+			return true
+		}
+		return false
+	}
+	// Fallback: allow numeric-only port like "4317"
+	if p, err := strconv.Atoi(s); err == nil && p > 0 && p <= 65535 {
+		return true
+	}
+	return false
+}
 
 type OTLPConfig struct {
 	Endpoint   string
@@ -43,7 +46,11 @@ type OTLPLoggerConfig struct {
 }
 
 func getEndpointConfigFromEnv(endpoint string) OTLPConfig {
-	endPoint := config.GetEnv(endpoint, OTLPEndpointEnv)
+	// prefer endpoint-specific env var, then global OTLP env, then default
+	endPoint := config.GetEnv(endpoint, "")
+	if endPoint == "" {
+		endPoint = config.GetEnv(OTLPEndpointEnv, otlpEndpointDefault)
+	}
 
 	hasHttps := strings.Contains(endPoint, "https://")
 	hasHttp := strings.Contains(endPoint, "http://")
@@ -56,7 +63,7 @@ func getEndpointConfigFromEnv(endpoint string) OTLPConfig {
 				IsInsecure: IsInsecure,
 			}
 		}
-	} else if reHostPort.MatchString(endPoint) {
+	} else if isHostPort(endPoint) {
 		return OTLPConfig{
 			Endpoint:   endPoint,
 			IsInsecure: IsInsecure,
