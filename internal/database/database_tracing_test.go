@@ -23,7 +23,7 @@ func TestCreateRead_ExportsTrace(t *testing.T) {
 	// Observability exporters/providers are not required for this integration
 	// smoke test; ensure GORM plugin works with the DB manager.
 
-	db, err := newDatabaseManagerFromConfig(&dbcontracts.DatabaseConfig{Driver: dbcontracts.DbDriverSQLiteMemory}, plugins.NewOtelGormPlugin())
+	db, err := newDatabaseManagerFromConfig(&dbcontracts.DatabaseConfig{Driver: dbcontracts.DbDriverSQLite, Mode: dbcontracts.DatabaseModeMemory}, plugins.NewOtelGormPlugin())
 	assert.NoError(t, err)
 	defer db.Shutdown(ctx)
 

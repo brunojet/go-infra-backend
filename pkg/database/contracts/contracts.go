@@ -27,10 +27,9 @@ const (
 type DatabaseDriver string
 
 const (
-	DbDriverSQLiteMemory DatabaseDriver = "sqlite_memory"
-	DbDriverSQLiteDisk   DatabaseDriver = "sqlite_disk"
-	DbDriverPostgres     DatabaseDriver = "postgres"
-	DbDriverMySQL        DatabaseDriver = "mysql"
+	DbDriverSQLite   DatabaseDriver = "sqlite"
+	DbDriverPostgres DatabaseDriver = "postgres"
+	DbDriverMySQL    DatabaseDriver = "mysql"
 )
 
 type DatabaseMode string
@@ -42,7 +41,7 @@ const (
 )
 
 const (
-	DbDriverDefault              = DbDriverSQLiteMemory
+	DbDriverDefault              = DbDriverSQLite
 	DbMaxOpenConnectionsDefault  = -1
 	DbMaxIdleConnectionsDefault  = -1
 	DbConnMaxLifetimeSecsDefault = -1

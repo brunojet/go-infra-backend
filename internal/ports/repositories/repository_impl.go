@@ -3,13 +3,11 @@ package repositories
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/brunojet/go-infra-backend/debugassert"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 var _ contracts.Repository[contracts.Entity] = (*gormRepositoryImpl[contracts.Entity])(nil)
@@ -29,57 +27,37 @@ func (g *gormRepositoryImpl[E]) GormDB() *gorm.DB {
 	return g.db
 }
 
-func (g *gormRepositoryImpl[E]) Create(ctx context.Context, inOut *E) error {
-	tx := g.db.WithContext(ctx).Create(inOut)
-	return MapTxError(tx)
+func (g *gormRepositoryImpl[E]) Create(ctx context.Context, params contracts.CreateParams, inOut *E) error {
+	tx, err := buildTxWithConflict[E](ctx, g.db, params)
+	if err != nil {
+		return err
+	}
+	if tx = tx.Create(inOut); tx.Error != nil {
+		return MapTxError(tx)
+	}
+	if tx.RowsAffected == 0 {
+		if err := getByScope(ctx, g.db, params.ConflictColumns, inOut); err != nil {
+			return fmt.Errorf("failed to load existing entity after conflict: %w", err)
+		}
+	}
+	return nil
 }
 
 func (g *gormRepositoryImpl[E]) GetByID(ctx context.Context, id map[string]any) (E, error) {
 	var entity E
-	tx := g.db.WithContext(ctx).First(&entity, id)
-	if err := MapTxError(tx); err != nil {
+	if err := getByScope(ctx, g.db, id, &entity); err != nil {
 		var zero E
 		return zero, err
 	}
 	return entity, nil
 }
 
-func setPagination(q *gorm.DB, page, pageSize int) error {
-	if page < 1 {
-		return fmt.Errorf("page must be greater than zero")
-	} else if pageSize <= 0 {
-		return fmt.Errorf("pageSize must be greater than zero")
-	}
-	q.Limit(pageSize).Offset((page - 1) * pageSize)
-	return nil
-}
-
-func setOrderBy(q *gorm.DB, orderBy, order string) error {
-	if orderBy == "" || order == "" {
-		return fmt.Errorf("both orderBy and order must be provided together")
-	}
-	orderClause := clause.OrderByColumn{Column: clause.Column{Name: orderBy}, Desc: (strings.ToLower(order) == "desc")}
-	q.Order(orderClause)
-	return nil
-}
-
-func getListSize(total, page, size int) int {
-	capacity := size
-	offset := (page - 1) * size
-	remaining := total - offset
-	if remaining < capacity {
-		if remaining < 0 {
-			capacity = 0
-		} else {
-			capacity = remaining
-		}
-	}
-	return capacity
-}
-
-func (g *gormRepositoryImpl[E]) List(ctx context.Context, listParams contracts.ListParams) ([]E, int, error) {
+func (g *gormRepositoryImpl[E]) List(ctx context.Context, listParams contracts.ListParams) ([]E, int64, error) {
 	var total int64
-	q := g.db.WithContext(ctx).Model(new(E))
+	q, err := buildTxWithScopes[E](ctx, g.db, listParams.QueryParams.Scopes)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	tx := q.Count(&total)
 	if err := MapTxError(tx); err != nil {
@@ -101,21 +79,26 @@ func (g *gormRepositoryImpl[E]) List(ctx context.Context, listParams contracts.L
 		return nil, 0, err
 	}
 
-	return items, int(total), nil
+	return items, total, nil
 }
 
-func (g *gormRepositoryImpl[E]) Update(ctx context.Context, id map[string]any, inOut *E) error {
-	tx := g.db.WithContext(ctx).Where(id).Updates(inOut)
-	if err := MapTxError(tx); err != nil {
+func (g *gormRepositoryImpl[E]) Update(ctx context.Context, scopes map[string]any, inOut *E) error {
+	tx, err := buildTxWithFilledScopes[E](ctx, g.db, scopes)
+	if err != nil {
 		return err
 	}
-
-	tx = g.db.WithContext(ctx).First(inOut, id)
-	return MapTxError(tx)
+	if tx = tx.Updates(inOut); tx.Error != nil {
+		return MapTxError(tx)
+	}
+	return getByScope(ctx, g.db, scopes, inOut)
 }
 
-func (g *gormRepositoryImpl[E]) Delete(ctx context.Context, id map[string]any) error {
-	tx := g.db.WithContext(ctx).Delete(new(E), id)
+func (g *gormRepositoryImpl[E]) Delete(ctx context.Context, scopes map[string]any) error {
+	tx, err := buildTxWithFilledScopes[E](ctx, g.db, scopes)
+	if err != nil {
+		return err
+	}
+	tx = tx.Delete(new(E))
 	return MapTxError(tx)
 }
 

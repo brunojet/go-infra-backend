@@ -78,15 +78,7 @@ func newDatabaseAdapterFromConfig(cfg *dbcontracts.DatabaseConfig) (dbcontracts.
 	case dbcontracts.DatabaseModeDisk:
 		return dbadpt.NewSQLite(cfg.Name)
 	default:
-		// fallback: support legacy driver enum values
-		switch cfg.Driver {
-		case dbcontracts.DbDriverSQLiteMemory:
-			return dbadpt.NewSQLite(":memory:")
-		case dbcontracts.DbDriverSQLiteDisk:
-			return dbadpt.NewSQLite(cfg.Name)
-		default:
-			return nil, dbcontracts.ErrUnsupportedDriver
-		}
+		return nil, dbcontracts.ErrUnsupportedDriver
 	}
 }
 

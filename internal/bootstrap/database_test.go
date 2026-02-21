@@ -14,7 +14,8 @@ func TestNewDatabaseWithObservability_RegistersShutdown(t *testing.T) {
 	assert := assert.New(t)
 
 	tmpDir := t.TempDir()
-	t.Setenv(dbcontracts.DB_DRIVER_ENV, string(dbcontracts.DbDriverSQLiteDisk))
+	t.Setenv(dbcontracts.DB_DRIVER_ENV, string(dbcontracts.DbDriverSQLite))
+	t.Setenv(dbcontracts.DB_MODE_ENV, string(dbcontracts.DatabaseModeDisk))
 	t.Setenv(dbcontracts.DB_NAME_ENV, filepath.Join(tmpDir, "app.db"))
 
 	sm := NewShutdownManager(context.Background())

@@ -9,7 +9,8 @@ import (
 )
 
 func TestMigrations(t *testing.T) {
-	t.Setenv(dbcontracts.DB_DRIVER_ENV, string(dbcontracts.DbDriverSQLiteMemory))
+	t.Setenv(dbcontracts.DB_DRIVER_ENV, string(dbcontracts.DbDriverSQLite))
+	t.Setenv(dbcontracts.DB_MODE_ENV, string(dbcontracts.DatabaseModeMemory))
 
 	db, err := database.NewDatabaseManagerFromEnv()
 	require.NoError(t, err)

@@ -72,23 +72,23 @@ func (m *MockRepository[E]) EXPECT() *MockRepositoryMockRecorder[E] {
 }
 
 // Create mocks base method.
-func (m *MockRepository[E]) Create(ctx context.Context, inOut *E) error {
+func (m *MockRepository[E]) Create(ctx context.Context, params contracts.CreateParams, inOut *E) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, inOut)
+	ret := m.ctrl.Call(m, "Create", ctx, params, inOut)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockRepositoryMockRecorder[E]) Create(ctx, inOut interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder[E]) Create(ctx, params, inOut interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRepository[E])(nil).Create), ctx, inOut)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRepository[E])(nil).Create), ctx, params, inOut)
 }
 
 // GormDB mocks base method.
 func (m *MockRepository[E]) GormDB() *gorm.DB {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DB")
+	ret := m.ctrl.Call(m, "GormDB")
 	ret0, _ := ret[0].(*gorm.DB)
 	return ret0
 }
@@ -129,11 +129,11 @@ func (mr *MockRepositoryMockRecorder[E]) GetByID(ctx, id interface{}) *gomock.Ca
 }
 
 // List mocks base method.
-func (m *MockRepository[E]) List(ctx context.Context, listParams contracts.ListParams) ([]E, int, error) {
+func (m *MockRepository[E]) List(ctx context.Context, listParams contracts.ListParams) ([]E, int64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", ctx, listParams)
 	ret0, _ := ret[0].([]E)
-	ret1, _ := ret[1].(int)
+	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }

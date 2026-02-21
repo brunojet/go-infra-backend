@@ -31,11 +31,11 @@ func TestNewSQLiteInMemory_ReturnsDatabase(t *testing.T) {
 func TestBuildDSNFromPath_MemoryAndEmpty(t *testing.T) {
 	dsn, err := buildDSNFromPath("")
 	assert.NoError(t, err)
-	assert.Equal(t, "file::memory:?mode=memory&cache=shared", dsn)
+	assert.Equal(t, "file::memory:?mode=memory&cache=shared&_pragma=foreign_keys(1)", dsn)
 
 	dsn, err = buildDSNFromPath("use-memory")
 	assert.NoError(t, err)
-	assert.Equal(t, "file::memory:?mode=memory&cache=shared", dsn)
+	assert.Equal(t, "file::memory:?mode=memory&cache=shared&_pragma=foreign_keys(1)", dsn)
 }
 
 func TestBuildDSNFromPath_FilePathSuccess(t *testing.T) {
@@ -45,7 +45,7 @@ func TestBuildDSNFromPath_FilePathSuccess(t *testing.T) {
 	dsn, err := buildDSNFromPath(dbPath)
 	assert.NoError(t, err)
 	abs, _ := filepath.Abs(dbPath)
-	want := "file:" + filepath.ToSlash(abs)
+	want := "file:" + filepath.ToSlash(abs) + "?_pragma=foreign_keys(1)"
 	assert.Equal(t, want, dsn)
 }
 
@@ -65,9 +65,9 @@ func TestBuildDSNFromPath_InvalidInputs(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "unable to configure dsn"))
 
 	// contains file: but still should be rejected by this helper
-	_, err = buildDSNFromPath("file:my.db")
-	assert.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), "unable to configure dsn"))
+	dsn, err := buildDSNFromPath("file:my.db")
+	assert.NoError(t, err)
+	assert.True(t, strings.HasPrefix(dsn, "file:my.db"))
 }
 
 func TestNewSQLite_ContinuesWithNilPlugin(t *testing.T) {

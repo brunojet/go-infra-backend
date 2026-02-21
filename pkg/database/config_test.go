@@ -12,7 +12,8 @@ import (
 func TestNewDatabaseManagerFromEnv_HappyPath_SQLiteDisk(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	t.Setenv(DB_DRIVER_ENV, string(DatabaseDriverSQLiteDisk))
+	t.Setenv(DB_DRIVER_ENV, string(DatabaseDriverSQLite))
+	t.Setenv(dbcontracts.DB_MODE_ENV, string(dbcontracts.DatabaseModeDisk))
 	t.Setenv(DB_NAME_ENV, filepath.Join(tmpDir, "app.db"))
 	t.Setenv(DB_SCHEMA_ENV, "")
 
@@ -43,16 +44,18 @@ func TestNewDatabaseManagerFromEnv_UnsupportedDriver(t *testing.T) {
 }
 
 func TestNewDatabaseManagerFromEnv_SQLiteMemory_Unsupported(t *testing.T) {
-	t.Setenv(DB_DRIVER_ENV, string(DatabaseDriverSQLiteMemory))
+	// New design: use DB_DRIVER=sqlite and DB_MODE=memory to select in-memory sqlite.
+	t.Setenv(DB_DRIVER_ENV, string(DatabaseDriverSQLite))
+	t.Setenv(dbcontracts.DB_MODE_ENV, string(dbcontracts.DatabaseModeMemory))
 
 	db, err := NewDatabaseManagerFromEnv()
-	require.Error(t, err)
-	require.Nil(t, db)
+	require.NoError(t, err)
+	require.NotNil(t, db)
 }
 
 func TestNewDatabaseManagerFromEnv_SQLiteDisk_MemoryDSN(t *testing.T) {
 	// Current implementation supports in-memory sqlite via sqlite_disk + Name containing "memory".
-	t.Setenv(DB_DRIVER_ENV, string(DatabaseDriverSQLiteDisk))
+	t.Setenv(DB_DRIVER_ENV, string(DatabaseDriverSQLite))
 	t.Setenv(DB_NAME_ENV, "memory")
 
 	db, err := NewDatabaseManagerFromEnv()

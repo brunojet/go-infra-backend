@@ -30,10 +30,9 @@ const (
 )
 
 const (
-	DatabaseDriverSQLiteMemory = dbcontracts.DbDriverSQLiteMemory
-	DatabaseDriverSQLiteDisk   = dbcontracts.DbDriverSQLiteDisk
-	DatabaseDriverPostgres     = dbcontracts.DbDriverPostgres
-	DatabaseDriverMySQL        = dbcontracts.DbDriverMySQL
+	DatabaseDriverSQLite   = dbcontracts.DbDriverSQLite
+	DatabaseDriverPostgres = dbcontracts.DbDriverPostgres
+	DatabaseDriverMySQL    = dbcontracts.DbDriverMySQL
 )
 
 // ---- Constructors (delegating to internal) ----

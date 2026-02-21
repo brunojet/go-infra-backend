@@ -17,14 +17,14 @@ import (
 )
 
 func TestNewSQLiteDatabase_DelegatesToAdapter(t *testing.T) {
-	db, err := newDatabaseManagerFromConfig(&contracts.DatabaseConfig{Driver: contracts.DbDriverSQLiteMemory})
+	db, err := newDatabaseManagerFromConfig(&contracts.DatabaseConfig{Driver: contracts.DbDriverSQLite, Mode: contracts.DatabaseModeMemory})
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 	assert.NoError(t, db.Shutdown(context.Background()))
 }
 
 func TestDatabaseManager_HealthCheck(t *testing.T) {
-	db, err := newDatabaseManagerFromConfig(&contracts.DatabaseConfig{Driver: contracts.DbDriverSQLiteMemory})
+	db, err := newDatabaseManagerFromConfig(&contracts.DatabaseConfig{Driver: contracts.DbDriverSQLite, Mode: contracts.DatabaseModeMemory})
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 	// HealthCheck should call Ping and return nil on a healthy in-memory DB
@@ -33,7 +33,7 @@ func TestDatabaseManager_HealthCheck(t *testing.T) {
 }
 
 func TestDatabaseManager_HealthCheckReturnsError(t *testing.T) {
-	db, err := newDatabaseManagerFromConfig(&contracts.DatabaseConfig{Driver: contracts.DbDriverSQLiteMemory})
+	db, err := newDatabaseManagerFromConfig(&contracts.DatabaseConfig{Driver: contracts.DbDriverSQLite, Mode: contracts.DatabaseModeMemory})
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 	// HealthCheck should call Ping and return nil on a healthy in-memory DB
@@ -43,7 +43,8 @@ func TestDatabaseManager_HealthCheckReturnsError(t *testing.T) {
 
 func TestNewSQLiteDatabase_NonexistentDirReturnsError(t *testing.T) {
 	_, err := newDatabaseManagerFromConfig(&contracts.DatabaseConfig{
-		Driver: contracts.DbDriverSQLiteDisk,
+		Driver: contracts.DbDriverSQLite,
+		Mode:   contracts.DatabaseModeDisk,
 		Name:   "nonexistent_dir/subdir.db",
 	})
 	if assert.Error(t, err) {
@@ -58,7 +59,8 @@ func TestNewSQLiteDatabase_FilePathCreatesDB(t *testing.T) {
 
 	dbPath := filepath.Join(tmpDir, "mydb.db")
 	db, err := newDatabaseManagerFromConfig(&contracts.DatabaseConfig{
-		Driver: contracts.DbDriverSQLiteDisk,
+		Driver: contracts.DbDriverSQLite,
+		Mode:   contracts.DatabaseModeDisk,
 		Name:   dbPath,
 	})
 	assert.NoError(t, err)

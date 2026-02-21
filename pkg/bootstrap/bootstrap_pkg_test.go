@@ -35,7 +35,8 @@ func TestSetShutdownLogger_DoesNotPanic(t *testing.T) {
 
 func TestNewDatabaseWithObservability_UsesEnvConfig(t *testing.T) {
 	tmpDir := t.TempDir()
-	t.Setenv(dbcontracts.DB_DRIVER_ENV, string(dbcontracts.DbDriverSQLiteDisk))
+	t.Setenv(dbcontracts.DB_DRIVER_ENV, string(dbcontracts.DbDriverSQLite))
+	t.Setenv(dbcontracts.DB_MODE_ENV, string(dbcontracts.DatabaseModeDisk))
 	t.Setenv(dbcontracts.DB_NAME_ENV, filepath.Join(tmpDir, "app.db"))
 
 	sm, stop := NewShutdownManagerWithSignals(2 * time.Second)
