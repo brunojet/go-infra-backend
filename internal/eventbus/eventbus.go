@@ -96,7 +96,7 @@ func (b *EventBus) Register(eventType ebcontracts.HandlerName, handler ebcontrac
 	if err := b.getIfExistsWorker("eventbus.register", eventType); err != nil {
 		return err
 	}
-	pool := workerpool.New(numWorkers, queueBacklog)
+	pool := workerpool.NewWorkerPool(numWorkers, queueBacklog)
 	pool.Start()
 	b.workers[eventType] = &eventWorker{pool: pool, handler: handler}
 	return nil

@@ -28,8 +28,8 @@ type WorkerPool struct {
 	CurrentInFlight int64  // tasks em andamento
 }
 
-// New cria um novo WorkerPool com N workers e buffer de tarefas
-func New(workers, buffer int) *WorkerPool {
+// NewWorkerPool cria um novo WorkerPool com N workers e buffer de tarefas
+func NewWorkerPool(workers, buffer int) *WorkerPool {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := &WorkerPool{
 		tasks:   make(chan wpcontracts.Task, buffer),

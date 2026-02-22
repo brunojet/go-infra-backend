@@ -11,7 +11,7 @@ import (
 
 func TestWorkerPool_Basic(t *testing.T) {
 	var count int32
-	pool := New(3, 10)
+	pool := NewWorkerPool(3, 10)
 	pool.Start()
 
 	tasks := 20
@@ -33,7 +33,7 @@ func TestWorkerPool_Basic(t *testing.T) {
 
 func TestWorkerPool_StopEarly(t *testing.T) {
 	var count int32
-	pool := New(2, 2)
+	pool := NewWorkerPool(2, 2)
 	pool.Start()
 
 	ok := pool.Enqueue(func(ctx context.Context) {
@@ -54,7 +54,7 @@ func TestWorkerPool_StopEarly(t *testing.T) {
 
 func TestWorkerPool_Parallelism(t *testing.T) {
 	var count int32
-	pool := New(5, 10)
+	pool := NewWorkerPool(5, 10)
 	pool.Start()
 
 	tasks := 5
@@ -78,7 +78,7 @@ func TestWorkerPool_Parallelism(t *testing.T) {
 
 func TestWorkerPool_CooperativeCancel(t *testing.T) {
 	var cancelled int32
-	pool := New(2, 2)
+	pool := NewWorkerPool(2, 2)
 	pool.Start()
 	done := make(chan struct{})
 	pool.Enqueue(func(ctx context.Context) {
@@ -101,7 +101,7 @@ func TestWorkerPool_CooperativeCancel(t *testing.T) {
 }
 
 func TestWorkerPool_Enqueue_ChannelClosedSuppressPanic(t *testing.T) {
-	pool := New(1, 1)
+	pool := NewWorkerPool(1, 1)
 	pool.Start()
 	pool.Stop() // fecha o canal
 	// Deve suprimir o panic pois o pool está parado
@@ -115,7 +115,7 @@ func TestWorkerPool_Enqueue_ChannelClosedSuppressPanic(t *testing.T) {
 }
 
 func TestWorkerPool_Enqueue_PanicPropagates(t *testing.T) {
-	pool := New(1, 1)
+	pool := NewWorkerPool(1, 1)
 	panicCaught := make(chan interface{}, 1)
 	pool.OnPanic = func(r interface{}) {
 		panicCaught <- r
