@@ -174,6 +174,8 @@ type ApplicationCatalog struct {
 	CreatedAt                    sql.NullTime   `gorm:"autoCreateTime;index:idx_application_catalog_del_created,priority:2"`
 	UpdatedAt                    sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_catalog_del_updated,priority:2"`
 	DeletedAt                    gorm.DeletedAt `gorm:"index:idx_application_catalog_del_created,priority:1;index:idx_application_catalog_del_updated,priority:1"`
+	Application                  *Application
+	TerminalModelConfiguration   *TerminalModelConfiguration
 	ApplicationProfile           *ApplicationProfile
 	ApplicationVersion           *ApplicationVersion
 }
