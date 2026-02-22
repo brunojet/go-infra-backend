@@ -26,24 +26,12 @@ func main() {
 
 	// AutoMigrate all domain models in dependency order (parents before children).
 	if err := gormDb.AutoMigrate(
-		&models.TerminalModel{},
-		&models.TerminalModelConfiguration{},
-		&models.FilterType{},
-		&models.Filter{},
-		&models.Application{},
+		&models.ApplicationProfileScreenshot{},
 		&models.ApplicationConfiguration{},
-		&models.ApplicationVersion{},
-		&models.ApplicationProfile{},
 		&models.ApplicationCatalog{},
 	); err != nil {
 		log.Fatalf("failed to migrate: %v", err)
 	}
-
-	// Ensure composite foreign key constraints exist for relationships
-	// that reference composite primary keys. GORM may not always create
-	// composite FK constraints automatically via AutoMigrate.
-	_ = gormDb.Migrator().CreateConstraint(&models.ApplicationVersion{}, "ApplicationConfiguration")
-	_ = gormDb.Migrator().CreateConstraint(&models.ApplicationCatalog{}, "ApplicationConfiguration")
 
 	httpServer := bootstrap.NewHttpServerWithObservability(sm)
 

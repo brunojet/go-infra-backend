@@ -14,19 +14,20 @@ type TerminalModel struct {
 	CreatedAt                   sql.NullTime                 `gorm:"autoCreateTime;index:idx_terminal_model_del_created,priority:2"`
 	UpdatedAt                   sql.NullTime                 `gorm:"autoUpdateTime;index:idx_terminal_model_del_updated,priority:2"`
 	DeletedAt                   gorm.DeletedAt               `gorm:"index:idx_terminal_model_del_created,priority:1;index:idx_terminal_model_del_updated,priority:1"`
-	TerminalModelConfigurations []TerminalModelConfiguration `gorm:"foreignKey:TerminalModelId;references:TerminalModelId"`
+	TerminalModelConfigurations []TerminalModelConfiguration `gorm:"foreignKey:TerminalModelId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
 }
 
 func (TerminalModel) TableName() string { return "terminal_model" }
 
 type TerminalModelConfiguration struct {
-	TerminalModelConfigurationId int64                      `gorm:"primaryKey;autoIncrement"`
-	TerminalModelId              int64                      `gorm:"not null;uniqueIndex:uk_terminal_model_configuration_terminal_integration,priority:1;index:idx_terminal_model_configuration_terminal,priority:1"`
-	IntegrationType              sql.NullInt16              `gorm:"not null;uniqueIndex:uk_terminal_model_configuration_terminal_integration,priority:2"`
-	CreatedAt                    sql.NullTime               `gorm:"autoCreateTime;index:idx_terminal_model_configuration_del_created,priority:2"`
-	UpdatedAt                    sql.NullTime               `gorm:"autoUpdateTime;index:idx_terminal_model_configuration_del_updated,priority:2"`
-	DeletedAt                    gorm.DeletedAt             `gorm:"index:idx_terminal_model_configuration_del_created,priority:1;index:idx_terminal_model_configuration_del_updated,priority:1"`
-	ApplicationConfigurations    []ApplicationConfiguration `gorm:"foreignKey:TerminalModelConfigurationId;references:TerminalModelConfigurationId"`
+	TerminalModelConfigurationId int64          `gorm:"primaryKey;autoIncrement"`
+	TerminalModelId              int64          `gorm:"not null;uniqueIndex:uk_terminal_model_configuration_terminal_integration,priority:1;index:idx_terminal_model_configuration_terminal,priority:1"`
+	IntegrationType              sql.NullInt16  `gorm:"not null;uniqueIndex:uk_terminal_model_configuration_terminal_integration,priority:2"`
+	CreatedAt                    sql.NullTime   `gorm:"autoCreateTime;index:idx_terminal_model_configuration_del_created,priority:2"`
+	UpdatedAt                    sql.NullTime   `gorm:"autoUpdateTime;index:idx_terminal_model_configuration_del_updated,priority:2"`
+	DeletedAt                    gorm.DeletedAt `gorm:"index:idx_terminal_model_configuration_del_created,priority:1;index:idx_terminal_model_configuration_del_updated,priority:1"`
+
+	TerminalModel *TerminalModel
 }
 
 func (TerminalModelConfiguration) TableName() string { return "terminal_model_configuration" }
@@ -38,7 +39,7 @@ type FilterType struct {
 	CreatedAt    sql.NullTime   `gorm:"autoCreateTime;index:idx_filter_type_del_created,priority:2"`
 	UpdatedAt    sql.NullTime   `gorm:"autoUpdateTime;index:idx_filter_type_del_updated,priority:2"`
 	DeletedAt    gorm.DeletedAt `gorm:"index:idx_filter_type_del_created,priority:1;index:idx_filter_type_del_updated,priority:1"`
-	Filters      []Filter       `gorm:"foreignKey:FilterTypeId;references:FilterTypeId"`
+	Filters      []Filter       `gorm:"foreignKey:FilterTypeId;references:FilterTypeId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
 }
 
 func (FilterType) TableName() string { return "filter_type" }
@@ -51,7 +52,11 @@ type Filter struct {
 	CreatedAt    sql.NullTime   `gorm:"autoCreateTime;index:idx_filter_del_created,priority:2"`
 	UpdatedAt    sql.NullTime   `gorm:"autoUpdateTime;index:idx_filter_del_updated,priority:2"`
 	DeletedAt    gorm.DeletedAt `gorm:"index:idx_filter_del_created,priority:1;index:idx_filter_del_updated,priority:1"`
+
+	FilterType *FilterType
 }
+
+func (Filter) TableName() string { return "filter" }
 
 type Application struct {
 	ApplicationId int64          `gorm:"primaryKey;autoIncrement"`
@@ -61,42 +66,80 @@ type Application struct {
 	UpdatedAt     sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_del_updated,priority:2"`
 	DeletedAt     gorm.DeletedAt `gorm:"index:idx_application_del_created,priority:1;index:idx_application_del_updated,priority:1"`
 
-	ApplicationConfigurations []ApplicationConfiguration `gorm:"foreignKey:ApplicationId;references:ApplicationId"`
-	ApplicationProfiles       []ApplicationProfile       `gorm:"foreignKey:ApplicationId;references:ApplicationId"`
-	ApplicationCatalogs       []ApplicationCatalog       `gorm:"foreignKey:ApplicationId;references:ApplicationId"`
+	ApplicationConfigurations []ApplicationConfiguration `gorm:"foreignKey:ApplicationId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
+	ApplicationProfiles       []ApplicationProfile       `gorm:"foreignKey:ApplicationId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
+	ApplicationImages         []ApplicationImage         `gorm:"foreignKey:ApplicationId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
 }
 
 func (Application) TableName() string { return "application" }
 
-type ApplicationConfigurationPk struct {
-	ApplicationId                int64 `gorm:"column:application_id;primaryKey;priority:1;index:idx_app_cfg_terminal_app,priority:2"`
-	TerminalModelConfigurationId int64 `gorm:"column:terminal_model_configuration_id;primaryKey;priority:2;index:idx_app_cfg_terminal_app,priority:1"`
+type ApplicationImage struct {
+	ApplicationImageId int64          `gorm:"primaryKey;autoIncrement"`
+	ApplicationId      int64          `gorm:"not null;uniqueIndex:idx_application_image_application,priority:1"`
+	FileName           sql.NullString `gorm:"not null;size:255"`
+	FileContentType    sql.NullString `gorm:"not null;size:255"`
+	// Store raw hash bytes (32 bytes). Use binary(32) for DB storage and
+	// let GORM handle []byte mapping. Avoid sql.NullByte which doesn't exist.
+	FileHash  []byte         `gorm:"type:binary(32);not null;uniqueIndex:idx_application_image_hash_app,priority:3"`
+	ImageType sql.NullInt16  `gorm:"not null;uniqueIndex:idx_application_image_type_app,priority:2"`
+	CreatedAt sql.NullTime   `gorm:"autoCreateTime;index:idx_application_image_del_created,priority:2"`
+	UpdatedAt sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_image_del_updated,priority:2"`
+	DeletedAt gorm.DeletedAt `gorm:"index:idx_application_image_del_created,priority:1;index:idx_application_image_del_updated,priority:1"`
+
+	// Child-side constraint will live on ApplicationImage.Application
+	Application                   *Application
+	ApplicationProfiles           []ApplicationProfile           `gorm:"foreignKey:IconId;references:ApplicationImageId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT;"`
+	ApplicationProfileScreenshots []ApplicationProfileScreenshot `gorm:"foreignKey:ApplicationImageId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
 }
 
 type ApplicationConfiguration struct {
-	ApplicationConfigurationPk `gorm:"embedded"`
-	PackageName                sql.NullString       `gorm:"column:package_name;not null;size:255"`
-	CreatedAt                  sql.NullTime         `gorm:"autoCreateTime;index:idx_application_configuration_del_created,priority:2"`
-	UpdatedAt                  sql.NullTime         `gorm:"autoUpdateTime;index:idx_application_configuration_del_updated,priority:2"`
-	DeletedAt                  gorm.DeletedAt       `gorm:"index:idx_application_configuration_del_created,priority:1;index:idx_application_configuration_del_updated,priority:1"`
-	ApplicationVersions        []ApplicationVersion `gorm:"foreignKey:ApplicationId,TerminalModelConfigurationId;references:ApplicationId,TerminalModelConfigurationId"`
-	ApplicationCatalogs        []ApplicationCatalog `gorm:"foreignKey:ApplicationId,TerminalModelConfigurationId;references:ApplicationId,TerminalModelConfigurationId"`
+	ApplicationId                int64          `gorm:"column:application_id;primaryKey;priority:1;index:idx_app_cfg_terminal_app,priority:2"`
+	TerminalModelConfigurationId int64          `gorm:"column:terminal_model_configuration_id;primaryKey;priority:2;index:idx_app_cfg_terminal_app,priority:1"`
+	PackageName                  sql.NullString `gorm:"column:package_name;not null;size:255"`
+	CreatedAt                    sql.NullTime   `gorm:"autoCreateTime;index:idx_application_configuration_del_created,priority:2"`
+	UpdatedAt                    sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_configuration_del_updated,priority:2"`
+	DeletedAt                    gorm.DeletedAt `gorm:"index:idx_application_configuration_del_created,priority:1;index:idx_application_configuration_del_updated,priority:1"`
+
+	Application                *Application
+	TerminalModelConfiguration *TerminalModelConfiguration
+	ApplicationVersions        []ApplicationVersion `gorm:"foreignKey:ApplicationId,TerminalModelConfigurationId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
+	ApplicationCatalogs        []ApplicationCatalog `gorm:"foreignKey:ApplicationId,TerminalModelConfigurationId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
+	Filters                    []Filter             `gorm:"many2many:application_configuration_filter;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT;"`
 }
 
 func (ApplicationConfiguration) TableName() string { return "application_configuration" }
+
+type ApplicationProfileScreenshot struct {
+	ApplicationProfileId int64          `gorm:"column:application_profile_id;primaryKey;priority:1"`
+	ApplicationImageId   int64          `gorm:"column:application_image_id;primaryKey;priority:2"`
+	Position             int16          `gorm:"column:position;not null"`
+	CreatedAt            sql.NullTime   `gorm:"autoCreateTime;index:idx_application_profile_screenshot_del_created,priority:2"`
+	UpdatedAt            sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_profile_screenshot_del_updated,priority:2"`
+	DeletedAt            gorm.DeletedAt `gorm:"index:idx_application_profile_screenshot_del_created,priority:1;index:idx_application_profile_screenshot_del_updated,priority:1"`
+
+	ApplicationProfile *ApplicationProfile
+	ApplicationImage   *ApplicationImage
+}
+
+func (ApplicationProfileScreenshot) TableName() string { return "application_profile_screenshot" }
 
 type ApplicationProfile struct {
 	ApplicationProfileId int64          `gorm:"primaryKey;autoIncrement"`
 	ApplicationId        int64          `gorm:"index"`
 	Name                 sql.NullString `gorm:"size:128;index:ux_application_profile_name_app,priority:1"`
 	Description          sql.NullString `gorm:"size:255"`
+	IconId               int64          `gorm:"not null"`
 	ReviewAt             sql.NullTime
 	ProductionAt         sql.NullTime
-	CreatedAt            sql.NullTime         `gorm:"autoCreateTime;index:idx_application_profile_history_del_created,priority:2"`
-	UpdatedAt            sql.NullTime         `gorm:"autoUpdateTime;index:idx_application_profile_history_del_updated,priority:2"`
-	DeletedAt            gorm.DeletedAt       `gorm:"index:idx_application_profile_history_del_created,priority:1;index:idx_application_profile_history_del_updated,priority:1"`
-	Filters              []Filter             `gorm:"many2many:application_profile_filters;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT;"`
-	ApplicationCatalogs  []ApplicationCatalog `gorm:"foreignKey:ApplicationProfileId;references:ApplicationProfileId"`
+	CreatedAt            sql.NullTime   `gorm:"autoCreateTime;index:idx_application_profile_history_del_created,priority:2"`
+	UpdatedAt            sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_profile_history_del_updated,priority:2"`
+	DeletedAt            gorm.DeletedAt `gorm:"index:idx_application_profile_history_del_created,priority:1;index:idx_application_profile_history_del_updated,priority:1"`
+	Filters              []Filter       `gorm:"many2many:application_profile_filters;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT;"`
+
+	Application                   *Application
+	ApplicationImage              *ApplicationImage
+	ApplicationCatalogs           []ApplicationCatalog           `gorm:"foreignKey:ApplicationProfileId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
+	ApplicationProfileScreenshots []ApplicationProfileScreenshot `gorm:"foreignKey:ApplicationProfileId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
 }
 
 func (ApplicationProfile) TableName() string {
@@ -112,25 +155,25 @@ type ApplicationVersion struct {
 	CreatedAt                    sql.NullTime   `gorm:"autoCreateTime;index:idx_application_version_history_del_created,priority:2"`
 	UpdatedAt                    sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_version_history_del_updated,priority:2"`
 	DeletedAt                    gorm.DeletedAt `gorm:"index:idx_application_version_history_del_created,priority:1;index:idx_application_version_history_del_updated,priority:1"`
+
+	ApplicationCatalogs []ApplicationCatalog `gorm:"foreignKey:ApplicationVersionId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
 }
 
 func (ApplicationVersion) TableName() string {
 	return "application_version_history"
 }
 
-type ApplicationCatalogPk struct {
-	ApplicationId                int64 `gorm:"column:application_id;primaryKey;priority:1;index:idx_ctlg_terminal_stage_app,priority:3"`
-	TerminalModelConfigurationId int64 `gorm:"column:terminal_model_configuration_id;primaryKey;priority:2;index:idx_ctlg_terminal_stage_app,priority:1"`
-	Stage                        int16 `gorm:"column:stage;primaryKey;priority:3;index:idx_ctlg_terminal_stage_app,priority:2"`
-}
-
 type ApplicationCatalog struct {
-	ApplicationCatalogPk `gorm:"embedded"`
-	ApplicationVersionId int64          `gorm:"column:application_version_id"`
-	ApplicationProfileId int64          `gorm:"column:application_profile_id"`
-	CreatedAt            sql.NullTime   `gorm:"autoCreateTime;index:idx_application_catalog_del_created,priority:2"`
-	UpdatedAt            sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_catalog_del_updated,priority:2"`
-	DeletedAt            gorm.DeletedAt `gorm:"index:idx_application_catalog_del_created,priority:1;index:idx_application_catalog_del_updated,priority:1"`
+	ApplicationId                int64          `gorm:"column:application_id;primaryKey;priority:1;index:idx_ctlg_terminal_stage_app,priority:3"`
+	TerminalModelConfigurationId int64          `gorm:"column:terminal_model_configuration_id;primaryKey;priority:2;index:idx_ctlg_terminal_stage_app,priority:1"`
+	Stage                        int16          `gorm:"column:stage;primaryKey;priority:3;index:idx_ctlg_terminal_stage_app,priority:2"`
+	ApplicationVersionId         int64          `gorm:"column:application_version_id"`
+	ApplicationProfileId         int64          `gorm:"column:application_profile_id"`
+	CreatedAt                    sql.NullTime   `gorm:"autoCreateTime;index:idx_application_catalog_del_created,priority:2"`
+	UpdatedAt                    sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_catalog_del_updated,priority:2"`
+	DeletedAt                    gorm.DeletedAt `gorm:"index:idx_application_catalog_del_created,priority:1;index:idx_application_catalog_del_updated,priority:1"`
+	ApplicationProfile           *ApplicationProfile
+	ApplicationVersion           *ApplicationVersion
 }
 
 func (ApplicationCatalog) TableName() string { return "application_catalog" }
