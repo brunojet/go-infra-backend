@@ -18,6 +18,8 @@ const (
 	DB_SCHEMA_ENV               = "DB_SCHEMA"
 	DB_NAME_ENV                 = "DB_NAME"
 	DB_MODE_ENV                 = "DB_MODE"
+	DB_USER_ENV                 = "DB_USER"
+	DB_PASS_ENV                 = "DB_PASS"
 	DB_MAX_OPEN_CONNECTIONS_ENV = "DB_MAX_OPEN_CONNECTIONS"
 	DB_MAX_IDLE_CONNECTIONS_ENV = "DB_MAX_IDLE_CONNECTIONS"
 	DB_CONN_MAX_LIFETIME_ENV    = "DB_CONN_MAX_LIFETIME"
@@ -61,6 +63,8 @@ type DatabaseConfig struct {
 	Schema              string
 	Name                string
 	Mode                DatabaseMode
+	UserName            string
+	Password            string
 	MaxOpenConnections  int
 	MaxIdleConnections  int
 	ConnMaxLifetimeSecs int

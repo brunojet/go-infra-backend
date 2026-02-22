@@ -18,6 +18,8 @@ func newDatabaseConfigFromEnv() (*dbcontracts.DatabaseConfig, error) {
 		Schema:             config.GetEnv(dbcontracts.DB_SCHEMA_ENV, ""),
 		Name:               config.GetEnv(dbcontracts.DB_NAME_ENV, "app.db"),
 		Mode:               dbcontracts.DatabaseMode(config.GetEnv(dbcontracts.DB_MODE_ENV, string(dbcontracts.DatabaseModeDefault))),
+		UserName:           config.GetEnv(dbcontracts.DB_USER_ENV, ""),
+		Password:           config.GetEnv(dbcontracts.DB_PASS_ENV, ""),
 		MaxOpenConnections: config.GetEnvAsInt(dbcontracts.DB_MAX_OPEN_CONNECTIONS_ENV, dbcontracts.DbMaxOpenConnectionsDefault),
 		MaxIdleConnections: config.GetEnvAsInt(dbcontracts.DB_MAX_IDLE_CONNECTIONS_ENV, dbcontracts.DbMaxIdleConnectionsDefault),
 		ConnMaxLifetimeSecs: config.GetEnvAsInt(dbcontracts.DB_CONN_MAX_LIFETIME_ENV,

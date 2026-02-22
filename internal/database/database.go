@@ -3,9 +3,11 @@ package database
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	dbadpt "github.com/brunojet/go-infra-backend/internal/database/adapters"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
+	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -66,17 +68,50 @@ func newDatabaseAdapterFromConfig(cfg *dbcontracts.DatabaseConfig) (dbcontracts.
 	if cfg == nil {
 		return nil, fmt.Errorf("config is nil")
 	}
-	// Prefer configured Mode for SQLite selection. This allows DB driver to
-	// remain 'sqlite' while Mode selects between memory and disk.
-	switch cfg.Mode {
-	case dbcontracts.DatabaseModeMemory:
-		if cfg.Name != "" {
-			// allow user-provided name to be included in the in-memory DSN
-			return dbadpt.NewSQLite("file:" + cfg.Name + "?mode=memory&cache=shared")
+	// Determine driver (default to configured default when empty)
+	driver := cfg.Driver
+	if driver == "" {
+		driver = dbcontracts.DbDriverDefault
+	}
+
+	switch driver {
+	case dbcontracts.DbDriverMySQL:
+		// Build DSN using github.com/go-sql-driver/mysql Config helper.
+		addr := strings.TrimSpace(cfg.Host)
+		if cfg.Port != "" {
+			addr = addr + ":" + strings.TrimSpace(cfg.Port)
 		}
-		return dbadpt.NewSQLite(":memory:")
-	case dbcontracts.DatabaseModeDisk:
-		return dbadpt.NewSQLite(cfg.Name)
+		mysqlCfg := mysql.Config{
+			User:   cfg.UserName,
+			Passwd: cfg.Password,
+			Net:    "tcp",
+			Addr:   addr,
+			DBName: cfg.Name,
+			Params: map[string]string{
+				"parseTime": "true",
+				"charset":   "utf8mb4",
+				"collation": "utf8mb4_unicode_ci",
+				"loc":       "Local",
+			},
+			InterpolateParams: true,
+		}
+		dsn := mysqlCfg.FormatDSN()
+		return dbadpt.NewMySQL(dsn)
+	case dbcontracts.DbDriverSQLite:
+		// Prefer configured Mode for SQLite selection. This allows DB driver to
+		// remain 'sqlite' while Mode selects between memory and disk.
+		switch cfg.Mode {
+		case dbcontracts.DatabaseModeMemory:
+			if cfg.Name != "" {
+				// allow user-provided name to be included in the in-memory DSN
+				return dbadpt.NewSQLite("file:" + cfg.Name + "?mode=memory&cache=shared")
+			}
+			return dbadpt.NewSQLite(":memory:")
+		case dbcontracts.DatabaseModeDisk:
+			return dbadpt.NewSQLite(cfg.Name)
+		default:
+			return nil, dbcontracts.ErrUnsupportedDriver
+		}
 	default:
 		return nil, dbcontracts.ErrUnsupportedDriver
 	}
