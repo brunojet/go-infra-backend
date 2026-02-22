@@ -9,6 +9,14 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// txMarker detects connection pools that expose transaction control methods.
+// We use this instead of asserting *sql.Tx because some DB adapters wrap/replace
+// the concrete type while still providing Commit/Rollback.
+type txMarker interface {
+	Commit() error
+	Rollback() error
+}
+
 // Note: package namespace enforcement is done by checking existing
 // ApplicationConfiguration rows; we avoid creating auxiliary rows here.
 
@@ -79,35 +87,55 @@ type Application struct {
 
 func (Application) TableName() string { return "application" }
 
+// ValidateCustomer checks whether there is an existing Application with the
+// same name owned by a different customer. candidateCustomer is the customer
+// identifier to validate (useful for Create and Update flows). It requires the
+// caller to run inside a transaction so SELECT ... FOR UPDATE is effective.
+func (a Application) ValidateCustomer(tx *gorm.DB, candidateCustomer sql.NullString) error {
+	if _, ok := tx.Statement.ConnPool.(txMarker); !ok {
+		return errors.New("operation must run inside a transaction")
+	}
+
+	var existing Application
+
+	err := tx.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).
+		Select("customer_id").
+		Where("name = ? AND customer_id != ?", a.Name.String, candidateCustomer.String).
+		First(&existing).Error
+
+	if err == nil {
+		return gorm.ErrCheckConstraintViolated
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil
+	}
+	return err
+}
+
 func (a Application) BeforeCreate(tx *gorm.DB) error {
 	if !a.Name.Valid || !a.CustomerId.Valid {
 		return errors.New("name and customer_id must be valid")
 	}
 
-	// Ensure we are running inside a transaction so SELECT ... FOR UPDATE is effective
-	if _, ok := tx.Statement.ConnPool.(*sql.Tx); !ok {
-		return errors.New("operation must run inside a transaction")
-	}
-
-	var existing Application
-	err := tx.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).
-		Select("customer_id").
-		Where("name = ? AND customer_id != ?", a.Name.String, a.CustomerId.String).
-		First(&existing).Error
-
-	if err == nil {
-		return gorm.ErrCheckConstraintViolated
-	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := a.ValidateCustomer(tx, a.CustomerId); err != nil {
 		return err
-	} else {
-		err = nil
 	}
 
 	tx.Statement.AddClause(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "name"}},
 		UpdateAll: true,
 	})
-	return err
+	return nil
+}
+
+// BeforeUpdate validates updates that would change customer ownership or name.
+// It uses the Application instance's `CustomerId` as the candidate value and
+// reuses ValidateCustomer without reflection.
+func (a *Application) BeforeUpdate(tx *gorm.DB) error {
+	if !a.Name.Valid || !a.CustomerId.Valid {
+		return errors.New("name and customer_id must be valid")
+	}
+	return a.ValidateCustomer(tx, a.CustomerId)
 }
 
 type ApplicationImage struct {
@@ -180,7 +208,7 @@ func (a ApplicationConfiguration) BeforeCreate(tx *gorm.DB) (err error) {
 	}
 
 	// Ensure we are running inside a transaction so SELECT ... FOR UPDATE is effective
-	if _, ok := tx.Statement.ConnPool.(*sql.Tx); !ok {
+	if _, ok := tx.Statement.ConnPool.(txMarker); !ok {
 		return errors.New("operation must run inside a transaction")
 	}
 
