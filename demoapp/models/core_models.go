@@ -88,9 +88,11 @@ type ApplicationImage struct {
 
 	// Child-side constraint will live on ApplicationImage.Application
 	Application                   *Application
-	ApplicationProfiles           []ApplicationProfile           `gorm:"foreignKey:IconId;references:ApplicationImageId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT;"`
+	ApplicationProfiles           []ApplicationProfile           `gorm:"foreignKey:ApplicationImageId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT;"`
 	ApplicationProfileScreenshots []ApplicationProfileScreenshot `gorm:"foreignKey:ApplicationImageId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
 }
+
+func (ApplicationImage) TableName() string { return "application_image" }
 
 type ApplicationConfiguration struct {
 	ApplicationId                int64          `gorm:"column:application_id;primaryKey;priority:1;index:idx_app_cfg_terminal_app,priority:2"`
@@ -128,7 +130,7 @@ type ApplicationProfile struct {
 	ApplicationId        int64          `gorm:"index"`
 	Name                 sql.NullString `gorm:"size:128;index:ux_application_profile_name_app,priority:1"`
 	Description          sql.NullString `gorm:"size:255"`
-	IconId               int64          `gorm:"not null"`
+	ApplicationImageId   int64          `gorm:"not null"`
 	ReviewAt             sql.NullTime
 	ProductionAt         sql.NullTime
 	CreatedAt            sql.NullTime   `gorm:"autoCreateTime;index:idx_application_profile_history_del_created,priority:2"`
