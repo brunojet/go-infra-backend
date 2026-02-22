@@ -58,6 +58,8 @@ func (wp *WorkerPool) Start() {
 					if wp.OnPanic != nil {
 						wp.OnPanic(r)
 					} else {
+						// TODO: tornar comportamento configurável (ex: PropagatePanic bool)
+						// Atualmente re-panica para preservação do comportamento fail-fast.
 						panic(r)
 					}
 				}
@@ -78,24 +80,39 @@ func (wp *WorkerPool) Start() {
 
 // Enqueue adiciona uma tarefa ao pool
 func (wp *WorkerPool) Enqueue(task Task) bool {
-	wp.mu.Lock()
-	stopped := atomic.LoadInt32(&wp.stopped) == 1
-	wp.mu.Unlock()
-	if stopped {
+	return wp.EnqueueWithContext(context.Background(), task)
+}
+
+// EnqueueWithContext tenta enfileirar respeitando o contexto fornecido.
+// Retorna true se a tarefa foi enfileirada com sucesso, false caso o pool
+// esteja parado ou o contexto seja cancelado antes da inserção.
+func (wp *WorkerPool) EnqueueWithContext(ctx context.Context, task Task) (ok bool) {
+	if atomic.LoadInt32(&wp.stopped) == 1 {
 		atomic.AddUint64(&wp.TasksRejected, 1)
 		return false
 	}
+
+	// recover para capturar panic ao enviar em canal fechado.
 	defer func() {
 		if r := recover(); r != nil {
+			// Se o pool não estiver marcado como stopped, repropagamos o panic.
 			if atomic.LoadInt32(&wp.stopped) != 1 {
 				panic(r)
 			}
+			// Caso esteja stopped, consideramos a task rejeitada.
+			atomic.AddUint64(&wp.TasksRejected, 1)
+			ok = false
 		}
 	}()
-	atomic.AddUint64(&wp.TasksEnqueued, 1)
-	wp.tasks <- task
 
-	return true
+	select {
+	case <-ctx.Done():
+		atomic.AddUint64(&wp.TasksRejected, 1)
+		return false
+	case wp.tasks <- task:
+		atomic.AddUint64(&wp.TasksEnqueued, 1)
+		return true
+	}
 }
 
 // Stop encerra o pool, cancela o contexto e aguarda todos os workers finalizarem
