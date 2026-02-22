@@ -25,6 +25,10 @@ type LocalS3EventQueue struct {
 // NewLocalS3EventQueue cria um novo watcher para o diretório local
 func NewLocalS3EventQueue(ctx context.Context, storagePath, filePath string) *LocalS3EventQueue {
 	watcherPath := filepath.Join(storagePath, filePath)
+	// Se storagePath não for absoluto, assume diretório base em os.TempDir()
+	if !filepath.IsAbs(storagePath) {
+		watcherPath = filepath.Join(os.TempDir(), storagePath, filePath)
+	}
 	if err := os.MkdirAll(watcherPath, 0755); err != nil {
 		panic(fmt.Sprintf("Erro ao criar diretório watcherPath: %v", err))
 	}
