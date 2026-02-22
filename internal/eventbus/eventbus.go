@@ -36,8 +36,6 @@ func NewEventBus() *EventBus {
 }
 
 func (b *EventBus) getWorkerUnsafe(eventType HandlerName) (*eventWorker, bool) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
 	w, ok := b.workers[eventType]
 	return w, ok
 }
