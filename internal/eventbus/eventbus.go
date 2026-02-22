@@ -35,16 +35,18 @@ func NewEventBus() *EventBus {
 	}
 }
 
-func (b *EventBus) getWorker(eventType HandlerName) (*eventWorker, bool) {
+func (b *EventBus) getWorkerUnsafe(eventType HandlerName) (*eventWorker, bool) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 	w, ok := b.workers[eventType]
 	return w, ok
 }
 
-func (b *EventBus) getOrErrorWorker(caller string, eventType HandlerName) (*eventWorker, error) {
+func (b *EventBus) getOrErrorWorkerUnsafe(caller string, eventType HandlerName) (*eventWorker, error) {
 	if err := b.isValidHandlerName(caller, eventType); err != nil {
 		return nil, err
 	}
-	w, ok := b.getWorker(eventType)
+	w, ok := b.getWorkerUnsafe(eventType)
 	if !ok {
 		err := fmt.Errorf("handler não registrado para o tipo de evento: %s", eventType)
 		return nil, err
@@ -52,11 +54,17 @@ func (b *EventBus) getOrErrorWorker(caller string, eventType HandlerName) (*even
 	return w, nil
 }
 
+func (b *EventBus) getOrErrorWorker(caller string, eventType HandlerName) (*eventWorker, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return b.getOrErrorWorkerUnsafe(caller, eventType)
+}
+
 func (b *EventBus) getIfExistsWorker(caller string, eventType HandlerName) error {
 	if err := b.isValidHandlerName(caller, eventType); err != nil {
 		return err
 	}
-	_, ok := b.getWorker(eventType)
+	_, ok := b.getWorkerUnsafe(eventType)
 	if ok {
 		err := fmt.Errorf("handler já registrado para o tipo de evento: %s", eventType)
 		return err
@@ -83,34 +91,6 @@ func (b *EventBus) isValidWorkerParams(caller string, handler Handler, numWorker
 	return nil
 }
 
-// func (b *EventBus) WrapHandlerWithObservability(eventType HandlerName, handler Handler) Handler {
-// 	return func(ctx context.Context, event any) error {
-// 		var (
-// 			traceID = observability.RequestIDFromContext(ctx)
-// 			hCtx    HandlerCtx
-// 		)
-// 		if traceID == "" {
-// 			hCtx = b.ObsHandler.HandlerStart(eventType)
-// 			ctx = observability.ContextWithTraceID(ctx, hCtx.TraceID)
-// 		} else {
-// 			hCtx = b.ObsHandler.HandlerStartWithTraceId(eventType, traceID)
-// 		}
-
-// 		var err error = nil
-// 		defer func() {
-// 			if r := recover(); r != nil {
-// 				b.ObsHandler.HandlerPanic(hCtx, r)
-// 			} else if err != nil {
-// 				b.ObsHandler.HandlerError(hCtx, err)
-// 			} else {
-// 				b.ObsHandler.HandlerSuccess(hCtx)
-// 			}
-// 		}()
-// 		err = handler(ctx, event)
-// 		return err
-// 	}
-// }
-
 func (b *EventBus) Register(eventType HandlerName, handler Handler, numWorkers int, queueBacklog int) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -129,7 +109,7 @@ func (b *EventBus) Register(eventType HandlerName, handler Handler, numWorkers i
 func (b *EventBus) Unregister(eventType HandlerName) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	w, err := b.getOrErrorWorker("eventbus.unregister", eventType)
+	w, err := b.getOrErrorWorkerUnsafe("eventbus.unregister", eventType)
 	if err != nil {
 		return err
 	}
@@ -139,20 +119,23 @@ func (b *EventBus) Unregister(eventType HandlerName) error {
 }
 
 func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName, data any) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
 	w, err := b.getOrErrorWorker("eventbus.publish_with_context", eventType)
 	if err != nil {
 		return err
 	}
-	w.pool.Enqueue(func(poolCtx context.Context) {
+
+	// enfileirar respeitando contexto; evita manter lock durante enqueue
+	enqueued := w.pool.EnqueueWithContext(ctx, func(poolCtx context.Context) {
 		realCtx := ctx
 		if ctx == context.TODO() {
 			realCtx = poolCtx
 		}
-
-		w.handler(realCtx, data)
+		// manter comportamento anterior: ignorar erro retornado pelo handler
+		_ = w.handler(realCtx, data)
 	})
+	if !enqueued {
+		return fmt.Errorf("evento rejeitado (fila cheia ou pool parado) para o tipo de evento: %s", eventType)
+	}
 	return nil
 }
 
@@ -183,7 +166,7 @@ func (b *EventBus) WaitForHandlers(eventTypes ...HandlerName) error {
 		return nil
 	}
 	for _, eventType := range eventTypes {
-		w, err := b.getOrErrorWorker("eventbus.wait.error", eventType)
+		w, err := b.getOrErrorWorkerUnsafe("eventbus.wait.error", eventType)
 		if err != nil {
 			return err
 		}
