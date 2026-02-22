@@ -175,33 +175,15 @@ func TestCatalogFilterSearch(t *testing.T) {
 	require.Equal(t, "app-two", apps[1].app.Name.String)
 }
 
-func TestPreloadOneShot(t *testing.T) {
-	t.Setenv(dbcontracts.DB_DRIVER_ENV, string(dbcontracts.DbDriverSQLite))
-	t.Setenv(dbcontracts.DB_MODE_ENV, string(dbcontracts.DatabaseModeMemory))
-
-	dbm, err := database.NewDatabaseManagerFromEnv()
-	require.NoError(t, err)
-	require.NotNil(t, dbm)
-
-	// Migrate involved models
-	err = dbm.Migrate(
-		&TerminalModel{}, &TerminalModelConfiguration{},
-		&Application{}, &ApplicationImage{}, &ApplicationProfile{},
-		&ApplicationConfiguration{}, &ApplicationVersion{}, &ApplicationCatalog{},
-		&FilterType{}, &Filter{},
-	)
-	require.NoError(t, err)
-
-	gdb, err := dbm.DatabaseAdapter().GormDB()
-	require.NoError(t, err)
-
+func createCatalogWithAssociations(t *testing.T, gdb *gorm.DB, appName, packageName, terminalModelName, filterType, filterName string) *ApplicationCatalog {
 	acfg := ApplicationConfiguration{
-		PackageName: sql.NullString{String: "pkg-one", Valid: true},
+		PackageName: sql.NullString{String: packageName, Valid: true},
 		Application: &Application{
-			Name: sql.NullString{String: "one-app", Valid: true},
+			Name:       sql.NullString{String: appName, Valid: true},
+			CustomerId: sql.NullString{String: "123456", Valid: true},
 		},
 		TerminalModelConfiguration: &TerminalModelConfiguration{
-			TerminalModel:   &TerminalModel{Name: sql.NullString{String: "tm", Valid: true}},
+			TerminalModel:   &TerminalModel{Name: sql.NullString{String: terminalModelName, Valid: true}},
 			IntegrationType: sql.NullInt16{Int16: 1, Valid: true},
 		},
 	}
@@ -223,8 +205,8 @@ func TestPreloadOneShot(t *testing.T) {
 		},
 		Filters: []Filter{
 			{
-				FilterType: &FilterType{Name: sql.NullString{String: "ft-one", Valid: true}},
-				Name:       sql.NullString{String: "green", Valid: true},
+				FilterType: &FilterType{Name: sql.NullString{String: filterType, Valid: true}},
+				Name:       sql.NullString{String: filterName, Valid: true},
 			},
 		},
 	}
@@ -243,19 +225,46 @@ func TestPreloadOneShot(t *testing.T) {
 	}
 	require.NoError(t, gdb.Create(&cat).Error)
 
-	// One-shot chained preload: ApplicationProfile (and its Filters), ApplicationVersion, Application
-	var catalogs []ApplicationCatalog
-	err = gdb.
+	// One-shot chained preload: load only the catalog we just created so subsequent
+	// calls don't accidentally return the first row in the table.
+	var got ApplicationCatalog
+	err := gdb.
 		Preload("ApplicationProfile.Filters").
 		Preload("ApplicationProfile.ApplicationImage").
 		Preload("ApplicationVersion").
-		Preload("Application").Find(&catalogs).Error
+		Preload("Application").
+		Where("application_id = ? AND terminal_model_configuration_id = ? AND stage = ?", acfg.ApplicationId, acfg.TerminalModelConfiguration.TerminalModelConfigurationId, 1).
+		First(&got).Error
 	require.NoError(t, err)
-	require.Len(t, catalogs, 1)
-
-	got := catalogs[0]
 	require.NotNil(t, got.ApplicationProfile)
 	require.Len(t, got.ApplicationProfile.Filters, 1)
 	require.NotNil(t, got.ApplicationVersion)
 	require.NotNil(t, got.Application)
+	return &got
+}
+
+func TestPreloadOneShot(t *testing.T) {
+	t.Setenv(dbcontracts.DB_DRIVER_ENV, string(dbcontracts.DbDriverSQLite))
+	t.Setenv(dbcontracts.DB_MODE_ENV, string(dbcontracts.DatabaseModeMemory))
+
+	dbm, err := database.NewDatabaseManagerFromEnv()
+	require.NoError(t, err)
+	require.NotNil(t, dbm)
+
+	err = dbm.Migrate(
+		&TerminalModel{}, &TerminalModelConfiguration{},
+		&Application{}, &ApplicationImage{}, &ApplicationProfile{},
+		&ApplicationConfiguration{}, &ApplicationVersion{}, &ApplicationCatalog{},
+		&FilterType{}, &Filter{},
+	)
+	require.NoError(t, err)
+
+	gdb, err := dbm.DatabaseAdapter().GormDB()
+	require.NoError(t, err)
+
+	cat1 := createCatalogWithAssociations(t, gdb, "app-one", "pkg-one", "tm1", "ft-one", "green")
+	require.NotNil(t, cat1)
+
+	cat2 := createCatalogWithAssociations(t, gdb, "app-one", "pkg-two", "tm2", "ft-two", "blue")
+	require.NotNil(t, cat2)
 }

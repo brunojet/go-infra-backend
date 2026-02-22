@@ -2,10 +2,15 @@ package models
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
+
+// Note: package namespace enforcement is done by checking existing
+// ApplicationConfiguration rows; we avoid creating auxiliary rows here.
 
 type TerminalModel struct {
 	TerminalModelId             int64                        `gorm:"primaryKey;autoIncrement"`
@@ -60,6 +65,7 @@ func (Filter) TableName() string { return "filter" }
 
 type Application struct {
 	ApplicationId int64          `gorm:"primaryKey;autoIncrement"`
+	CustomerId    sql.NullString `gorm:"size:32;not null;index:idx_application_customer"`
 	Name          sql.NullString `gorm:"not null;size:32;uniqueIndex:ux_application_name"`
 	Description   sql.NullString `gorm:"size:500"`
 	CreatedAt     sql.NullTime   `gorm:"autoCreateTime;index:idx_application_del_created,priority:2"`
@@ -73,6 +79,37 @@ type Application struct {
 
 func (Application) TableName() string { return "application" }
 
+func (a Application) BeforeCreate(tx *gorm.DB) error {
+	if !a.Name.Valid || !a.CustomerId.Valid {
+		return errors.New("name and customer_id must be valid")
+	}
+
+	// Ensure we are running inside a transaction so SELECT ... FOR UPDATE is effective
+	if _, ok := tx.Statement.ConnPool.(*sql.Tx); !ok {
+		return errors.New("operation must run inside a transaction")
+	}
+
+	var existing Application
+	err := tx.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).
+		Select("customer_id").
+		Where("name = ? AND customer_id != ?", a.Name.String, a.CustomerId.String).
+		First(&existing).Error
+
+	if err == nil {
+		return gorm.ErrCheckConstraintViolated
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	} else {
+		err = nil
+	}
+
+	tx.Statement.AddClause(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "name"}},
+		UpdateAll: true,
+	})
+	return err
+}
+
 type ApplicationImage struct {
 	ApplicationImageId int64          `gorm:"primaryKey;autoIncrement"`
 	ApplicationId      int64          `gorm:"not null;uniqueIndex:idx_application_image_application,priority:1"`
@@ -80,8 +117,8 @@ type ApplicationImage struct {
 	FileContentType    sql.NullString `gorm:"not null;size:255"`
 	// Store raw hash bytes (32 bytes). Use binary(32) for DB storage and
 	// let GORM handle []byte mapping. Avoid sql.NullByte which doesn't exist.
-	FileHash  []byte         `gorm:"type:binary(32);not null;uniqueIndex:idx_application_image_hash_app,priority:3"`
-	ImageType sql.NullInt16  `gorm:"not null;uniqueIndex:idx_application_image_type_app,priority:2"`
+	FileHash  []byte         `gorm:"type:binary(32);not null;uniqueIndex:idx_application_image_application,priority:3"`
+	ImageType sql.NullInt16  `gorm:"not null;uniqueIndex:idx_application_image_application,priority:2"`
 	CreatedAt sql.NullTime   `gorm:"autoCreateTime;index:idx_application_image_del_created,priority:2"`
 	UpdatedAt sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_image_del_updated,priority:2"`
 	DeletedAt gorm.DeletedAt `gorm:"index:idx_application_image_del_created,priority:1;index:idx_application_image_del_updated,priority:1"`
@@ -94,10 +131,35 @@ type ApplicationImage struct {
 
 func (ApplicationImage) TableName() string { return "application_image" }
 
+func (a ApplicationImage) BeforeCreate(tx *gorm.DB) (err error) {
+	if len(a.FileHash) != 32 {
+		return errors.New("file_hash must be exactly 32 bytes")
+	}
+	tx.Statement.AddClause(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "application_id"}, {Name: "file_hash"}, {Name: "image_type"}},
+		DoNothing: true,
+	})
+	return nil
+}
+
+func (a *ApplicationImage) CreateOrGet(tx *gorm.DB) error {
+	tx = tx.Create(a)
+
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	if tx.RowsAffected == 0 {
+		tx = tx.Where("application_id = ? AND file_hash = ? AND image_type = ?", a.ApplicationId, a.FileHash, a.ImageType).First(a)
+	}
+
+	return tx.Error
+}
+
 type ApplicationConfiguration struct {
 	ApplicationId                int64          `gorm:"column:application_id;primaryKey;priority:1;index:idx_app_cfg_terminal_app,priority:2"`
-	TerminalModelConfigurationId int64          `gorm:"column:terminal_model_configuration_id;primaryKey;priority:2;index:idx_app_cfg_terminal_app,priority:1"`
-	PackageName                  sql.NullString `gorm:"column:package_name;not null;size:255"`
+	TerminalModelConfigurationId int64          `gorm:"column:terminal_model_configuration_id;primaryKey;priority:2;index:idx_app_cfg_terminal_app,priority:1;uniqueIndex:ux_app_cfg_terminal_app,priority:1"`
+	PackageName                  sql.NullString `gorm:"column:package_name;not null;size:255;uniqueIndex:ux_app_cfg_terminal_app,priority:2"`
 	CreatedAt                    sql.NullTime   `gorm:"autoCreateTime;index:idx_application_configuration_del_created,priority:2"`
 	UpdatedAt                    sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_configuration_del_updated,priority:2"`
 	DeletedAt                    gorm.DeletedAt `gorm:"index:idx_application_configuration_del_created,priority:1;index:idx_application_configuration_del_updated,priority:1"`
@@ -110,6 +172,40 @@ type ApplicationConfiguration struct {
 }
 
 func (ApplicationConfiguration) TableName() string { return "application_configuration" }
+
+func (a ApplicationConfiguration) BeforeCreate(tx *gorm.DB) (err error) {
+	// If package name is not set, nothing to validate here
+	if !a.PackageName.Valid {
+		return nil
+	}
+
+	// Ensure we are running inside a transaction so SELECT ... FOR UPDATE is effective
+	if _, ok := tx.Statement.ConnPool.(*sql.Tx); !ok {
+		return errors.New("operation must run inside a transaction")
+	}
+
+	// Use SELECT ... FOR UPDATE to reduce race window. This requires the caller to perform the
+	// operation inside a transaction so that the lock is effective and a returned error will
+	// roll back the enclosing transaction.
+	var existing ApplicationConfiguration
+	if err := tx.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).
+		Select("application_id").
+		Where("package_name = ?", a.PackageName.String).
+		First(&existing).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// no existing owner — allow create
+			return nil
+		}
+		return err
+	}
+
+	// If an existing configuration is owned by another application, reject.
+	if existing.ApplicationId != a.ApplicationId {
+		return gorm.ErrCheckConstraintViolated
+	}
+
+	return nil
+}
 
 type ApplicationProfileScreenshot struct {
 	ApplicationProfileId int64          `gorm:"column:application_profile_id;primaryKey;priority:1"`
@@ -148,6 +244,16 @@ func (ApplicationProfile) TableName() string {
 	return "application_profile_history"
 }
 
+func (a *ApplicationProfile) BeforeCreate(tx *gorm.DB) (err error) {
+	if a.ApplicationImage != nil {
+		err = a.ApplicationImage.CreateOrGet(tx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type ApplicationVersion struct {
 	ApplicationVersionId         int64 `gorm:"primaryKey;autoIncrement"`
 	ApplicationId                int64 `gorm:"column:application_id;index:idx_appver_app_cfg,priority:1;index:idx_appver_terminal_app,priority:2"`
@@ -181,6 +287,14 @@ type ApplicationCatalog struct {
 }
 
 func (ApplicationCatalog) TableName() string { return "application_catalog" }
+
+func (ApplicationCatalog) BeforeCreate(tx *gorm.DB) (err error) {
+	tx.Statement.AddClause(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "application_id"}, {Name: "terminal_model_configuration_id"}, {Name: "stage"}},
+		UpdateAll: true,
+	})
+	return nil
+}
 
 // AuditOperation represents a generic CRUD operation recorded in the audit log.
 // Use small integers to keep storage and indexes compact across databases.
