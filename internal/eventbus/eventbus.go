@@ -7,21 +7,19 @@ import (
 	"sync"
 
 	"github.com/brunojet/go-infra-backend/internal/workerpool"
+	ebcontracts "github.com/brunojet/go-infra-backend/pkg/eventbus/contracts"
+	wpcontracts "github.com/brunojet/go-infra-backend/pkg/workerpool/contracts"
 )
 
 var (
 	handlerNameRegex = regexp.MustCompile(`^[a-z][a-z0-9_]{0,99}$`)
 )
 
-type Handler func(ctx context.Context, event any) error
-
-type HandlerName string
-
-type WorkerMap map[HandlerName]*eventWorker
+type WorkerMap map[ebcontracts.HandlerName]*eventWorker
 
 type eventWorker struct {
-	pool    *workerpool.WorkerPool
-	handler Handler
+	pool    wpcontracts.WorkerPool
+	handler ebcontracts.Handler
 }
 
 type EventBus struct {
@@ -35,12 +33,12 @@ func NewEventBus() *EventBus {
 	}
 }
 
-func (b *EventBus) getWorkerUnsafe(eventType HandlerName) (*eventWorker, bool) {
+func (b *EventBus) getWorkerUnsafe(eventType ebcontracts.HandlerName) (*eventWorker, bool) {
 	w, ok := b.workers[eventType]
 	return w, ok
 }
 
-func (b *EventBus) getOrErrorWorkerUnsafe(caller string, eventType HandlerName) (*eventWorker, error) {
+func (b *EventBus) getOrErrorWorkerUnsafe(caller string, eventType ebcontracts.HandlerName) (*eventWorker, error) {
 	if err := b.isValidHandlerName(caller, eventType); err != nil {
 		return nil, err
 	}
@@ -52,13 +50,13 @@ func (b *EventBus) getOrErrorWorkerUnsafe(caller string, eventType HandlerName) 
 	return w, nil
 }
 
-func (b *EventBus) getOrErrorWorker(caller string, eventType HandlerName) (*eventWorker, error) {
+func (b *EventBus) getOrErrorWorker(caller string, eventType ebcontracts.HandlerName) (*eventWorker, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.getOrErrorWorkerUnsafe(caller, eventType)
 }
 
-func (b *EventBus) getIfExistsWorker(caller string, eventType HandlerName) error {
+func (b *EventBus) getIfExistsWorker(caller string, eventType ebcontracts.HandlerName) error {
 	if err := b.isValidHandlerName(caller, eventType); err != nil {
 		return err
 	}
@@ -70,14 +68,14 @@ func (b *EventBus) getIfExistsWorker(caller string, eventType HandlerName) error
 	return nil
 }
 
-func (b *EventBus) isValidHandlerName(caller string, eventType HandlerName) error {
+func (b *EventBus) isValidHandlerName(caller string, eventType ebcontracts.HandlerName) error {
 	if !handlerNameRegex.MatchString(string(eventType)) {
 		return fmt.Errorf("caller: %s eventType inválido: deve começar com letra minúscula, conter apenas letras minúsculas, números ou sublinhado, e ter até 100 caracteres", caller)
 	}
 	return nil
 }
 
-func (b *EventBus) isValidWorkerParams(caller string, handler Handler, numWorkers int, queueBacklog int) error {
+func (b *EventBus) isValidWorkerParams(caller string, handler ebcontracts.Handler, numWorkers int, queueBacklog int) error {
 	if handler == nil {
 		return fmt.Errorf("caller: %s handler não pode ser nil", caller)
 	}
@@ -89,7 +87,7 @@ func (b *EventBus) isValidWorkerParams(caller string, handler Handler, numWorker
 	return nil
 }
 
-func (b *EventBus) Register(eventType HandlerName, handler Handler, numWorkers int, queueBacklog int) error {
+func (b *EventBus) Register(eventType ebcontracts.HandlerName, handler ebcontracts.Handler, numWorkers int, queueBacklog int) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if err := b.isValidWorkerParams("eventbus.register", handler, numWorkers, queueBacklog); err != nil {
@@ -104,7 +102,7 @@ func (b *EventBus) Register(eventType HandlerName, handler Handler, numWorkers i
 	return nil
 }
 
-func (b *EventBus) Unregister(eventType HandlerName) error {
+func (b *EventBus) Unregister(eventType ebcontracts.HandlerName) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	w, err := b.getOrErrorWorkerUnsafe("eventbus.unregister", eventType)
@@ -116,7 +114,7 @@ func (b *EventBus) Unregister(eventType HandlerName) error {
 	return nil
 }
 
-func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName, data any) error {
+func (b *EventBus) PublishWithContext(ctx context.Context, eventType ebcontracts.HandlerName, data any) error {
 	w, err := b.getOrErrorWorker("eventbus.publish_with_context", eventType)
 	if err != nil {
 		return err
@@ -138,7 +136,7 @@ func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName
 }
 
 // Publish mantém compatibilidade, usando contexto nil (sem cancelamento externo)
-func (b *EventBus) Publish(eventType HandlerName, data any) error {
+func (b *EventBus) Publish(eventType ebcontracts.HandlerName, data any) error {
 	return b.PublishWithContext(context.TODO(), eventType, data)
 }
 
@@ -154,7 +152,7 @@ func (b *EventBus) Stop() {
 	}
 }
 
-func (b *EventBus) WaitForHandlers(eventTypes ...HandlerName) error {
+func (b *EventBus) WaitForHandlers(eventTypes ...ebcontracts.HandlerName) error {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	if len(eventTypes) == 0 {

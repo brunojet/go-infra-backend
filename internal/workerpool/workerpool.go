@@ -7,12 +7,12 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	wpcontracts "github.com/brunojet/go-infra-backend/pkg/workerpool/contracts"
 )
 
-type Task func(ctx context.Context)
-
 type WorkerPool struct {
-	tasks   chan Task
+	tasks   chan wpcontracts.Task
 	workers int
 	wg      sync.WaitGroup
 	stopped int32      // flag atômico para indicar se o pool foi parado
@@ -28,22 +28,17 @@ type WorkerPool struct {
 	CurrentInFlight int64  // tasks em andamento
 }
 
-type WorkerPoolMetrics struct {
-	TasksProcessed  uint64 `json:"tasks_processed"`
-	TasksRejected   uint64 `json:"tasks_rejected"`
-	TasksEnqueued   uint64 `json:"tasks_enqueued"`
-	CurrentInFlight int64  `json:"current_in_flight"`
-}
-
 // New cria um novo WorkerPool com N workers e buffer de tarefas
 func New(workers, buffer int) *WorkerPool {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := &WorkerPool{
-		tasks:   make(chan Task, buffer),
+		tasks:   make(chan wpcontracts.Task, buffer),
 		workers: workers,
 		ctx:     ctx,
 		cancel:  cancel,
 	}
+	// Default OnPanic to no-op to avoid propagating panics from tasks.
+	wp.OnPanic = func(interface{}) {}
 	return wp
 }
 
@@ -79,14 +74,14 @@ func (wp *WorkerPool) Start() {
 }
 
 // Enqueue adiciona uma tarefa ao pool
-func (wp *WorkerPool) Enqueue(task Task) bool {
+func (wp *WorkerPool) Enqueue(task wpcontracts.Task) bool {
 	return wp.EnqueueWithContext(context.Background(), task)
 }
 
 // EnqueueWithContext tenta enfileirar respeitando o contexto fornecido.
 // Retorna true se a tarefa foi enfileirada com sucesso, false caso o pool
 // esteja parado ou o contexto seja cancelado antes da inserção.
-func (wp *WorkerPool) EnqueueWithContext(ctx context.Context, task Task) (ok bool) {
+func (wp *WorkerPool) EnqueueWithContext(ctx context.Context, task wpcontracts.Task) (ok bool) {
 	if atomic.LoadInt32(&wp.stopped) == 1 {
 		atomic.AddUint64(&wp.TasksRejected, 1)
 		return false
@@ -132,8 +127,8 @@ func (wp *WorkerPool) Wait() {
 }
 
 // Exporta um snapshot das métricas atuais do pool
-func (wp *WorkerPool) ExportMetrics() WorkerPoolMetrics {
-	return WorkerPoolMetrics{
+func (wp *WorkerPool) ExportMetrics() wpcontracts.WorkerPoolMetrics {
+	return wpcontracts.WorkerPoolMetrics{
 		TasksProcessed:  atomic.LoadUint64(&wp.TasksProcessed),
 		TasksRejected:   atomic.LoadUint64(&wp.TasksRejected),
 		TasksEnqueued:   atomic.LoadUint64(&wp.TasksEnqueued),

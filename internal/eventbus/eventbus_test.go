@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	ebcontracts "github.com/brunojet/go-infra-backend/pkg/eventbus/contracts"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -97,7 +98,7 @@ func TestIsValidHandlerName(t *testing.T) {
 	bus := NewEventBus()
 	cases := []struct {
 		name      string
-		eventType HandlerName
+		eventType ebcontracts.HandlerName
 		expectErr bool
 	}{
 		{"válido simples", "abc", false},
@@ -106,7 +107,7 @@ func TestIsValidHandlerName(t *testing.T) {
 		{"inválido maiúscula", "Abc", true},
 		{"inválido hífen", "abc-def", true},
 		{"inválido vazio", "", true},
-		{"inválido longo", HandlerName(string(make([]byte, 101))), true},
+		{"inválido longo", ebcontracts.HandlerName(string(make([]byte, 101))), true},
 	}
 	for _, tc := range cases {
 		err := bus.isValidHandlerName("test", tc.eventType)
@@ -123,7 +124,7 @@ func TestIsValidWorkerParams(t *testing.T) {
 	validHandler := func(ctx context.Context, event any) error { return nil }
 	cases := []struct {
 		name         string
-		handler      Handler
+		handler      ebcontracts.Handler
 		numWorkers   int
 		queueBacklog int
 		expectErr    bool

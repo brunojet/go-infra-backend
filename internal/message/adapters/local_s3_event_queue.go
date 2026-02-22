@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
+	mqcontracts "github.com/brunojet/go-infra-backend/pkg/message/contracts"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -22,21 +24,25 @@ type LocalS3EventQueue struct {
 	filePath    string
 }
 
+var _ mqcontracts.MessageQueueAdapter = (*LocalS3EventQueue)(nil) // Asserção de interface
+
 // NewLocalS3EventQueue cria um novo watcher para o diretório local
-func NewLocalS3EventQueue(ctx context.Context, storagePath, filePath string) *LocalS3EventQueue {
-	watcherPath := filepath.Join(storagePath, filePath)
-	// Se storagePath não for absoluto, assume diretório base em os.TempDir()
+// Requer que `storagePath` seja um caminho absoluto para o diretório do
+// bucket; retorna erro caso contrário.
+func NewLocalS3EventQueue(ctx context.Context, storagePath, filePath string) (*LocalS3EventQueue, error) {
 	if !filepath.IsAbs(storagePath) {
-		watcherPath = filepath.Join(os.TempDir(), storagePath, filePath)
+		return nil, errors.New("storagePath must be an absolute path")
 	}
+	watcherPath := filepath.Join(storagePath, filePath)
 	if err := os.MkdirAll(watcherPath, 0755); err != nil {
-		panic(fmt.Sprintf("Erro ao criar diretório watcherPath: %v", err))
+		return nil, fmt.Errorf("Erro ao criar diretório watcherPath: %v", err)
 	}
+	bucket := filepath.Base(storagePath)
 	return &LocalS3EventQueue{
 		watcherPath: watcherPath,
-		storagePath: storagePath,
+		storagePath: bucket,
 		filePath:    filePath,
-	}
+	}, nil
 }
 
 // Start inicia o watcher e chama o callback para cada evento S3 PutObject simulado
@@ -53,7 +59,9 @@ func (l *LocalS3EventQueue) Start(onMessage func(event any)) (stop func()) {
 		for {
 			select {
 			case event := <-watcher.Events:
-				if event.Op&fsnotify.Create == fsnotify.Create {
+				// Some platforms may report Write instead of Create when a file
+				// is created. Accept either Create or Write to be robust.
+				if event.Op&(fsnotify.Create|fsnotify.Write) != 0 {
 					key := filepath.Join(l.filePath, filepath.Base(event.Name))
 					filePath := event.Name
 					fileInfo, err := os.Stat(filePath)
