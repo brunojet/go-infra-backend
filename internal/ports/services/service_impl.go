@@ -19,7 +19,7 @@ func NewServiceImpl[D any, E repoContracts.Entity](r repoContracts.Repository[E]
 func (s *serviceImpl[D, E]) Create(ctx context.Context, dto *D) error {
 	var model E
 	s.mapper.ToModel(dto, &model)
-	if err := s.repo.Create(ctx, repoContracts.CreateParams{}, &model); err != nil {
+	if err := s.repo.Create(ctx, &model); err != nil {
 		return err
 	}
 	s.mapper.ToDTO(&model, dto)

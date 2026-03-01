@@ -84,7 +84,7 @@ func TestGormrepositories_CreateAndGet(t *testing.T) {
 	ctx := context.Background()
 
 	e := &TestEntity{ID: "id-create", Name: ps("bob"), Age: pi(22)}
-	err := repo.Create(ctx, repoContracts.CreateParams{}, e)
+	err := repo.Create(ctx, e)
 	assert.NoError(t, err)
 
 	// after Create the input object should be populated with the created values
@@ -117,8 +117,8 @@ func TestGormrepositories_List(t *testing.T) {
 	ctx := context.Background()
 
 	// create multiple
-	assert.NoError(t, repo.Create(ctx, repoContracts.CreateParams{}, &TestEntity{ID: "l-1", Name: ps("n1"), Age: pi(1)}))
-	assert.NoError(t, repo.Create(ctx, repoContracts.CreateParams{}, &TestEntity{ID: "l-2", Name: ps("n2"), Age: pi(2)}))
+	assert.NoError(t, repo.Create(ctx, &TestEntity{ID: "l-1", Name: ps("n1"), Age: pi(1)}))
+	assert.NoError(t, repo.Create(ctx, &TestEntity{ID: "l-2", Name: ps("n2"), Age: pi(2)}))
 
 	items, _, err := repo.List(ctx, repoContracts.ListParams{Page: 1, Size: 10, OrderBy: "NAME", Order: "asc"})
 	assert.NoError(t, err)
@@ -133,7 +133,7 @@ func TestGormrepositories_Update(t *testing.T) {
 	ctx := context.Background()
 
 	// create initial entity with pointers
-	assert.NoError(t, repo.Create(ctx, repoContracts.CreateParams{}, &TestEntity{ID: "u-1", Name: ps("orig"), Age: pi(10)}))
+	assert.NoError(t, repo.Create(ctx, &TestEntity{ID: "u-1", Name: ps("orig"), Age: pi(10)}))
 
 	// successful update with new values using pointers
 	in := &TestEntity{Name: ps("updated")}
@@ -152,7 +152,7 @@ func TestGormrepositories_Delete(t *testing.T) {
 	repo := NewGormRepository[TestEntity](db)
 	ctx := context.Background()
 
-	assert.NoError(t, repo.Create(ctx, repoContracts.CreateParams{}, &TestEntity{ID: "d-1", Name: ps("to-del"), Age: pi(5)}))
+	assert.NoError(t, repo.Create(ctx, &TestEntity{ID: "d-1", Name: ps("to-del"), Age: pi(5)}))
 	assert.NoError(t, repo.Delete(ctx, map[string]any{"id": "d-1"}))
 	_, err := repo.GetByID(ctx, map[string]any{"id": "d-1"})
 	assert.ErrorIs(t, err, ErrNotFound)
@@ -182,7 +182,7 @@ func TestGormrepositories_Update_NilInputAndDeletedAfterUpdate(t *testing.T) {
 	assert.Error(t, err)
 
 	// create then delete before calling Update to simulate missing after update
-	assert.NoError(t, repo.Create(ctx, repoContracts.CreateParams{}, &TestEntity{ID: "u-delete", Name: ps("x"), Age: pi(1)}))
+	assert.NoError(t, repo.Create(ctx, &TestEntity{ID: "u-delete", Name: ps("x"), Age: pi(1)}))
 	// remove it directly via DB
 	assert.NoError(t, repo.Delete(ctx, map[string]any{"id": "u-delete"}))
 
@@ -333,7 +333,7 @@ func TestList_ErrorsAndSuccess(t *testing.T) {
 	// create records
 	for i := 0; i < 5; i++ {
 		m := RepoTestModel{Name: "n"}
-		err := repo.Create(ctx, repoContracts.CreateParams{}, &m)
+		err := repo.Create(ctx, &m)
 		assert.NoError(t, err)
 	}
 

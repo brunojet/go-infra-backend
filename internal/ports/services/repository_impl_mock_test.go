@@ -72,17 +72,17 @@ func (m *MockRepository[E]) EXPECT() *MockRepositoryMockRecorder[E] {
 }
 
 // Create mocks base method.
-func (m *MockRepository[E]) Create(ctx context.Context, params contracts.CreateParams, inOut *E) error {
+func (m *MockRepository[E]) Create(ctx context.Context, inOut *E) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, params, inOut)
+	ret := m.ctrl.Call(m, "Create", ctx, inOut)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockRepositoryMockRecorder[E]) Create(ctx, params, inOut interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder[E]) Create(ctx, inOut interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRepository[E])(nil).Create), ctx, params, inOut)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRepository[E])(nil).Create), ctx, inOut)
 }
 
 // GormDB mocks base method.

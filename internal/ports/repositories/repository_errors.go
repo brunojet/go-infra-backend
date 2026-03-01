@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	porterrors "github.com/brunojet/go-infra-backend/internal/ports/errors"
 	"gorm.io/gorm"
 )
 
@@ -20,7 +21,20 @@ var (
 	ErrOrderByMissing            = errors.New("orderBy must be provided")
 	ErrInvalidPage               = errors.New("page must be greater than zero")
 	ErrInvalidPageSize           = errors.New("pageSize must be greater than zero")
+	ErrRequiresTransaction       = errors.New("operation must run inside a transaction")
+	ErrBusinessRuleViolation     = porterrors.ErrBusinessRuleViolation
+	ErrLockValidationWhere       = errors.New("where clause must be provided for lock validation")
 )
+
+type BusinessRuleError = porterrors.BusinessRuleError
+
+func NewBusinessRuleError(cause error) error {
+	return porterrors.NewBusinessRuleError(cause)
+}
+
+func IsBusinessRuleError(err error) bool {
+	return porterrors.IsBusinessRuleError(err)
+}
 
 func MapDbError(err error) error {
 	if err == nil {

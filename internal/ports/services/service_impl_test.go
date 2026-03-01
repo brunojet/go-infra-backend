@@ -111,7 +111,7 @@ func TestGenericService_Create(t *testing.T) {
 	svc := NewServiceImpl(repo, TestMapper{})
 	ctx := context.Background()
 
-	repo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ repoContracts.CreateParams, inOut *TestModel) error {
+	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *TestModel) error {
 		inOut.ID = 1
 		now := time.Now().UTC()
 		inOut.CreatedAt = now
@@ -131,7 +131,7 @@ func TestGenericService_GetByID(t *testing.T) {
 	ctx := context.Background()
 
 	var createdModel TestModel
-	repo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ repoContracts.CreateParams, inOut *TestModel) error {
+	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *TestModel) error {
 		inOut.ID = 2
 		now := time.Now().UTC()
 		inOut.CreatedAt = now
@@ -192,7 +192,7 @@ func TestGenericService_Update(t *testing.T) {
 	ctx := context.Background()
 
 	var created TestModel
-	repo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ repoContracts.CreateParams, inOut *TestModel) error {
+	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *TestModel) error {
 		inOut.ID = 10
 		now := time.Now().UTC()
 		inOut.CreatedAt = now
@@ -228,7 +228,7 @@ func TestGenericService_Delete(t *testing.T) {
 	svc := NewServiceImpl(repoContracts.Repository[TestModel](repo), TestMapper{})
 	ctx := context.Background()
 
-	repo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ repoContracts.CreateParams, inOut *TestModel) error {
+	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *TestModel) error {
 		inOut.ID = 20
 		now := time.Now().UTC()
 		inOut.CreatedAt = now
@@ -248,7 +248,7 @@ func TestGenericService_Delete(t *testing.T) {
 // errRepo sempre retorna erro para cada operação — usado para testar caminhos de erro
 type errRepo struct{}
 
-func (e *errRepo) Create(ctx context.Context, params repoContracts.CreateParams, inOut *TestModel) error {
+func (e *errRepo) Create(ctx context.Context, inOut *TestModel) error {
 	return errors.New("repo error")
 }
 func (e *errRepo) GetByID(ctx context.Context, id map[string]any) (TestModel, error) {
@@ -277,7 +277,7 @@ func TestGenericService_Errors(t *testing.T) {
 
 	// Create repo error
 	got := TestDTO{Name: "x"}
-	repo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
+	repo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
 	err := svc.Create(ctx, &got)
 	assert.Error(t, err)
 
