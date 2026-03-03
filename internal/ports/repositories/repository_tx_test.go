@@ -41,7 +41,7 @@ func TestTxFromContext_WithGormDB(t *testing.T) {
 	db, cleanup := openMemoryDB(t)
 	defer cleanup()
 	gdb := mustGormDB(t, db)
-	ctx := ContextWithTx(context.Background(), gdb)
+	ctx := contextWithTx(context.Background(), gdb)
 	got, err := TxFromContext(ctx)
 	assert.NoError(t, err)
 	assert.Same(t, gdb, got)

@@ -12,15 +12,27 @@ import (
 
 type ctxKeyTx struct{}
 
-type txMarker interface {
-	Commit() error
-	Rollback() error
-}
-
 type LockValidationSpec[E contracts.Entity] = contracts.LockValidationSpec[E]
 
-// ContextWithTx returns a new context that carries the given *gorm.DB transaction.
-func ContextWithTx(ctx context.Context, tx *gorm.DB) context.Context {
+func hasTransactionInContext(ctx context.Context) bool {
+	tx, err := TxFromContext(ctx)
+	return err == nil && tx != nil
+}
+
+func isTransactionAndContextValid(tx *gorm.DB) bool {
+	if tx == nil || tx.Statement == nil {
+		return false
+	}
+
+	if hasTransactionInContext(tx.Statement.Context) {
+		return true
+	}
+
+	return false
+}
+
+// contextWithTx returns a new context that carries the given *gorm.DB transaction.
+func contextWithTx(ctx context.Context, tx *gorm.DB) context.Context {
 	return context.WithValue(ctx, ctxKeyTx{}, tx)
 }
 
@@ -50,24 +62,17 @@ func GetContextFromTx(tx *gorm.DB) context.Context {
 // 3) returns nil on not found (no conflict)
 // 4) evaluates optional callback for custom blocking rules when a record is found
 func ValidateTxWithUpdateLock[E contracts.Entity](tx *gorm.DB, spec contracts.LockValidationSpec[E]) error {
-	if tx == nil {
-		return ErrInvalidTx
-	}
 	if strings.TrimSpace(spec.WhereSQL) == "" {
 		return ErrLockValidationWhere
 	}
-	if _, ok := tx.Statement.ConnPool.(txMarker); !ok {
+	if !isTransactionAndContextValid(tx) {
 		return ErrRequiresTransaction
 	}
-
-	ctx := GetContextFromTx(tx)
-
-	q := tx.Session(&gorm.Session{NewDB: true}).WithContext(ctx).Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
+	q := tx.Session(&gorm.Session{NewDB: true}).Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
 	if len(spec.SelectColumns) > 0 {
 		q = q.Select(spec.SelectColumns)
 	}
 	q = q.Where(spec.WhereSQL, spec.WhereArgs...)
-
 	var found E
 	err := q.First(&found).Error
 	if err == nil {

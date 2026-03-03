@@ -46,10 +46,6 @@ func MapDbError(err error) error { return internalrepos.MapDbError(err) }
 
 func MapTxError(tx *gorm.DB) error { return internalrepos.MapTxError(tx) }
 
-func ContextWithTx(ctx context.Context, tx *gorm.DB) context.Context {
-	return internalrepos.ContextWithTx(ctx, tx)
-}
-
 func TxFromContext(ctx context.Context) (*gorm.DB, error) { return internalrepos.TxFromContext(ctx) }
 
 func GetContextFromTx(tx *gorm.DB) context.Context { return internalrepos.GetContextFromTx(tx) }

@@ -57,27 +57,21 @@ func (g *gormRepositoryImpl[E]) List(ctx context.Context, listParams contracts.L
 	if err != nil {
 		return nil, 0, err
 	}
-
 	tx := q.Count(&total)
 	if err := MapTxError(tx); err != nil {
 		return nil, 0, err
 	}
-
 	if err := setOrderBy(q, listParams.OrderBy, listParams.Order); err != nil {
 		return nil, 0, err
 	}
-
 	if err := setPagination(q, listParams.Page, listParams.Size); err != nil {
 		return nil, 0, err
 	}
-
 	items := make([]E, 0, getListSize(int(total), listParams.Page, listParams.Size))
-
 	tx = q.Find(&items)
 	if err := MapTxError(tx); err != nil {
 		return nil, 0, err
 	}
-
 	return items, total, nil
 }
 
@@ -105,6 +99,6 @@ func (g *gormRepositoryImpl[E]) Delete(ctx context.Context, scopes map[string]an
 
 func (g *gormRepositoryImpl[E]) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
 	return g.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return fn(ContextWithTx(ctx, tx))
+		return fn(contextWithTx(ctx, tx))
 	})
 }
