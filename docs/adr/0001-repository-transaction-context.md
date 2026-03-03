@@ -1,4 +1,8 @@
-# Padrão de Transação por Contexto no Repositório
+# ADR 0001: Padrão de Transação por Contexto no Repositório
+
+- **Status**: Aceito
+- **Data**: 2026-03-03
+- **Contexto**: `internal/ports/repositories`, `demoapp/services`
 
 ## Objetivo
 
@@ -56,6 +60,20 @@ Isso gerava inconsistência sutil de comportamento (principalmente em update + r
 - Repositório não deve ignorar contexto recebido.
 - Regras de orquestração ficam em service/repository, não em hook de model.
 - Hook de model deve ficar restrito a integridade local da entidade.
+
+## Responsabilidades por camada
+
+- **Model**
+	- Garantir integridade local da entidade (campos/estados válidos e hooks locais).
+	- Não abrir transação e não orquestrar fluxo entre agregados.
+- **Repository**
+	- Executar persistência e consulta.
+	- Resolver conexão efetiva via `dbFromContext(ctx)` (tx do contexto ou db base).
+	- Não codificar regra de negócio de processo.
+- **Service**
+	- Orquestrar caso de uso e regras de negócio entre entidades/repositórios.
+	- Delimitar transação com `WithTx` quando necessário.
+	- Não carregar detalhes de Gorm/SQL.
 
 ## Checklist para PR
 

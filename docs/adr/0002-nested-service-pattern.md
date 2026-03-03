@@ -1,4 +1,4 @@
-# ADR 0001: Padrão de Nested Service
+# ADR 0002: Padrão de Nested Service
 
 - **Status**: Aceito
 - **Data**: 2026-03-03
@@ -42,6 +42,19 @@ Usar `NestedService[D, M]` com foco em:
 - **NestedService (genérico)**: composição de escopos, listagem nested, mapeamento DTO/model.
 - **Serviço de domínio nested**: regras de negócio do recurso nested (transição, create one-shot, regras de integridade).
 - **Model**: integridade local da entidade (sem orquestração de fluxo nested).
+
+## Responsabilidades por camada
+
+- **Model**
+   - Regras locais de integridade da entidade.
+   - Sem lógica de orchestration de nested/service.
+- **Repository**
+   - Persistência e consulta das entidades.
+   - Sem decisão de fluxo nested e sem semântica de endpoint.
+- **Service**
+   - Aplicar `parentScopes` validados no fluxo nested.
+   - Orquestrar regras de negócio (ex.: create one-shot + archive duplicates).
+   - Decidir quando usar implementação genérica vs especialização por domínio.
 
 ## Consequências
 
