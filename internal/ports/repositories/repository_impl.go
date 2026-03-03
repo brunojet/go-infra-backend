@@ -35,13 +35,15 @@ func (g *gormRepositoryImpl[E]) dbFromContext(ctx context.Context) *gorm.DB {
 }
 
 func (g *gormRepositoryImpl[E]) Create(ctx context.Context, inOut *E) error {
-	tx := g.dbFromContext(ctx).Model(new(E)).Create(inOut)
+	db := g.dbFromContext(ctx)
+	tx := db.Model(new(E)).Create(inOut)
 	return MapTxError(tx)
 }
 
 func (g *gormRepositoryImpl[E]) GetByID(ctx context.Context, id map[string]any) (E, error) {
+	db := g.dbFromContext(ctx)
 	var entity E
-	if err := getByScope(ctx, g.dbFromContext(ctx), id, &entity); err != nil {
+	if err := getByScope(db, id, &entity); err != nil {
 		var zero E
 		return zero, err
 	}
@@ -49,8 +51,9 @@ func (g *gormRepositoryImpl[E]) GetByID(ctx context.Context, id map[string]any) 
 }
 
 func (g *gormRepositoryImpl[E]) List(ctx context.Context, listParams contracts.ListParams) ([]E, int64, error) {
+	db := g.dbFromContext(ctx)
 	var total int64
-	q, err := buildTxWithScopes[E](ctx, g.dbFromContext(ctx), listParams.QueryParams.Scopes)
+	q, err := buildTxWithScopes[E](db, listParams.QueryParams.Scopes)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -79,18 +82,20 @@ func (g *gormRepositoryImpl[E]) List(ctx context.Context, listParams contracts.L
 }
 
 func (g *gormRepositoryImpl[E]) Update(ctx context.Context, scopes map[string]any, inOut *E) error {
-	tx, err := buildTxWithFilledScopes[E](ctx, g.dbFromContext(ctx), scopes)
+	db := g.dbFromContext(ctx)
+	tx, err := buildTxWithFilledScopes[E](db, scopes)
 	if err != nil {
 		return err
 	}
 	if tx = tx.Updates(inOut); tx.Error != nil {
 		return MapTxError(tx)
 	}
-	return getByScope(ctx, g.dbFromContext(ctx), scopes, inOut)
+	return getByScope(db, scopes, inOut)
 }
 
 func (g *gormRepositoryImpl[E]) Delete(ctx context.Context, scopes map[string]any) error {
-	tx, err := buildTxWithFilledScopes[E](ctx, g.dbFromContext(ctx), scopes)
+	db := g.dbFromContext(ctx)
+	tx, err := buildTxWithFilledScopes[E](db, scopes)
 	if err != nil {
 		return err
 	}

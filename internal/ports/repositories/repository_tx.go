@@ -121,8 +121,8 @@ func AddOnConflictUpdateAll(tx *gorm.DB, columnNames ...string) error {
 	return AddOnConflict(tx, contracts.ConflictActionUpdate, columnNames...)
 }
 
-func buildTxWithScopes[E contracts.Entity](ctx context.Context, db *gorm.DB, scopes map[string]any) (*gorm.DB, error) {
-	tx := db.WithContext(ctx).Model(new(E))
+func buildTxWithScopes[E contracts.Entity](db *gorm.DB, scopes map[string]any) (*gorm.DB, error) {
+	tx := db.Model(new(E))
 	for fieldName, fieldValue := range scopes {
 		if fieldName == "" || fieldValue == nil {
 			return nil, fmt.Errorf("%w: field '%s' has invalid value", ErrInvalidScope, fieldName)
@@ -132,15 +132,15 @@ func buildTxWithScopes[E contracts.Entity](ctx context.Context, db *gorm.DB, sco
 	return tx, nil
 }
 
-func buildTxWithFilledScopes[E contracts.Entity](ctx context.Context, db *gorm.DB, scopes map[string]any) (*gorm.DB, error) {
+func buildTxWithFilledScopes[E contracts.Entity](db *gorm.DB, scopes map[string]any) (*gorm.DB, error) {
 	if len(scopes) == 0 {
 		return nil, ErrEmptyScopes
 	}
-	return buildTxWithScopes[E](ctx, db, scopes)
+	return buildTxWithScopes[E](db, scopes)
 }
 
-func getByScope[E contracts.Entity](ctx context.Context, db *gorm.DB, scopes map[string]any, out *E) error {
-	tx, err := buildTxWithFilledScopes[E](ctx, db, scopes)
+func getByScope[E contracts.Entity](db *gorm.DB, scopes map[string]any, out *E) error {
+	tx, err := buildTxWithFilledScopes[E](db, scopes)
 	if err != nil {
 		return err
 	}

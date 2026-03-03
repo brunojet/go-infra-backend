@@ -139,22 +139,20 @@ func TestBuildTxWithScopes_ValidationAndFilledScopes(t *testing.T) {
 	_, gdb, cleanup := openSimpleMemoryDB(t)
 	defer cleanup()
 
-	ctx := context.Background()
-
 	// invalid scope: empty field name
-	_, err := buildTxWithScopes[TestEntity](ctx, gdb, map[string]any{"": "v"})
+	_, err := buildTxWithScopes[TestEntity](gdb, map[string]any{"": "v"})
 	assert.True(t, errors.Is(err, ErrInvalidScope))
 
 	// nil value
-	_, err = buildTxWithScopes[TestEntity](ctx, gdb, map[string]any{"id": nil})
+	_, err = buildTxWithScopes[TestEntity](gdb, map[string]any{"id": nil})
 	assert.True(t, errors.Is(err, ErrInvalidScope))
 
 	// filled scopes empty -> error
-	_, err = buildTxWithFilledScopes[TestEntity](ctx, gdb, map[string]any{})
+	_, err = buildTxWithFilledScopes[TestEntity](gdb, map[string]any{})
 	assert.ErrorIs(t, err, ErrEmptyScopes)
 
 	// valid filled scopes -> success
-	tx, err := buildTxWithFilledScopes[TestEntity](ctx, gdb, map[string]any{"id": "x"})
+	tx, err := buildTxWithFilledScopes[TestEntity](gdb, map[string]any{"id": "x"})
 	assert.NoError(t, err)
 	assert.NotNil(t, tx)
 }
@@ -163,17 +161,15 @@ func TestGetByScope_ErrorsAndSuccess(t *testing.T) {
 	db, gdb, cleanup := openSimpleMemoryDB(t)
 	defer cleanup()
 
-	ctx := context.Background()
-
 	// empty scopes -> ErrEmptyScopes
 	var out TestEntity
-	err := getByScope(ctx, gdb, map[string]any{}, &out)
+	err := getByScope(gdb, map[string]any{}, &out)
 	assert.ErrorIs(t, err, ErrEmptyScopes)
 
 	// create a record and fetch it
 	require.NoError(t, gdb.Create(&TestEntity{ID: "g-1", Name: func() *string { s := "x"; return &s }(), Age: func() *int { i := 1; return &i }()}).Error)
 	var got TestEntity
-	err = getByScope(ctx, gdb, map[string]any{"id": "g-1"}, &got)
+	err = getByScope(gdb, map[string]any{"id": "g-1"}, &got)
 	assert.NoError(t, err)
 	assert.Equal(t, "g-1", got.ID)
 	_ = db
