@@ -7,15 +7,44 @@ import (
 )
 
 type ServiceMapper[D any, E repoContracts.Entity] interface {
-	GetModelKey(id string) (map[string]any, error)
 	ToModel(dto *D, model *E)
 	ToDTO(model *E, dto *D)
+	GetModelKey(id string) (map[string]any, error)
+	ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error)
+}
+
+type InstanceMethods[D any] interface {
+	GetByID(ctx context.Context, id string) (D, error)
+	Update(ctx context.Context, id string, dto *D) error
+	Delete(ctx context.Context, id string) error
+}
+
+type QueryParams struct {
+	Scopes map[string]any
+}
+
+type ListParams struct {
+	QueryParams
+	Page    int
+	Size    int
+	OrderBy string
+	Order   string
 }
 
 type Service[D any, E repoContracts.Entity] interface {
+	InstanceMethods[D]
 	Create(ctx context.Context, dto *D) error
-	GetByID(ctx context.Context, id string) (D, error)
-	List(ctx context.Context, size int) ([]D, error)
-	Update(ctx context.Context, id string, dto *D) error
-	Delete(ctx context.Context, id string) error
+	List(ctx context.Context, params ListParams) ([]D, int64, error)
+}
+
+type NestedServiceMapper[D any, E repoContracts.Entity] interface {
+	ServiceMapper[D, E]
+	ApplyParentQueryScopes(parentID string, queryScopes map[string]any) (map[string]any, error)
+	ApplyParentScopes(parentID string, model *E) error
+}
+
+type NestedService[D any, E repoContracts.Entity] interface {
+	InstanceMethods[D]
+	CreateNested(ctx context.Context, parentID string, dto *D) error
+	ListNested(ctx context.Context, parentID string, params ListParams) ([]D, int64, error)
 }

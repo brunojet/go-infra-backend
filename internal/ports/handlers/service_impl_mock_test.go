@@ -4,30 +4,30 @@ import (
 	context "context"
 	reflect "reflect"
 
-	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 
 	gomock "github.com/golang/mock/gomock"
 )
 
 // ensure the generated mock (for concrete test types) implements the service contract
-var _ svcContracts.Service[any, contracts.Entity] = (*MockService[any, contracts.Entity])(nil)
+var _ svcContracts.Service[any, repoContracts.Entity] = (*MockService[any, repoContracts.Entity])(nil)
 
-var _ svcContracts.ServiceMapper[any, contracts.Entity] = (*MockServiceMapper[any, contracts.Entity])(nil)
+var _ svcContracts.ServiceMapper[any, repoContracts.Entity] = (*MockServiceMapper[any, repoContracts.Entity])(nil)
 
 // MockServiceMapper is a mock of ServiceMapper interface.
-type MockServiceMapper[D any, E contracts.Entity] struct {
+type MockServiceMapper[D any, E repoContracts.Entity] struct {
 	ctrl     *gomock.Controller
 	recorder *MockServiceMapperMockRecorder[D, E]
 }
 
 // MockServiceMapperMockRecorder is the mock recorder for MockServiceMapper.
-type MockServiceMapperMockRecorder[D any, E contracts.Entity] struct {
+type MockServiceMapperMockRecorder[D any, E repoContracts.Entity] struct {
 	mock *MockServiceMapper[D, E]
 }
 
 // NewMockServiceMapper creates a new mock instance.
-func NewMockServiceMapper[D any, E contracts.Entity](ctrl *gomock.Controller) *MockServiceMapper[D, E] {
+func NewMockServiceMapper[D any, E repoContracts.Entity](ctrl *gomock.Controller) *MockServiceMapper[D, E] {
 	mock := &MockServiceMapper[D, E]{ctrl: ctrl}
 	mock.recorder = &MockServiceMapperMockRecorder[D, E]{mock}
 	return mock
@@ -45,6 +45,21 @@ func (m *MockServiceMapper[D, E]) GetModelKey(id string) (map[string]any, error)
 	ret0, _ := ret[0].(map[string]any)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
+}
+
+// ApplyQueryScopes mocks base method.
+func (m *MockServiceMapper[D, E]) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyQueryScopes", queryScopes)
+	ret0, _ := ret[0].(map[string]any)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ApplyQueryScopes indicates an expected call of ApplyQueryScopes.
+func (mr *MockServiceMapperMockRecorder[D, E]) ApplyQueryScopes(queryScopes interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyQueryScopes", reflect.TypeOf((*MockServiceMapper[D, E])(nil).ApplyQueryScopes), queryScopes)
 }
 
 // GetModelKey indicates an expected call of GetModelKey.
@@ -78,18 +93,18 @@ func (mr *MockServiceMapperMockRecorder[D, E]) ToModel(dto, model interface{}) *
 }
 
 // MockService is a mock of Service interface.
-type MockService[D any, E contracts.Entity] struct {
+type MockService[D any, E repoContracts.Entity] struct {
 	ctrl     *gomock.Controller
 	recorder *MockServiceMockRecorder[D, E]
 }
 
 // MockServiceMockRecorder is the mock recorder for MockService.
-type MockServiceMockRecorder[D any, E contracts.Entity] struct {
+type MockServiceMockRecorder[D any, E repoContracts.Entity] struct {
 	mock *MockService[D, E]
 }
 
 // NewMockService creates a new mock instance.
-func NewMockService[D any, E contracts.Entity](ctrl *gomock.Controller) *MockService[D, E] {
+func NewMockService[D any, E repoContracts.Entity](ctrl *gomock.Controller) *MockService[D, E] {
 	mock := &MockService[D, E]{ctrl: ctrl}
 	mock.recorder = &MockServiceMockRecorder[D, E]{mock}
 	return mock
@@ -147,21 +162,22 @@ func (mr *MockServiceMockRecorder[D, E]) GetByID(ctx, id interface{}) *gomock.Ca
 }
 
 // List mocks base method.
-func (m *MockService[D, E]) List(ctx context.Context, size int) ([]D, error) {
+func (m *MockService[D, E]) List(ctx context.Context, params svcContracts.ListParams) ([]D, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, size)
+	ret := m.ctrl.Call(m, "List", ctx, params)
 	var ret0 []D
 	if ret[0] != nil {
 		ret0 = ret[0].([]D)
 	}
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // List indicates an expected call of List.
-func (mr *MockServiceMockRecorder[D, E]) List(ctx, size interface{}) *gomock.Call {
+func (mr *MockServiceMockRecorder[D, E]) List(ctx, params interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockService[D, E])(nil).List), ctx, size)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockService[D, E])(nil).List), ctx, params)
 }
 
 // Update mocks base method.

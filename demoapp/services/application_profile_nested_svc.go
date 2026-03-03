@@ -7,16 +7,61 @@ import (
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
 	internalservices "github.com/brunojet/go-infra-backend/internal/ports/services"
+	"github.com/brunojet/go-infra-backend/internal/utils"
 	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
-	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
-var errNestedProfileApplicationIDRequired = porterrors.NewBusinessRuleError(errors.New("application_id parent scope must be valid"))
+const (
+	nestedProfileParentIDArity                     = 1
+	errTextNestedProfileApplicationIDScopeRequired = "application_id parent scope must be valid"
+)
+
+var errNestedProfileApplicationIDRequired = porterrors.NewBusinessRuleError(errors.New(errTextNestedProfileApplicationIDScopeRequired))
 
 type applicationProfileNestedMapper struct{}
 
-func (applicationProfileNestedMapper) ApplyParentScopes(parentScopes map[string]any, _ *models.ApplicationProfile, model *models.ApplicationProfile) error {
+func (applicationProfileNestedMapper) DecodeParentID(parentID string) (map[string]any, error) {
+	values, err := utils.DecodeCompactInt64s(parentID, nestedProfileParentIDArity)
+	if err != nil {
+		return nil, errNestedProfileApplicationIDRequired
+	}
+
+	return map[string]any{models.ColAppProfileApplicationID: values[0]}, nil
+}
+
+func (applicationProfileNestedMapper) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {
+	return queryScopes, nil
+}
+
+func (m applicationProfileNestedMapper) ApplyParentQueryScopes(parentID string, queryScopes map[string]any) (map[string]any, error) {
+	mappedQueryScopes, err := m.ApplyQueryScopes(queryScopes)
+	if err != nil {
+		return nil, err
+	}
+
+	parentScopes, err := m.DecodeParentID(parentID)
+	if err != nil {
+		return nil, err
+	}
+
+	mergedScopes := make(map[string]any, len(parentScopes)+len(mappedQueryScopes))
+	for key, value := range mappedQueryScopes {
+		mergedScopes[key] = value
+	}
+	for key, value := range parentScopes {
+		mergedScopes[key] = value
+	}
+
+	return mergedScopes, nil
+}
+
+func (m applicationProfileNestedMapper) ApplyParentScopes(parentID string, model *models.ApplicationProfile) error {
+	parentScopes, err := m.DecodeParentID(parentID)
+	if err != nil {
+		return err
+	}
+
 	applicationID, err := repo.RequireScopeInt64(parentScopes, models.ColAppProfileApplicationID, errNestedProfileApplicationIDRequired)
 	if err != nil {
 		return err
@@ -34,21 +79,30 @@ func (applicationProfileNestedMapper) ToDTO(model *models.ApplicationProfile, dt
 	*dto = *model
 }
 
+func (applicationProfileNestedMapper) GetModelKey(id string) (map[string]any, error) {
+	profileID, err := utils.StringToInt64(id)
+	if err != nil || profileID <= 0 {
+		return nil, errProfileScopeIDRequired
+	}
+
+	return map[string]any{models.ColAppProfileID: profileID}, nil
+}
+
 type ApplicationProfileNestedService interface {
 	svcContracts.NestedService[models.ApplicationProfile, models.ApplicationProfile]
 }
 
 type applicationProfileNestedService struct {
-	nestedSvc svcContracts.NestedService[models.ApplicationProfile, models.ApplicationProfile]
-	repo      repo.ApplicationProfileRepository
-	mapper    applicationProfileNestedMapper
+	svcContracts.NestedService[models.ApplicationProfile, models.ApplicationProfile]
+	repo   repo.ApplicationProfileRepository
+	mapper applicationProfileNestedMapper
 }
 
 func NewApplicationProfileNestedService(r repo.ApplicationProfileRepository) ApplicationProfileNestedService {
 	return &applicationProfileNestedService{
-		nestedSvc: internalservices.NewNestedServiceImpl(r, applicationProfileNestedMapper{}),
-		repo:      r,
-		mapper:    applicationProfileNestedMapper{},
+		NestedService: internalservices.NewNestedServiceImpl(r, applicationProfileNestedMapper{}),
+		repo:          r,
+		mapper:        applicationProfileNestedMapper{},
 	}
 }
 
@@ -61,16 +115,12 @@ func (s *applicationProfileNestedService) createOneShot(ctx context.Context, inO
 	})
 }
 
-func (s *applicationProfileNestedService) CreateNested(ctx context.Context, parentScopes map[string]any, dto *models.ApplicationProfile) error {
+func (s *applicationProfileNestedService) CreateNested(ctx context.Context, parentID string, dto *models.ApplicationProfile) error {
 	var model models.ApplicationProfile
 	s.mapper.ToModel(dto, &model)
-	if err := s.mapper.ApplyParentScopes(parentScopes, dto, &model); err != nil {
+	if err := s.mapper.ApplyParentScopes(parentID, &model); err != nil {
 		return err
 	}
 
 	return s.createOneShot(ctx, &model)
-}
-
-func (s *applicationProfileNestedService) ListNested(ctx context.Context, parentScopes map[string]any, params repoContracts.ListParams) ([]models.ApplicationProfile, int64, error) {
-	return s.nestedSvc.ListNested(ctx, parentScopes, params)
 }

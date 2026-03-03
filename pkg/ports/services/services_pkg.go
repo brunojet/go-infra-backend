@@ -16,5 +16,5 @@ type Service[D any, E repo.Entity] = contracts.Service[D, E]
 
 // NewServiceImpl delegates to the internal implementation.
 func NewServiceImpl[D any, E repo.Entity](r repo.Repository[E], m ServiceMapper[D, E]) Service[D, E] {
-	return internalservices.NewServiceImpl[D, E](r, m)
+	return internalservices.NewServiceImpl(r, m)
 }

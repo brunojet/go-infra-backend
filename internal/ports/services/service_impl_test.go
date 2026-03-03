@@ -72,6 +72,28 @@ func (m TestMapper) GetModelKey(id string) (map[string]any, error) {
 	return map[string]any{"id": id}, nil
 }
 
+func (m TestMapper) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {
+	return queryScopes, nil
+}
+
+type testMapperQueryScopesError struct{}
+
+func (m testMapperQueryScopesError) GetModelKey(id string) (map[string]any, error) {
+	return TestMapper{}.GetModelKey(id)
+}
+
+func (m testMapperQueryScopesError) ToModel(dto *TestDTO, model *TestModel) {
+	TestMapper{}.ToModel(dto, model)
+}
+
+func (m testMapperQueryScopesError) ToDTO(model *TestModel, dto *TestDTO) {
+	TestMapper{}.ToDTO(model, dto)
+}
+
+func (m testMapperQueryScopesError) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {
+	return nil, errors.New("query scope mapping error")
+}
+
 func (m TestMapper) ToModel(dto *TestDTO, model *TestModel) {
 	debugassert.Assert(dto != nil, "ToModel: dto is nil")
 	debugassert.Assert(model != nil, "ToModel: model is nil")
@@ -176,8 +198,9 @@ func TestGenericService_List(t *testing.T) {
 
 	repo.EXPECT().List(gomock.Any(), gomock.Any()).Return(models, int64(len(models)), nil)
 
-	list, err := svc.List(ctx, len(inTestData))
+	list, total, err := svc.List(ctx, contracts.ListParams{Page: 1, Size: len(inTestData), OrderBy: "id", Order: "asc"})
 	assert.NoError(t, err)
+	assert.Equal(t, int64(len(inTestData)), total)
 	assert.Len(t, list, len(inTestData))
 	for _, dto := range list {
 		assert.Equal(t, outTestData[dto.ID], dto)
@@ -287,7 +310,7 @@ func TestGenericService_Errors(t *testing.T) {
 
 	// List repo error
 	repo.EXPECT().List(gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("repo error"))
-	_, err = svc.List(ctx, 0)
+	_, _, err = svc.List(ctx, contracts.ListParams{Page: 1, Size: 10, OrderBy: "id", Order: "asc"})
 	assert.Error(t, err)
 
 	// Update: mapper GetModelKey error when id non-numeric
@@ -306,6 +329,17 @@ func TestGenericService_Errors(t *testing.T) {
 	// Delete: repo error for numeric id
 	repo.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
 	assert.Error(t, svc.Delete(ctx, "1"))
+}
+
+func TestGenericService_List_MapperApplyQueryScopesError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repo := NewMockRepository[TestModel](ctrl)
+	svc := NewServiceImpl(repo, testMapperQueryScopesError{})
+	ctx := context.Background()
+
+	_, _, err := svc.List(ctx, contracts.ListParams{Page: 1, Size: 10, OrderBy: "id", Order: "asc"})
+	assert.Error(t, err)
 }
 
 func TestGenericService_GetByID_RepoError(t *testing.T) {

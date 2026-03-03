@@ -10,14 +10,6 @@ type Entity interface {
 	TableName() string
 }
 
-type ConflictAction int16
-
-const (
-	ConflictActionError ConflictAction = iota
-	ConflictActionIgnore
-	ConflictActionUpdate
-)
-
 type QueryParams struct {
 	Scopes map[string]any
 }

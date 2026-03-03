@@ -16,7 +16,7 @@ var (
 )
 
 func NewGenericHandler[E repo.Entity, D any](s svc.Service[D, E]) *GinHandler[E, D] {
-	return internalhandlers.NewGenericHandler[E, D](s)
+	return internalhandlers.NewGenericHandler[E](s)
 }
 
 func BindJSONToDTOPtr[D any](c *gin.Context) (*D, error) {

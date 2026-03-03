@@ -7,7 +7,6 @@ import (
 
 	dbadapters "github.com/brunojet/go-infra-backend/internal/database/adapters"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
-	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -110,27 +109,27 @@ func TestAddOnConflict_ValidationAndModes(t *testing.T) {
 	_, gdb, cleanup := openSimpleMemoryDB(t)
 	defer cleanup()
 
-	err := AddOnConflict(nil, repoContracts.ConflictActionIgnore, "id")
+	err := addOnConflict(nil, conflictActionIgnore, "id")
 	assert.ErrorIs(t, err, ErrInvalidTx)
 
-	err = AddOnConflict(gdb, repoContracts.ConflictActionIgnore)
+	err = addOnConflict(gdb, conflictActionIgnore)
 	assert.ErrorIs(t, err, ErrInvalidConflictColumns)
 
-	err = AddOnConflict(gdb, repoContracts.ConflictActionIgnore, "")
+	err = addOnConflict(gdb, conflictActionIgnore, "")
 	assert.ErrorIs(t, err, ErrInvalidConflictColumnName)
 
 	err = gdb.Transaction(func(tx *gorm.DB) error {
-		return AddOnConflict(tx, repoContracts.ConflictActionIgnore, "id")
+		return addOnConflict(tx, conflictActionIgnore, "id")
 	})
 	assert.NoError(t, err)
 
 	err = gdb.Transaction(func(tx *gorm.DB) error {
-		return AddOnConflict(tx, repoContracts.ConflictActionUpdate, "id")
+		return addOnConflict(tx, conflictActionUpdate, "id")
 	})
 	assert.NoError(t, err)
 
 	err = gdb.Transaction(func(tx *gorm.DB) error {
-		return AddOnConflict(tx, repoContracts.ConflictActionError)
+		return addOnConflict(tx, conflictActionError)
 	})
 	assert.NoError(t, err)
 }
@@ -216,6 +215,7 @@ func TestValidateTxWithUpdateLock_NotFoundReturnsNil(t *testing.T) {
 	defer cleanup()
 
 	err := gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(contextWithTx(context.Background(), tx))
 		return ValidateTxWithUpdateLock(tx, LockValidationSpec[TestEntity]{
 			SelectColumns: []string{"id"},
 			WhereSQL:      "id = ?",
@@ -232,6 +232,7 @@ func TestValidateTxWithUpdateLock_FoundDefaultAndCallback(t *testing.T) {
 	require.NoError(t, gdb.Create(&TestEntity{ID: "t-1", Name: func() *string { s := "john"; return &s }(), Age: func() *int { i := 30; return &i }()}).Error)
 
 	err := gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(contextWithTx(context.Background(), tx))
 		return ValidateTxWithUpdateLock(tx, LockValidationSpec[TestEntity]{
 			SelectColumns: []string{"id"},
 			WhereSQL:      "id = ?",
@@ -241,6 +242,7 @@ func TestValidateTxWithUpdateLock_FoundDefaultAndCallback(t *testing.T) {
 	assert.ErrorIs(t, err, ErrBusinessRuleViolation)
 
 	err = gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(contextWithTx(context.Background(), tx))
 		return ValidateTxWithUpdateLock(tx, LockValidationSpec[TestEntity]{
 			SelectColumns: []string{"id", "name"},
 			WhereSQL:      "id = ?",
@@ -254,4 +256,36 @@ func TestValidateTxWithUpdateLock_FoundDefaultAndCallback(t *testing.T) {
 		})
 	})
 	assert.NoError(t, err)
+
+	expected := errors.New("custom-block")
+	err = gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(contextWithTx(context.Background(), tx))
+		return ValidateTxWithUpdateLock(tx, LockValidationSpec[TestEntity]{
+			SelectColumns: []string{"id", "name"},
+			WhereSQL:      "id = ?",
+			WhereArgs:     []any{"t-1"},
+			BlockIfFound: func(_ *TestEntity) error {
+				return expected
+			},
+		})
+	})
+	assert.ErrorIs(t, err, expected)
+}
+
+func TestValidateTxWithUpdateLock_DBErrorPassthrough(t *testing.T) {
+	_, gdb, cleanup := openSimpleMemoryDB(t)
+	defer cleanup()
+
+	err := gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(contextWithTx(context.Background(), tx))
+		return ValidateTxWithUpdateLock(tx, LockValidationSpec[TestEntity]{
+			WhereSQL: "id = ? AND (",
+			WhereArgs: []any{
+				"x",
+			},
+		})
+	})
+	assert.Error(t, err)
+	assert.NotErrorIs(t, err, ErrRequiresTransaction)
+	assert.NotErrorIs(t, err, ErrBusinessRuleViolation)
 }

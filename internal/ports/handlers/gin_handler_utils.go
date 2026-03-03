@@ -3,13 +3,23 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	repoerrs "github.com/brunojet/go-infra-backend/internal/ports/repositories"
+	svccontracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 	"github.com/gin-gonic/gin"
 )
 
 var (
 	ErrInvalidJSONBody = errors.New("invalid JSON body")
+)
+
+const (
+	queryParamPage    = "page"
+	queryParamSize    = "size"
+	queryParamOrderBy = "orderBy"
+	queryParamOrder   = "order"
 )
 
 func MapErrorToStatus(err error) int {
@@ -42,4 +52,46 @@ func BindJSONToDTOPtr[D any](c *gin.Context) (*D, error) {
 		return nil, ErrInvalidJSONBody
 	}
 	return &dto, nil
+}
+
+func ParsePaginationParams(values url.Values) (int, int) {
+	page, _ := strconv.Atoi(values.Get(queryParamPage))
+	size, _ := strconv.Atoi(values.Get(queryParamSize))
+	return page, size
+}
+
+func ExtractQueryScopes(values url.Values, ignoredKeys map[string]struct{}) map[string]any {
+	scopes := make(map[string]any)
+	for key, vals := range values {
+		if _, ignored := ignoredKeys[key]; ignored {
+			continue
+		}
+		if len(vals) == 0 {
+			continue
+		}
+		scopes[key] = vals[0]
+	}
+	return scopes
+}
+
+func BuildListParamsFromRequest(c *gin.Context) svccontracts.ListParams {
+	query := c.Request.URL.Query()
+	page, size := ParsePaginationParams(query)
+
+	ignored := map[string]struct{}{
+		queryParamPage:    {},
+		queryParamSize:    {},
+		queryParamOrderBy: {},
+		queryParamOrder:   {},
+	}
+
+	orderBy := query.Get(queryParamOrderBy)
+
+	return svccontracts.ListParams{
+		QueryParams: svccontracts.QueryParams{Scopes: ExtractQueryScopes(query, ignored)},
+		Page:        page,
+		Size:        size,
+		OrderBy:     orderBy,
+		Order:       query.Get(queryParamOrder),
+	}
 }

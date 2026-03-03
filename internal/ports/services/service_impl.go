@@ -42,17 +42,21 @@ func (s *serviceImpl[D, E]) GetByID(ctx context.Context, id string) (D, error) {
 	return dto, nil
 }
 
-func (s *serviceImpl[D, E]) List(ctx context.Context, size int) ([]D, error) {
-	params := repoContracts.ListParams{Page: 1, Size: size, OrderBy: "id", Order: "asc"}
-	models, _, err := s.repo.List(ctx, params)
+func (s *serviceImpl[D, E]) List(ctx context.Context, params contracts.ListParams) ([]D, int64, error) {
+	mappedScopes, err := s.mapper.ApplyQueryScopes(params.QueryParams.Scopes)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+	repoParams := toRepoListParams(params, mappedScopes)
+	models, total, err := s.repo.List(ctx, repoParams)
+	if err != nil {
+		return nil, 0, err
 	}
 	out := make([]D, len(models))
 	for i := range models {
 		s.mapper.ToDTO(&models[i], &out[i])
 	}
-	return out, nil
+	return out, total, nil
 }
 
 func (s *serviceImpl[D, E]) Update(ctx context.Context, id string, dto *D) error {

@@ -9,7 +9,9 @@ import (
 	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 )
 
-var errVersionScopeIDRequired = porterrors.NewBusinessRuleError(errors.New("application_version_id scope must be valid"))
+const errTextVersionScopeIDRequired = "application_version_id scope must be valid"
+
+var errVersionScopeIDRequired = porterrors.NewBusinessRuleError(errors.New(errTextVersionScopeIDRequired))
 
 type ApplicationVersionService interface {
 	UpdateAndSyncCatalog(ctx context.Context, scopes map[string]any, inOut *models.ApplicationVersion) error

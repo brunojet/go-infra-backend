@@ -358,3 +358,48 @@ func TestGetDB(t *testing.T) {
 	repo := NewGormRepository[TestEntity](db)
 	assert.Same(t, mustGormDB(t, db), repo.GormDB())
 }
+
+func TestGormRepository_WithTx_UsesTransactionalContextForCRUD(t *testing.T) {
+	db, cleanup := openMemoryDB(t)
+	defer cleanup()
+
+	repo := NewGormRepository[TestEntity](db)
+	ctx := context.Background()
+
+	err := repo.WithTx(ctx, func(txCtx context.Context) error {
+		if errCreate := repo.Create(txCtx, &TestEntity{ID: "tx-rollback", Name: ps("tmp"), Age: pi(1)}); errCreate != nil {
+			return errCreate
+		}
+		return errors.New("force rollback")
+	})
+	assert.EqualError(t, err, "force rollback")
+
+	_, err = repo.GetByID(ctx, map[string]any{"id": "tx-rollback"})
+	assert.ErrorIs(t, err, ErrNotFound)
+}
+
+func TestList_Update_Delete_ExtraErrorBranches(t *testing.T) {
+	db, cleanup := openMemoryDB(t)
+	defer cleanup()
+
+	repo := NewGormRepository[TestEntity](db)
+	ctx := context.Background()
+
+	_, _, err := repo.List(ctx, contracts.ListParams{
+		QueryParams: contracts.QueryParams{Scopes: map[string]any{"": "x"}},
+		Page:        1,
+		Size:        10,
+		OrderBy:     "id",
+		Order:       "asc",
+	})
+	assert.ErrorIs(t, err, ErrInvalidScope)
+
+	err = repo.Update(ctx, map[string]any{}, &TestEntity{Name: ps("n")})
+	assert.ErrorIs(t, err, ErrEmptyScopes)
+
+	err = repo.Delete(ctx, map[string]any{})
+	assert.ErrorIs(t, err, ErrEmptyScopes)
+
+	err = repo.Delete(ctx, map[string]any{"id": "missing"})
+	assert.ErrorIs(t, err, ErrNotFound)
+}

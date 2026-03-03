@@ -45,7 +45,8 @@ func (h *GinHandler[E, D]) GetByID(c *gin.Context) {
 }
 
 func (h *GinHandler[E, D]) List(c *gin.Context) {
-	list, err := h.service.List(c.Request.Context(), 10)
+	params := BuildListParamsFromRequest(c)
+	list, _, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
 		SetResponseFromError(c, err)
 		return

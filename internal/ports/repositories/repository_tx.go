@@ -12,6 +12,14 @@ import (
 
 type ctxKeyTx struct{}
 
+type conflictAction uint8
+
+const (
+	conflictActionError conflictAction = iota
+	conflictActionIgnore
+	conflictActionUpdate
+)
+
 type LockValidationSpec[E contracts.Entity] = contracts.LockValidationSpec[E]
 
 func hasTransactionInContext(ctx context.Context) bool {
@@ -19,16 +27,12 @@ func hasTransactionInContext(ctx context.Context) bool {
 	return err == nil && tx != nil
 }
 
+func isTransactionValid(tx *gorm.DB) bool {
+	return tx != nil && tx.Statement != nil
+}
+
 func isTransactionAndContextValid(tx *gorm.DB) bool {
-	if tx == nil || tx.Statement == nil {
-		return false
-	}
-
-	if hasTransactionInContext(tx.Statement.Context) {
-		return true
-	}
-
-	return false
+	return isTransactionValid(tx) && hasTransactionInContext(tx.Statement.Context)
 }
 
 // contextWithTx returns a new context that carries the given *gorm.DB transaction.
@@ -36,62 +40,11 @@ func contextWithTx(ctx context.Context, tx *gorm.DB) context.Context {
 	return context.WithValue(ctx, ctxKeyTx{}, tx)
 }
 
-// TxFromContext extracts a *gorm.DB transaction from the context.
-// Returns ErrInvalidTx when no transaction is present or when value has wrong type.
-func TxFromContext(ctx context.Context) (*gorm.DB, error) {
-	if v := ctx.Value(ctxKeyTx{}); v != nil {
-		if tx, ok := v.(*gorm.DB); ok {
-			return tx, nil
-		}
-		return nil, ErrInvalidTx
-	}
-	return nil, ErrInvalidTx
-}
-
-func GetContextFromTx(tx *gorm.DB) context.Context {
-	if tx.Statement != nil && tx.Statement.Context != nil {
-		return tx.Statement.Context
-	}
-	return context.Background()
-}
-
-// ValidateTxWithUpdateLock performs a reusable business-rule validation pattern:
-// 1) requires an explicit transaction
-// 2) executes SELECT ... FOR UPDATE with provided where clause
-// 3) uses tx.Statement.Context when present (for observability/tracing propagation)
-// 3) returns nil on not found (no conflict)
-// 4) evaluates optional callback for custom blocking rules when a record is found
-func ValidateTxWithUpdateLock[E contracts.Entity](tx *gorm.DB, spec contracts.LockValidationSpec[E]) error {
-	if strings.TrimSpace(spec.WhereSQL) == "" {
-		return ErrLockValidationWhere
-	}
-	if !isTransactionAndContextValid(tx) {
-		return ErrRequiresTransaction
-	}
-	q := tx.Session(&gorm.Session{NewDB: true}).Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
-	if len(spec.SelectColumns) > 0 {
-		q = q.Select(spec.SelectColumns)
-	}
-	q = q.Where(spec.WhereSQL, spec.WhereArgs...)
-	var found E
-	err := q.First(&found).Error
-	if err == nil {
-		if spec.BlockIfFound != nil {
-			return spec.BlockIfFound(&found)
-		}
-		return ErrBusinessRuleViolation
-	}
-	if err == gorm.ErrRecordNotFound {
-		return nil
-	}
-	return MapDbError(err)
-}
-
-func AddOnConflict(tx *gorm.DB, action contracts.ConflictAction, columnNames ...string) error {
-	if tx == nil || tx.Statement == nil {
+func addOnConflict(tx *gorm.DB, action conflictAction, columnNames ...string) error {
+	if !isTransactionValid(tx) {
 		return ErrInvalidTx
 	}
-	if action == contracts.ConflictActionError {
+	if action == conflictActionError {
 		return nil
 	}
 	if len(columnNames) == 0 {
@@ -108,22 +61,14 @@ func AddOnConflict(tx *gorm.DB, action contracts.ConflictAction, columnNames ...
 
 	onConflict := clause.OnConflict{Columns: columns}
 	switch action {
-	case contracts.ConflictActionIgnore:
+	case conflictActionIgnore:
 		onConflict.DoNothing = true
-	case contracts.ConflictActionUpdate:
+	case conflictActionUpdate:
 		onConflict.UpdateAll = true
 	}
 
 	tx.Statement.AddClause(onConflict)
 	return nil
-}
-
-func AddOnConflictDoNothing(tx *gorm.DB, columnNames ...string) error {
-	return AddOnConflict(tx, contracts.ConflictActionIgnore, columnNames...)
-}
-
-func AddOnConflictUpdateAll(tx *gorm.DB, columnNames ...string) error {
-	return AddOnConflict(tx, contracts.ConflictActionUpdate, columnNames...)
 }
 
 func buildTxWithScopes[E contracts.Entity](db *gorm.DB, scopes map[string]any) (*gorm.DB, error) {
@@ -184,4 +129,56 @@ func getListSize(total, page, size int) int {
 		}
 	}
 	return capacity
+}
+
+// TxFromContext extracts a *gorm.DB transaction from the context.
+// Returns ErrInvalidTx when no transaction is present or when value has wrong type.
+func TxFromContext(ctx context.Context) (*gorm.DB, error) {
+	if v := ctx.Value(ctxKeyTx{}); v != nil {
+		if tx, ok := v.(*gorm.DB); ok {
+			return tx, nil
+		}
+		return nil, ErrInvalidTx
+	}
+	return nil, ErrInvalidTx
+}
+
+// ValidateTxWithUpdateLock performs a reusable business-rule validation pattern:
+// 1) requires an explicit transaction
+// 2) executes SELECT ... FOR UPDATE with provided where clause
+// 3) uses tx.Statement.Context when present (for observability/tracing propagation)
+// 3) returns nil on not found (no conflict)
+// 4) evaluates optional callback for custom blocking rules when a record is found
+func ValidateTxWithUpdateLock[E contracts.Entity](tx *gorm.DB, spec contracts.LockValidationSpec[E]) error {
+	if strings.TrimSpace(spec.WhereSQL) == "" {
+		return ErrLockValidationWhere
+	}
+	if !isTransactionAndContextValid(tx) {
+		return ErrRequiresTransaction
+	}
+	q := tx.Session(&gorm.Session{NewDB: true}).Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
+	if len(spec.SelectColumns) > 0 {
+		q = q.Select(spec.SelectColumns)
+	}
+	q = q.Where(spec.WhereSQL, spec.WhereArgs...)
+	var found E
+	err := q.First(&found).Error
+	if err == nil {
+		if spec.BlockIfFound != nil {
+			return spec.BlockIfFound(&found)
+		}
+		return ErrBusinessRuleViolation
+	}
+	if err == gorm.ErrRecordNotFound {
+		return nil
+	}
+	return MapDbError(err)
+}
+
+func AddOnConflictDoNothing(tx *gorm.DB, columnNames ...string) error {
+	return addOnConflict(tx, conflictActionIgnore, columnNames...)
+}
+
+func AddOnConflictUpdateAll(tx *gorm.DB, columnNames ...string) error {
+	return addOnConflict(tx, conflictActionUpdate, columnNames...)
 }

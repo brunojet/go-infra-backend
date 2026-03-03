@@ -8,49 +8,56 @@ import (
 )
 
 type nestedServiceImpl[D any, E repoContracts.Entity] struct {
-	repo   repoContracts.Repository[E]
-	mapper svcContracts.NestedServiceMapper[D, E]
+	nestRpo repoContracts.Repository[E]
+	nestMap svcContracts.NestedServiceMapper[D, E]
+	baseSvc svcContracts.Service[D, E]
 }
 
 func NewNestedServiceImpl[D any, E repoContracts.Entity](
 	r repoContracts.Repository[E],
 	m svcContracts.NestedServiceMapper[D, E],
 ) svcContracts.NestedService[D, E] {
-	return &nestedServiceImpl[D, E]{repo: r, mapper: m}
+	return &nestedServiceImpl[D, E]{nestRpo: r, nestMap: m, baseSvc: NewServiceImpl(r, m)}
 }
 
-func (s *nestedServiceImpl[D, E]) CreateNested(ctx context.Context, parentScopes map[string]any, dto *D) error {
+func (s *nestedServiceImpl[D, E]) GetByID(ctx context.Context, id string) (D, error) {
+	return s.baseSvc.GetByID(ctx, id)
+}
+
+func (s *nestedServiceImpl[D, E]) Update(ctx context.Context, id string, dto *D) error {
+	return s.baseSvc.Update(ctx, id, dto)
+}
+
+func (s *nestedServiceImpl[D, E]) Delete(ctx context.Context, id string) error {
+	return s.baseSvc.Delete(ctx, id)
+}
+
+func (s *nestedServiceImpl[D, E]) CreateNested(ctx context.Context, parentID string, dto *D) error {
 	var model E
-	s.mapper.ToModel(dto, &model)
-	if err := s.mapper.ApplyParentScopes(parentScopes, dto, &model); err != nil {
+	s.nestMap.ToModel(dto, &model)
+	if err := s.nestMap.ApplyParentScopes(parentID, &model); err != nil {
 		return err
 	}
-	if err := s.repo.Create(ctx, &model); err != nil {
+	if err := s.nestRpo.Create(ctx, &model); err != nil {
 		return err
 	}
-	s.mapper.ToDTO(&model, dto)
+	s.nestMap.ToDTO(&model, dto)
 	return nil
 }
 
-func (s *nestedServiceImpl[D, E]) ListNested(ctx context.Context, parentScopes map[string]any, params repoContracts.ListParams) ([]D, int64, error) {
-	queryScopes := make(map[string]any, len(parentScopes)+len(params.QueryParams.Scopes))
-	for key, value := range params.QueryParams.Scopes {
-		queryScopes[key] = value
-	}
-	for key, value := range parentScopes {
-		queryScopes[key] = value
-	}
-	params.QueryParams.Scopes = queryScopes
-
-	models, total, err := s.repo.List(ctx, params)
+func (s *nestedServiceImpl[D, E]) ListNested(ctx context.Context, parentID string, params svcContracts.ListParams) ([]D, int64, error) {
+	mergedScopes, err := s.nestMap.ApplyParentQueryScopes(parentID, params.QueryParams.Scopes)
 	if err != nil {
 		return nil, 0, err
 	}
-
+	repoParams := toRepoListParams(params, mergedScopes)
+	models, total, err := s.nestRpo.List(ctx, repoParams)
+	if err != nil {
+		return nil, 0, err
+	}
 	dtos := make([]D, len(models))
 	for i := range models {
-		s.mapper.ToDTO(&models[i], &dtos[i])
+		s.nestMap.ToDTO(&models[i], &dtos[i])
 	}
-
 	return dtos, total, nil
 }

@@ -56,3 +56,33 @@ func TestBindJSONToDTOPtr_SuccessAndFailure(t *testing.T) {
 	a.Nil(dto2)
 	a.Equal(http.StatusBadRequest, w2.Code)
 }
+
+func TestBuildListParamsFromRequest_UsesCanonicalKeys(t *testing.T) {
+	a := assert.New(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/?page=2&size=25&orderBy=created_at&order=desc&application_id=10", nil)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	params := BuildListParamsFromRequest(c)
+	a.Equal(2, params.Page)
+	a.Equal(25, params.Size)
+	a.Equal("created_at", params.OrderBy)
+	a.Equal("desc", params.Order)
+	a.Equal("10", params.QueryParams.Scopes["application_id"])
+}
+
+func TestBuildListParamsFromRequest_LeavesUnknownQueryAsScope(t *testing.T) {
+	a := assert.New(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/?order_by=legacy&status=active", nil)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	params := BuildListParamsFromRequest(c)
+	a.Equal("", params.OrderBy)
+	a.Equal("legacy", params.QueryParams.Scopes["order_by"])
+	a.Equal("active", params.QueryParams.Scopes["status"])
+}

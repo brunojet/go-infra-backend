@@ -9,6 +9,16 @@ import (
 	"gorm.io/gorm"
 )
 
+func TestBusinessRuleHelpers(t *testing.T) {
+	sentinel := errors.New("business-cause")
+	err := NewBusinessRuleError(sentinel)
+	assert.Error(t, err)
+	assert.True(t, IsBusinessRuleError(err))
+	assert.ErrorIs(t, err, sentinel)
+
+	assert.False(t, IsBusinessRuleError(errors.New("plain-error")))
+}
+
 func TestMapDBError_MapDBRecordNotFound(t *testing.T) {
 	err := MapDbError(gorm.ErrRecordNotFound)
 	assert.ErrorIs(t, err, ErrNotFound)

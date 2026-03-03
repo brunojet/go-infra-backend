@@ -8,6 +8,8 @@ import (
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
+const helloWorldIDKey = "id"
+
 type HelloWorldDTO struct {
 	ID      string
 	Message string
@@ -17,7 +19,11 @@ type HelloWorldDTO struct {
 type helloWorldMapper struct{}
 
 func (helloWorldMapper) GetModelKey(id string) (map[string]any, error) {
-	return map[string]any{"id": id}, nil
+	return map[string]any{helloWorldIDKey: id}, nil
+}
+
+func (helloWorldMapper) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {
+	return queryScopes, nil
 }
 
 func (helloWorldMapper) ToModel(dto *HelloWorldDTO, model *helloWorldRepo.HelloWorld) {

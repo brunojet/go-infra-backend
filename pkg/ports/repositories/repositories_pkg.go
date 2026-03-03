@@ -11,20 +11,15 @@ import (
 )
 
 // ---- Contracts ----
-
-type ListParams = contracts.ListParams
-
-type Entity = contracts.Entity
-
-type LockValidationSpec[E Entity] = contracts.LockValidationSpec[E]
-type ConflictAction = contracts.ConflictAction
-
-type Repository[E Entity] = contracts.Repository[E]
-
-type BusinessRuleError = errs.BusinessRuleError
+type (
+	ListParams                   = contracts.ListParams
+	Entity                       = contracts.Entity
+	LockValidationSpec[E Entity] = contracts.LockValidationSpec[E]
+	Repository[E Entity]         = contracts.Repository[E]
+	BusinessRuleError            = errs.BusinessRuleError
+)
 
 // ---- Errors ----
-
 var (
 	ErrDBUnavailable         = internalrepos.ErrDBUnavailable
 	ErrInvalidTx             = internalrepos.ErrInvalidTx
@@ -34,28 +29,15 @@ var (
 	ErrLockValidationWhere   = internalrepos.ErrLockValidationWhere
 )
 
-const (
-	ConflictActionError  = contracts.ConflictActionError
-	ConflictActionIgnore = contracts.ConflictActionIgnore
-	ConflictActionUpdate = contracts.ConflictActionUpdate
-)
-
 // ---- Helpers (delegating to internal) ----
-
 func MapDbError(err error) error { return internalrepos.MapDbError(err) }
 
 func MapTxError(tx *gorm.DB) error { return internalrepos.MapTxError(tx) }
 
 func TxFromContext(ctx context.Context) (*gorm.DB, error) { return internalrepos.TxFromContext(ctx) }
 
-func GetContextFromTx(tx *gorm.DB) context.Context { return internalrepos.GetContextFromTx(tx) }
-
 func ValidateTxWithUpdateLock[E Entity](tx *gorm.DB, spec contracts.LockValidationSpec[E]) error {
 	return internalrepos.ValidateTxWithUpdateLock(tx, spec)
-}
-
-func AddOnConflict(tx *gorm.DB, action ConflictAction, columnNames ...string) error {
-	return internalrepos.AddOnConflict(tx, action, columnNames...)
 }
 
 func AddOnConflictDoNothing(tx *gorm.DB, columnNames ...string) error {

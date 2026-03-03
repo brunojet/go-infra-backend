@@ -108,7 +108,7 @@ func TestList_Handler(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
-	ms.EXPECT().List(gomock.Any(), gomock.Any()).Return([]SimpleDTO{{ID: "1"}}, nil)
+	ms.EXPECT().List(gomock.Any(), gomock.Any()).Return([]SimpleDTO{{ID: "1"}}, int64(1), nil)
 	h.List(c)
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -116,7 +116,7 @@ func TestList_Handler(t *testing.T) {
 	rec = httptest.NewRecorder()
 	c, _ = gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
-	ms.EXPECT().List(gomock.Any(), gomock.Any()).Return(nil, repoerrs.ErrDBUnavailable)
+	ms.EXPECT().List(gomock.Any(), gomock.Any()).Return(nil, int64(0), repoerrs.ErrDBUnavailable)
 	h.List(c)
 	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
 }

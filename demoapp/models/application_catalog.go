@@ -26,8 +26,7 @@ const (
 )
 
 var (
-	errCatalogVersionRequiredPilotProd = porterrors.NewBusinessRuleError(errors.New(errTextCatalogVersionRequiredPilotProd))
-	errCatalogStageInvalid             = porterrors.NewBusinessRuleError(errors.New(errTextCatalogStageInvalid))
+	errCatalogStageInvalid = porterrors.NewBusinessRuleError(errors.New(errTextCatalogStageInvalid))
 )
 
 type ApplicationCatalog struct {
