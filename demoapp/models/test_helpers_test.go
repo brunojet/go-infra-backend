@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
@@ -15,6 +16,7 @@ func createTerminalModelConfigurationOneShot(t *testing.T, gdb *gorm.DB, termina
 	var cfg TerminalModelConfiguration
 
 	require.NoError(t, gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(portsrepos.ContextWithTx(tx.Statement.Context, tx))
 		tm := buildTerminalModel(terminalModelName, "")
 		if err := tx.Create(&tm).Error; err != nil {
 			return err
@@ -82,14 +84,18 @@ func createApplication(t *testing.T, gdb *gorm.DB, name, customer string) Applic
 func createApplicationWithDescription(t *testing.T, gdb *gorm.DB, name, customer, description string) Application {
 	t.Helper()
 
-	app := Application{
-		Name:       sql.NullString{String: name, Valid: true},
-		CustomerId: sql.NullString{String: customer, Valid: true},
-	}
-	if description != "" {
-		app.Description = sql.NullString{String: description, Valid: true}
-	}
-	require.NoError(t, gdb.Create(&app).Error)
+	var app Application
+	require.NoError(t, gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(portsrepos.ContextWithTx(tx.Statement.Context, tx))
+		app = Application{
+			Name:       sql.NullString{String: name, Valid: true},
+			CustomerId: sql.NullString{String: customer, Valid: true},
+		}
+		if description != "" {
+			app.Description = sql.NullString{String: description, Valid: true}
+		}
+		return tx.Create(&app).Error
+	}))
 	require.NotZero(t, app.ApplicationId)
 	return app
 }
@@ -97,12 +103,16 @@ func createApplicationWithDescription(t *testing.T, gdb *gorm.DB, name, customer
 func createApplicationConfiguration(t *testing.T, gdb *gorm.DB, applicationID, terminalModelConfigurationID int64, packageName string) ApplicationConfiguration {
 	t.Helper()
 
-	ac := ApplicationConfiguration{
-		ApplicationId:                applicationID,
-		TerminalModelConfigurationId: terminalModelConfigurationID,
-		PackageName:                  sql.NullString{String: packageName, Valid: true},
-	}
-	require.NoError(t, gdb.Create(&ac).Error)
+	var ac ApplicationConfiguration
+	require.NoError(t, gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(portsrepos.ContextWithTx(tx.Statement.Context, tx))
+		ac = ApplicationConfiguration{
+			ApplicationId:                applicationID,
+			TerminalModelConfigurationId: terminalModelConfigurationID,
+			PackageName:                  sql.NullString{String: packageName, Valid: true},
+		}
+		return tx.Create(&ac).Error
+	}))
 	return ac
 }
 
@@ -111,6 +121,7 @@ func createApplicationConfigurationOneShot(t *testing.T, gdb *gorm.DB, appName, 
 
 	var ac ApplicationConfiguration
 	require.NoError(t, gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(portsrepos.ContextWithTx(tx.Statement.Context, tx))
 		app := Application{
 			Name:       sql.NullString{String: appName, Valid: true},
 			CustomerId: sql.NullString{String: customer, Valid: true},
@@ -135,8 +146,16 @@ func createApplicationConfigurationOneShot(t *testing.T, gdb *gorm.DB, appName, 
 func createApplicationImage(t *testing.T, gdb *gorm.DB, applicationID int64, imageType int16, hashByte byte) ApplicationImage {
 	t.Helper()
 
-	img := newApplicationImage(applicationID, imageType, hashByte)
-	require.NoError(t, gdb.Create(&img).Error)
+	var img ApplicationImage
+	require.NoError(t, gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(portsrepos.ContextWithTx(tx.Statement.Context, tx))
+		tmp := newApplicationImage(applicationID, imageType, hashByte)
+		if err := tx.Create(&tmp).Error; err != nil {
+			return err
+		}
+		img = tmp
+		return nil
+	}))
 	require.NotZero(t, img.ApplicationImageId)
 	return img
 }
@@ -162,13 +181,24 @@ func hash32(fill byte) []byte {
 func createApplicationProfile(t *testing.T, gdb *gorm.DB, applicationID int64, name string, imageHashByte byte) ApplicationProfile {
 	t.Helper()
 
-	img := createApplicationImage(t, gdb, applicationID, 1, imageHashByte)
-	profile := ApplicationProfile{
-		ApplicationId:      applicationID,
-		ApplicationImageId: img.ApplicationImageId,
-		Name:               sql.NullString{String: name, Valid: true},
-	}
-	require.NoError(t, gdb.Create(&profile).Error)
+	var profile ApplicationProfile
+	require.NoError(t, gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(portsrepos.ContextWithTx(tx.Statement.Context, tx))
+		img := newApplicationImage(applicationID, 1, imageHashByte)
+		if err := tx.Create(&img).Error; err != nil {
+			return err
+		}
+		tmp := ApplicationProfile{
+			ApplicationId:      applicationID,
+			ApplicationImageId: img.ApplicationImageId,
+			Name:               sql.NullString{String: name, Valid: true},
+		}
+		if err := tx.Create(&tmp).Error; err != nil {
+			return err
+		}
+		profile = tmp
+		return nil
+	}))
 	require.NotZero(t, profile.ApplicationProfileId)
 	return profile
 }
@@ -176,18 +206,26 @@ func createApplicationProfile(t *testing.T, gdb *gorm.DB, applicationID int64, n
 func createApplicationProfileWithNestedImage(t *testing.T, gdb *gorm.DB, applicationID int64, name string, imageHashByte byte) ApplicationProfile {
 	t.Helper()
 
-	profile := ApplicationProfile{
-		ApplicationId: applicationID,
-		Name:          sql.NullString{String: name, Valid: true},
-		ApplicationImage: &ApplicationImage{
-			ApplicationId:   applicationID,
-			FileName:        sql.NullString{String: "icon.png", Valid: true},
-			FileContentType: sql.NullString{String: "image/png", Valid: true},
-			FileHash:        hash32(imageHashByte),
-			ImageType:       sql.NullInt16{Int16: 1, Valid: true},
-		},
-	}
-	require.NoError(t, gdb.Create(&profile).Error)
+	var profile ApplicationProfile
+	require.NoError(t, gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(portsrepos.ContextWithTx(tx.Statement.Context, tx))
+		tmp := ApplicationProfile{
+			ApplicationId: applicationID,
+			Name:          sql.NullString{String: name, Valid: true},
+			ApplicationImage: &ApplicationImage{
+				ApplicationId:   applicationID,
+				FileName:        sql.NullString{String: "icon.png", Valid: true},
+				FileContentType: sql.NullString{String: "image/png", Valid: true},
+				FileHash:        hash32(imageHashByte),
+				ImageType:       sql.NullInt16{Int16: 1, Valid: true},
+			},
+		}
+		if err := tx.Session(&gorm.Session{FullSaveAssociations: true}).Create(&tmp).Error; err != nil {
+			return err
+		}
+		profile = tmp
+		return nil
+	}))
 	require.NotZero(t, profile.ApplicationProfileId)
 	return profile
 }
@@ -236,6 +274,7 @@ func createFilterOneShot(t *testing.T, gdb *gorm.DB, filterTypeName, filterName 
 
 	var f Filter
 	require.NoError(t, gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(portsrepos.ContextWithTx(tx.Statement.Context, tx))
 		ft := FilterType{Name: sql.NullString{String: filterTypeName, Valid: true}}
 		if err := tx.Create(&ft).Error; err != nil {
 			return err
@@ -264,6 +303,7 @@ func createFilterOneShotWithNestedFilterType(t *testing.T, gdb *gorm.DB, filterT
 	}
 
 	require.NoError(t, gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(portsrepos.ContextWithTx(tx.Statement.Context, tx))
 		return tx.Session(&gorm.Session{FullSaveAssociations: true}).Create(&f).Error
 	}))
 
@@ -272,4 +312,17 @@ func createFilterOneShotWithNestedFilterType(t *testing.T, gdb *gorm.DB, filterT
 	require.NotNil(t, f.FilterType)
 	require.NotZero(t, f.FilterType.FilterTypeId)
 	return f
+}
+
+// RunInTransaction is a generic helper to run a DB operation in a transaction and return the created/modified entity.
+func RunInTransaction[T any](t *testing.T, gdb *gorm.DB, op func(tx *gorm.DB) (T, error)) T {
+	t.Helper()
+	var result T
+	require.NoError(t, gdb.Transaction(func(tx *gorm.DB) error {
+		tx = tx.WithContext(portsrepos.ContextWithTx(tx.Statement.Context, tx))
+		var err error
+		result, err = op(tx)
+		return err
+	}))
+	return result
 }

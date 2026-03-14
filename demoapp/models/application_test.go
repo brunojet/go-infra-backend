@@ -13,12 +13,14 @@ func TestApplicationCreate_UpsertSameNameSameCustomer(t *testing.T) {
 	gdb := dbtest.OpenMemoryDB(t, &Application{})
 
 	_ = createApplicationWithDescription(t, gdb, "app-upsert", "cust-1", "v1")
-	dup := Application{
+	a := Application{
 		Name:        sql.NullString{String: "app-upsert", Valid: true},
 		CustomerId:  sql.NullString{String: "cust-1", Valid: true},
 		Description: sql.NullString{String: "v2", Valid: true},
 	}
-	require.NoError(t, gdb.Create(&dup).Error)
+	RunInTransaction(t, gdb, func(tx *gorm.DB) (Application, error) {
+		return a, tx.Create(&a).Error
+	})
 
 	var count int64
 	require.NoError(t, gdb.Model(&Application{}).Where("name = ?", "app-upsert").Count(&count).Error)
@@ -34,12 +36,13 @@ func TestApplicationCreate_RejectsSameNameDifferentCustomer(t *testing.T) {
 	gdb := dbtest.OpenMemoryDB(t, &Application{})
 
 	_ = createApplication(t, gdb, "app-conflict", "cust-1")
-
 	second := Application{
 		Name:       sql.NullString{String: "app-conflict", Valid: true},
 		CustomerId: sql.NullString{String: "cust-2", Valid: true},
 	}
-	err := gdb.Create(&second).Error
+	err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
+		return tx.Create(&second).Error, nil
+	})
 	require.ErrorIs(t, err, gorm.ErrCheckConstraintViolated)
 }
 
@@ -50,7 +53,9 @@ func TestApplicationUpdate_RejectsNameCollisionWithOtherCustomer(t *testing.T) {
 	_ = createApplication(t, gdb, "app-b", "cust-b")
 
 	app1.Name = sql.NullString{String: "app-b", Valid: true}
-	err := gdb.Save(&app1).Error
+	err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
+		return tx.Save(&app1).Error, nil
+	})
 	require.ErrorIs(t, err, gorm.ErrCheckConstraintViolated)
 }
 
@@ -78,7 +83,9 @@ func TestApplicationConfiguration_RejectsSamePackageAcrossDifferentApps(t *testi
 	_ = createApplicationConfigurationOneShot(t, gdb, "app-cfg-a", "cust-a", cfgTerm.TerminalModelConfigurationId, "pkg.global")
 
 	ac2 := ApplicationConfiguration{ApplicationId: app2.ApplicationId, TerminalModelConfigurationId: cfgTerm.TerminalModelConfigurationId, PackageName: sql.NullString{String: "pkg.global", Valid: true}}
-	err := gdb.Create(&ac2).Error
+	err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
+		return tx.Create(&ac2).Error, nil
+	})
 	require.ErrorIs(t, err, gorm.ErrCheckConstraintViolated)
 }
 
@@ -89,7 +96,9 @@ func TestApplicationCreate_InvalidRequiredFields(t *testing.T) {
 		Name:       sql.NullString{},
 		CustomerId: sql.NullString{String: "cust-x", Valid: true},
 	}
-	err := gdb.Create(&invalid).Error
+	err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
+		return tx.Create(&invalid).Error, nil
+	})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), errNameAndCustomerRequired)
 }
@@ -100,7 +109,9 @@ func TestApplicationUpdate_SuccessSameOwnerNoNameCollision(t *testing.T) {
 	app := createApplicationWithDescription(t, gdb, "app-update-ok", "cust-ok", "before")
 
 	app.Description = sql.NullString{String: "after", Valid: true}
-	require.NoError(t, gdb.Save(&app).Error)
+	require.NoError(t, RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
+		return tx.Save(&app).Error, nil
+	}))
 
 	var got Application
 	require.NoError(t, gdb.First(&got, app.ApplicationId).Error)
@@ -112,10 +123,12 @@ func TestApplicationUpdate_InvalidRequiredFields(t *testing.T) {
 
 	app := createApplication(t, gdb, "app-invalid-update", "cust-a")
 
-	app.CustomerId = sql.NullString{}
-	err := gdb.Save(&app).Error
-	require.Error(t, err)
-	require.Contains(t, err.Error(), errAppIDAndCustomerRequired)
+	       app.CustomerId = sql.NullString{}
+	       err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
+		       return tx.Save(&app).Error, nil
+	       })
+	       require.Error(t, err)
+	       require.Contains(t, err.Error(), errAppIDAndCustomerRequired)
 }
 
 func TestApplicationConfigurationUpdate_SuccessAndErrorBranches(t *testing.T) {
@@ -129,16 +142,22 @@ func TestApplicationConfigurationUpdate_SuccessAndErrorBranches(t *testing.T) {
 
 	// Success branch of BeforeUpdate
 	ac1.PackageName = sql.NullString{String: "pkg-a-2", Valid: true}
-	require.NoError(t, gdb.Save(&ac1).Error)
+	require.NoError(t, RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
+		return tx.Save(&ac1).Error, nil
+	}))
 
-	// Error branch: invalid package_name
-	ac1.PackageName = sql.NullString{}
-	err := gdb.Save(&ac1).Error
-	require.Error(t, err)
-	require.Contains(t, err.Error(), errPackageNameRequired)
+	       // Error branch: invalid package_name
+	       ac1.PackageName = sql.NullString{}
+	       err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
+		       return tx.Save(&ac1).Error, nil
+	       })
+	       require.Error(t, err)
+	       require.Contains(t, err.Error(), errPackageNameRequired)
 
-	// Error branch: package collides with another app
-	ac2.PackageName = sql.NullString{String: "pkg-a-2", Valid: true}
-	err = gdb.Save(&ac2).Error
-	require.ErrorIs(t, err, gorm.ErrCheckConstraintViolated)
+	       // Error branch: package collides with another app
+	       ac2.PackageName = sql.NullString{String: "pkg-a-2", Valid: true}
+	       err = RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
+		       return tx.Save(&ac2).Error, nil
+	       })
+	       require.ErrorIs(t, err, gorm.ErrCheckConstraintViolated)
 }

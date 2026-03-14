@@ -40,6 +40,13 @@ func contextWithTx(ctx context.Context, tx *gorm.DB) context.Context {
 	return context.WithValue(ctx, ctxKeyTx{}, tx)
 }
 
+// ContextWithTx returns a new context that carries the given *gorm.DB transaction.
+// This is a thin exported wrapper used by higher-level packages and tests to
+// annotate contexts with the transaction marker expected by TxFromContext.
+func ContextWithTx(ctx context.Context, tx *gorm.DB) context.Context {
+	return contextWithTx(ctx, tx)
+}
+
 func addOnConflict(tx *gorm.DB, action conflictAction, columnNames ...string) error {
 	if !isTransactionValid(tx) {
 		return ErrInvalidTx

@@ -41,6 +41,11 @@ type Application struct {
 	ApplicationImages         []ApplicationImage         `gorm:"foreignKey:ApplicationId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
 }
 
+// Error implements [error].
+func (a Application) Error() string {
+	panic("unimplemented")
+}
+
 func (Application) TableName() string { return tableApplication }
 
 // validateAppOwnerCreate checks whether there is an existing Application with the

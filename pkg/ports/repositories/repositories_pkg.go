@@ -34,6 +34,12 @@ func MapDbError(err error) error { return internalrepos.MapDbError(err) }
 
 func MapTxError(tx *gorm.DB) error { return internalrepos.MapTxError(tx) }
 
+// ContextWithTx is a convenience wrapper that annotates a context with a
+// *gorm.DB transaction so downstream code can retrieve it via TxFromContext.
+func ContextWithTx(ctx context.Context, tx *gorm.DB) context.Context {
+	return internalrepos.ContextWithTx(ctx, tx)
+}
+
 func TxFromContext(ctx context.Context) (*gorm.DB, error) { return internalrepos.TxFromContext(ctx) }
 
 func ValidateTxWithUpdateLock[E Entity](tx *gorm.DB, spec contracts.LockValidationSpec[E]) error {
