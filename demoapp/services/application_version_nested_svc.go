@@ -5,6 +5,7 @@ import (
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
+	"github.com/brunojet/go-infra-backend/internal/ports/services"
 	internalservices "github.com/brunojet/go-infra-backend/internal/ports/services"
 	"github.com/brunojet/go-infra-backend/internal/utils"
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
@@ -57,12 +58,12 @@ func (m applicationVersionNestedMapper) ApplyParentScopes(parentID string, model
 		return err
 	}
 
-	applicationID, err := repo.RequireScopeInt64(parentScopes, models.ColAppVersionApplicationID, errNestedVersionApplicationIDRequired)
+	applicationID, err := services.ParseScopeInt[int64](parentScopes, models.ColAppVersionApplicationID, 1)
 	if err != nil {
 		return err
 	}
 
-	terminalID, err := repo.RequireScopeInt64(parentScopes, models.ColAppVersionTerminalModelConfigurationID, errNestedVersionTerminalIDRequired)
+	terminalID, err := services.ParseScopeInt[int64](parentScopes, models.ColAppVersionTerminalModelConfigurationID, 1)
 	if err != nil {
 		return err
 	}
@@ -81,11 +82,10 @@ func (applicationVersionNestedMapper) ToDTO(model *models.ApplicationVersion, dt
 }
 
 func (applicationVersionNestedMapper) GetModelKey(id string) (map[string]any, error) {
-	versionID, err := utils.StringToInt64(id)
-	if err != nil || versionID <= 0 {
+	versionID, err := services.ParseScopeIntFromString[int64](id, 0)
+	if err != nil {
 		return nil, errNestedVersionIDRequired
 	}
-
 	return map[string]any{models.ColAppVersionID: versionID}, nil
 }
 

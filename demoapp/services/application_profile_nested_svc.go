@@ -5,16 +5,16 @@ import (
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
+	"github.com/brunojet/go-infra-backend/internal/ports/services"
 	internalservices "github.com/brunojet/go-infra-backend/internal/ports/services"
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
-	"github.com/brunojet/go-infra-backend/pkg/utils"
 )
 
 type applicationProfileNestedMapper struct{}
 
 func (applicationProfileNestedMapper) DecodeParentID(parentID string) (map[string]any, error) {
-	id, err := utils.StringToInt64(parentID)
-	if err != nil || id <= 0 {
+	id, err := services.ParseScopeIntFromString[int64](parentID, 0)
+	if err != nil {
 		return nil, errNestedProfileApplicationIDRequired
 	}
 	return map[string]any{models.ColAppProfileApplicationID: id}, nil
@@ -52,7 +52,7 @@ func (m applicationProfileNestedMapper) ApplyParentScopes(parentID string, model
 		return err
 	}
 
-	applicationID, err := repo.RequireScopeInt64(parentScopes, models.ColAppProfileApplicationID, errNestedProfileApplicationIDRequired)
+	applicationID, err := services.ParseScopeInt[int64](parentScopes, models.ColAppProfileApplicationID, 1)
 	if err != nil {
 		return err
 	}
@@ -70,11 +70,10 @@ func (applicationProfileNestedMapper) ToDTO(model *models.ApplicationProfile, dt
 }
 
 func (applicationProfileNestedMapper) GetModelKey(id string) (map[string]any, error) {
-	profileID, err := utils.StringToInt64(id)
-	if err != nil || profileID <= 0 {
+	profileID, err := services.ParseScopeIntFromString[int64](id, 0)
+	if err != nil {
 		return nil, errProfileScopeIDRequired
 	}
-
 	return map[string]any{models.ColAppProfileID: profileID}, nil
 }
 

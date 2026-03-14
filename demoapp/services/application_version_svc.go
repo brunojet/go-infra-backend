@@ -5,6 +5,7 @@ import (
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
+	"github.com/brunojet/go-infra-backend/internal/ports/services"
 )
 
 // constants and errors moved to consts.go and errors.go
@@ -39,12 +40,8 @@ func (s *applicationVersionService) UpdateAndSyncCatalog(ctx context.Context, sc
 	})
 }
 
-func versionIDFromScopes(scopes map[string]any) (int64, error) {
-	return repo.RequireScopeInt64(scopes, models.ColAppVersionID, errVersionScopeIDRequired)
-}
-
 func (s *applicationVersionService) validateVersionStageTransition(ctx context.Context, scopes map[string]any, inOut *models.ApplicationVersion) error {
-	versionID, err := versionIDFromScopes(scopes)
+	versionID, err := services.ParseScopeInt[int64](scopes, models.ColAppVersionID, 1)
 	if err != nil {
 		return err
 	}

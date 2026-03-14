@@ -5,6 +5,7 @@ import (
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
+	"github.com/brunojet/go-infra-backend/internal/ports/services"
 	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
 	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 )
@@ -41,16 +42,11 @@ func (s *applicationProfileService) UpdateAndSyncCatalog(ctx context.Context, sc
 	})
 }
 
-func profileIDFromScopes(scopes map[string]any) (int64, error) {
-	return repo.RequireScopeInt64(scopes, models.ColAppProfileID, errProfileScopeIDRequired)
-}
-
 func (s *applicationProfileService) validateProfileStageTransition(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
-	profileID, err := profileIDFromScopes(scopes)
+	profileID, err := services.ParseScopeInt[int64](scopes, models.ColAppProfileID, 1)
 	if err != nil {
 		return err
 	}
-
 	currentStage, err := s.profileRepo.LoadCurrentStage(ctx, profileID)
 	if err != nil {
 		return err

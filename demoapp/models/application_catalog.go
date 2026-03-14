@@ -17,7 +17,6 @@ const (
 	whereCatalogApplicationIDEq            = colCatalogApplicationID + " = ?"
 	whereCatalogTerminalModelIDEq          = colCatalogTerminalModelConfigurationID + " = ?"
 	whereCatalogStageEq                    = colCatalogStage + " = ?"
-	errTextCatalogVersionRequiredPilotProd = "application_version_id is required when stage is pilot or production"
 	errTextCatalogStageInvalid             = "invalid stage"
 
 	catalogStageReview     int16 = applicationStageReview

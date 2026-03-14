@@ -3,16 +3,9 @@ package services
 import (
 	"strings"
 
+	"github.com/brunojet/go-infra-backend/internal/utils"
 	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
-)
-
-const (
-	defaultListPage    = 1
-	defaultListSize    = 10
-	defaultListOrderBy = "id"
-	listOrderAsc       = "asc"
-	listOrderDesc      = "desc"
 )
 
 type AnyInt interface {
@@ -21,20 +14,19 @@ type AnyInt interface {
 
 func normalizeListParams(params svcContracts.ListParams) svcContracts.ListParams {
 	if params.Page <= 0 {
-		params.Page = defaultListPage
+		params.Page = DefaultListPage
 	}
 	if params.Size <= 0 {
-		params.Size = defaultListSize
+		params.Size = DefaultListSize
 	}
 	if strings.TrimSpace(params.OrderBy) == "" {
-		params.OrderBy = defaultListOrderBy
+		params.OrderBy = DefaultListOrderBy
 	}
 	order := strings.ToLower(strings.TrimSpace(params.Order))
-	if order != listOrderDesc {
-		order = listOrderAsc
+	if order != ListOrderDesc {
+		order = ListOrderAsc
 	}
 	params.Order = order
-
 	return params
 }
 
@@ -53,4 +45,44 @@ func toRepoListParams(params svcContracts.ListParams, scopes map[string]any) rep
 		OrderBy:     params.OrderBy,
 		Order:       params.Order,
 	}
+}
+
+// ParseScopeInt extrai e valida um valor inteiro de um map de scopes.
+// Retorna o valor se presente, do tipo correto e >= minValue, caso contrário retorna um erro genérico.
+func ParseScopeInt[T AnyInt](scopes map[string]any, key string, minValue T) (T, error) {
+	rawValue, ok := scopes[key]
+	if !ok {
+		var zero T
+		return zero, ErrScopeKeyNotFound
+	}
+
+	value, ok := rawValue.(T)
+	if !ok || value < minValue {
+		var zero T
+		return zero, ErrScopeValueInvalid
+	}
+
+	return value, nil
+}
+
+
+// StringToInt converte string para inteiro genérico, validando se > 0
+func StringToInt[T AnyInt](s string) (T, error) {
+       id, err := utils.StringToInt64(s)
+       if err != nil || id <= 0 {
+	       var zero T
+	       return zero, ErrScopeValueInvalid
+       }
+       return T(id), nil
+}
+
+
+// ParseScopeIntFromString converte e valida string para inteiro de escopo, com valor mínimo
+func ParseScopeIntFromString[T AnyInt](value string, minValue T) (T, error) {
+       id, err := StringToInt[T](value)
+       if err != nil || id <= minValue {
+	       var zero T
+	       return zero, ErrScopeValueInvalid
+       }
+       return id, nil
 }
