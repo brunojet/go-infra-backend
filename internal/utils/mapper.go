@@ -114,7 +114,7 @@ func ToJSONBytes(v any) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(b) == 0 || bytes.Equal(b, []byte("null")) {
+	if len(b) == 0 || bytes.Equal(b, nullJSONBytes) {
 		return nil, nil
 	}
 	return b, nil

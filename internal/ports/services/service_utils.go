@@ -15,6 +15,10 @@ const (
 	listOrderDesc      = "desc"
 )
 
+type AnyInt interface {
+	~int64 | ~int32 | ~int16
+}
+
 func normalizeListParams(params svcContracts.ListParams) svcContracts.ListParams {
 	if params.Page <= 0 {
 		params.Page = defaultListPage
