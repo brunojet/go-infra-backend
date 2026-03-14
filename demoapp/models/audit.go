@@ -21,14 +21,16 @@ const (
 type AuditEntityType int16
 
 const (
-	AuditEntityUnknown                    AuditEntityType = 0
-	AuditEntityApplication                AuditEntityType = 1
-	AuditEntityTerminalModel              AuditEntityType = 2
-	AuditEntityTerminalModelConfiguration AuditEntityType = 3
-	AuditEntityApplicationConfiguration   AuditEntityType = 4
-	AuditEntityApplicationProfile         AuditEntityType = 5
-	AuditEntityApplicationVersion         AuditEntityType = 6
-	AuditEntityApplicationCatalog         AuditEntityType = 7
+	AuditEntityUnknown AuditEntityType = iota
+	AuditEntityApplication
+	AuditEntityTerminalModel
+	AuditEntityTerminalModelConfiguration
+	AuditEntityApplicationConfiguration
+	AuditEntityFilterType
+	AuditEntityFilter
+	AuditEntityApplicationProfile
+	AuditEntityApplicationVersion
+	AuditEntityApplicationCatalog
 )
 
 // FieldValueType describes the stored field value format in AuditFieldChange.
