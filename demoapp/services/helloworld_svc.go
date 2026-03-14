@@ -8,8 +8,6 @@ import (
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
-const helloWorldIDKey = "id"
-
 type HelloWorldDTO struct {
 	ID      string
 	Message string

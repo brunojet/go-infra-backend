@@ -2,40 +2,26 @@ package services
 
 import (
 	"context"
-	"errors"
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
 	internalservices "github.com/brunojet/go-infra-backend/internal/ports/services"
 	"github.com/brunojet/go-infra-backend/internal/utils"
-	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
-)
-
-const (
-	nestedVersionParentIDArity                       = 2
-	errTextNestedVersionApplicationIDScopeRequired   = "application_id parent scope must be valid"
-	errTextNestedVersionTerminalModelIDScopeRequired = "terminal_model_configuration_id parent scope must be valid"
-	errTextNestedVersionIDScopeRequired              = "application_version_id scope must be valid"
-)
-
-var (
-	errNestedVersionApplicationIDRequired = porterrors.NewBusinessRuleError(errors.New(errTextNestedVersionApplicationIDScopeRequired))
-	errNestedVersionTerminalIDRequired    = porterrors.NewBusinessRuleError(errors.New(errTextNestedVersionTerminalModelIDScopeRequired))
-	errNestedVersionIDRequired            = porterrors.NewBusinessRuleError(errors.New(errTextNestedVersionIDScopeRequired))
 )
 
 type applicationVersionNestedMapper struct{}
 
 func (applicationVersionNestedMapper) DecodeParentID(parentID string) (map[string]any, error) {
-	values, err := utils.DecodeCompactInt64s(parentID, nestedVersionParentIDArity)
-	if err != nil {
+	var applicationID, terminalModelID int64
+
+	if err := utils.DecodeCompositeKey(parentID, &applicationID, &terminalModelID); err != nil {
 		return nil, errNestedVersionApplicationIDRequired
 	}
 
 	return map[string]any{
-		models.ColAppVersionApplicationID:                values[0],
-		models.ColAppVersionTerminalModelConfigurationID: values[1],
+		models.ColAppVersionApplicationID:                applicationID,
+		models.ColAppVersionTerminalModelConfigurationID: terminalModelID,
 	}, nil
 }
 

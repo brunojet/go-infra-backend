@@ -2,24 +2,14 @@ package services
 
 import (
 	"context"
-	"errors"
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
-	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
 	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 )
 
-const (
-	errTextProfileScopeIDRequired = "application_profile_id scope must be valid"
-	profileSyncInitialPage        = 1
-	profileSyncPageSize           = 10
-	profileSyncOrderBy            = models.ColAppVersionTerminalModelConfigurationID
-	profileSyncOrder              = "asc"
-)
-
-var errProfileScopeIDRequired = porterrors.NewBusinessRuleError(errors.New(errTextProfileScopeIDRequired))
+// constants and errors moved to consts.go and errors.go
 
 type ApplicationProfileService interface {
 	UpdateAndSyncCatalog(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error

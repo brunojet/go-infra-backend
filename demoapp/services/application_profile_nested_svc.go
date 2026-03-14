@@ -2,32 +2,22 @@ package services
 
 import (
 	"context"
-	"errors"
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
 	internalservices "github.com/brunojet/go-infra-backend/internal/ports/services"
-	"github.com/brunojet/go-infra-backend/internal/utils"
-	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/utils"
 )
-
-const (
-	nestedProfileParentIDArity                     = 1
-	errTextNestedProfileApplicationIDScopeRequired = "application_id parent scope must be valid"
-)
-
-var errNestedProfileApplicationIDRequired = porterrors.NewBusinessRuleError(errors.New(errTextNestedProfileApplicationIDScopeRequired))
 
 type applicationProfileNestedMapper struct{}
 
 func (applicationProfileNestedMapper) DecodeParentID(parentID string) (map[string]any, error) {
-	values, err := utils.DecodeCompactInt64s(parentID, nestedProfileParentIDArity)
-	if err != nil {
+	id, err := utils.StringToInt64(parentID)
+	if err != nil || id <= 0 {
 		return nil, errNestedProfileApplicationIDRequired
 	}
-
-	return map[string]any{models.ColAppProfileApplicationID: values[0]}, nil
+	return map[string]any{models.ColAppProfileApplicationID: id}, nil
 }
 
 func (applicationProfileNestedMapper) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {

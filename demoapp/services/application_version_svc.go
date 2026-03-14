@@ -2,16 +2,12 @@ package services
 
 import (
 	"context"
-	"errors"
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
-	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 )
 
-const errTextVersionScopeIDRequired = "application_version_id scope must be valid"
-
-var errVersionScopeIDRequired = porterrors.NewBusinessRuleError(errors.New(errTextVersionScopeIDRequired))
+// constants and errors moved to consts.go and errors.go
 
 type ApplicationVersionService interface {
 	UpdateAndSyncCatalog(ctx context.Context, scopes map[string]any, inOut *models.ApplicationVersion) error
