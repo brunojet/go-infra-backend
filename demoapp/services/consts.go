@@ -17,11 +17,7 @@ const (
 	// Hello world
 	helloWorldIDKey = "id"
 
-	// Version service
-	errTextVersionScopeIDRequired = "application_version_id scope must be valid"
-
 	// Nested/version parent error texts
-	errTextNestedVersionApplicationIDScopeRequired   = "application_id parent scope must be valid"
-	errTextNestedVersionTerminalModelIDScopeRequired = "terminal_model_configuration_id parent scope must be valid"
-	errTextNestedVersionIDScopeRequired              = "application_version_id scope must be valid"
+	errTextNestedVersionApplicationIDScopeRequired = "application_id parent scope must be valid"
+	errTextNestedVersionIDScopeRequired            = "application_version_id scope must be valid"
 )

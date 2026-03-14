@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"maps"
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
@@ -29,34 +30,21 @@ func (m applicationProfileNestedMapper) ApplyParentQueryScopes(parentID string, 
 	if err != nil {
 		return nil, err
 	}
-
 	parentScopes, err := m.DecodeParentID(parentID)
 	if err != nil {
 		return nil, err
 	}
-
 	mergedScopes := make(map[string]any, len(parentScopes)+len(mappedQueryScopes))
-	for key, value := range mappedQueryScopes {
-		mergedScopes[key] = value
-	}
-	for key, value := range parentScopes {
-		mergedScopes[key] = value
-	}
-
+	maps.Copy(mergedScopes, mappedQueryScopes)
+	maps.Copy(mergedScopes, parentScopes)
 	return mergedScopes, nil
 }
 
 func (m applicationProfileNestedMapper) ApplyParentScopes(parentID string, model *models.ApplicationProfile) error {
-	parentScopes, err := m.DecodeParentID(parentID)
+	applicationID, err := services.ParseScopeIntFromString[int64](parentID, 1)
 	if err != nil {
 		return err
 	}
-
-	applicationID, err := services.ParseScopeInt[int64](parentScopes, models.ColAppProfileApplicationID, 1)
-	if err != nil {
-		return err
-	}
-
 	model.ApplicationId = applicationID
 	return nil
 }
