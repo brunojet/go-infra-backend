@@ -21,6 +21,10 @@ const (
 	ColAppProfileApplicationID = "application_id"
 	ColAppProfileStage         = "stage"
 	ColAppProfileDeletedAt     = "deleted_at"
+
+	ColAppCatalogApplicationID = "application_id"
+	ColAppCatalogProfileID     = "application_profile_id"
+	ColAppCatalogStage         = "stage"
 )
 
 var (

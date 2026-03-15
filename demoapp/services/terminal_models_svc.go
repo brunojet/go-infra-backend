@@ -1,0 +1,84 @@
+package services
+
+import (
+	"github.com/brunojet/go-infra-backend/demoapp/models"
+	"github.com/brunojet/go-infra-backend/internal/ports/services"
+	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+)
+
+type terminalModelMapper struct{}
+
+func (terminalModelMapper) GetModelKey(id string) (map[string]any, error) {
+	return map[string]any{models.ColTerminalModelID: id}, nil
+}
+
+func (terminalModelMapper) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {
+	return queryScopes, nil
+}
+
+func (terminalModelMapper) ToModel(dto *models.TerminalModel, model *models.TerminalModel) {
+	*model = *dto
+}
+
+func (terminalModelMapper) ToDTO(model *models.TerminalModel, dto *models.TerminalModel) {
+	*dto = *model
+}
+
+type TerminalModelsService struct {
+	svcContracts.Service[models.TerminalModel, models.TerminalModel]
+}
+
+func NewTerminalModelsService(repo repoContracts.Repository[models.TerminalModel]) *TerminalModelsService {
+	return &TerminalModelsService{
+		Service: services.NewServiceImpl(repo, terminalModelMapper{}),
+	}
+}
+
+// TerminalModelConfigurationNestedService: nested em TerminalModel
+type terminalModelConfigurationNestedMapper struct{}
+
+func (terminalModelConfigurationNestedMapper) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {
+	return queryScopes, nil
+}
+
+func (m terminalModelConfigurationNestedMapper) ApplyParentQueryScopes(parentID string, queryScopes map[string]any) (map[string]any, error) {
+	mappedQueryScopes, err := m.ApplyQueryScopes(queryScopes)
+	if err != nil {
+		return nil, err
+	}
+	parentId, err := services.ParseScopeIntFromString[int64](parentID, 1)
+	if err != nil {
+		return nil, err
+	}
+	mappedQueryScopes[models.ColTerminalModelID] = parentId
+	return mappedQueryScopes, nil
+}
+
+func (m terminalModelConfigurationNestedMapper) ApplyParentScopes(parentID string, model *models.TerminalModelConfiguration) error {
+	parentId, err := services.ParseScopeIntFromString[int64](parentID, 1)
+	if err != nil {
+		return err
+	}
+	model.TerminalModelId = parentId
+	return nil
+}
+func (terminalModelConfigurationNestedMapper) ToModel(dto *models.TerminalModelConfiguration, model *models.TerminalModelConfiguration) {
+	*model = *dto
+}
+func (terminalModelConfigurationNestedMapper) ToDTO(model *models.TerminalModelConfiguration, dto *models.TerminalModelConfiguration) {
+	*dto = *model
+}
+func (terminalModelConfigurationNestedMapper) GetModelKey(id string) (map[string]any, error) {
+	return map[string]any{models.ColTerminalModelConfigurationID: id}, nil
+}
+
+type TerminalModelConfigurationNestedService struct {
+	svcContracts.NestedService[models.TerminalModelConfiguration, models.TerminalModelConfiguration]
+}
+
+func NewTerminalModelConfigurationNestedService(repo repoContracts.Repository[models.TerminalModelConfiguration]) *TerminalModelConfigurationNestedService {
+	return &TerminalModelConfigurationNestedService{
+		NestedService: services.NewNestedServiceImpl(repo, terminalModelConfigurationNestedMapper{}),
+	}
+}

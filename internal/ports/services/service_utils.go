@@ -65,24 +65,22 @@ func ParseScopeInt[T AnyInt](scopes map[string]any, key string, minValue T) (T, 
 	return value, nil
 }
 
-
 // StringToInt converte string para inteiro genérico, validando se > 0
 func StringToInt[T AnyInt](s string) (T, error) {
-       id, err := utils.StringToInt64(s)
-       if err != nil || id <= 0 {
-	       var zero T
-	       return zero, ErrScopeValueInvalid
-       }
-       return T(id), nil
+	id, err := utils.StringToInt64(s)
+	if err != nil || id <= 0 {
+		var zero T
+		return zero, ErrScopeValueInvalid
+	}
+	return T(id), nil
 }
-
 
 // ParseScopeIntFromString converte e valida string para inteiro de escopo, com valor mínimo
 func ParseScopeIntFromString[T AnyInt](value string, minValue T) (T, error) {
-       id, err := StringToInt[T](value)
-       if err != nil || id <= minValue {
-	       var zero T
-	       return zero, ErrScopeValueInvalid
-       }
-       return id, nil
+	id, err := StringToInt[T](value)
+	if err != nil || id < minValue {
+		var zero T
+		return zero, ErrScopeValueInvalid
+	}
+	return id, nil
 }

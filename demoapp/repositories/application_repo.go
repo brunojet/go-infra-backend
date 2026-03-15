@@ -7,6 +7,14 @@ import (
 	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 )
 
+type ApplicationRepository interface {
+	contracts.Repository[models.Application]
+}
+
+type ApplicationConfigurationRepository interface {
+	contracts.Repository[models.ApplicationConfiguration]
+}
+
 type ApplicationRepo struct {
 	contracts.Repository[models.Application]
 }

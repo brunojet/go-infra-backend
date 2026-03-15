@@ -3,7 +3,6 @@ package repositories
 import (
 	"context"
 	"database/sql"
-	"errors"
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	internalrepos "github.com/brunojet/go-infra-backend/internal/ports/repositories"
@@ -11,6 +10,7 @@ import (
 	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
 	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -21,17 +21,10 @@ const (
 	whereVersionDelNil  = models.ColAppVersionDeletedAt + " IS NULL"
 )
 
-var (
-	errArchiveVersionModelRequired = portsrepos.NewBusinessRuleError(errors.New("version must be valid"))
-	errArchiveVersionInvalidID     = portsrepos.NewBusinessRuleError(errors.New("application_version_id must be valid"))
-	errArchiveVersionInvalidAppID  = portsrepos.NewBusinessRuleError(errors.New("application_id must be valid"))
-	errArchiveVersionInvalidTmID   = portsrepos.NewBusinessRuleError(errors.New("terminal_model_configuration_id must be valid"))
-	errArchiveVersionStageRequired = portsrepos.NewBusinessRuleError(errors.New("stage is required"))
-)
-
 type ApplicationVersionRepository interface {
 	contracts.Repository[models.ApplicationVersion]
 	LoadCurrentStage(ctx context.Context, versionID int64) (int16, error)
+	FindStageVersionID(ctx context.Context, applicationID int64, configurationTerminalModelID int64, stage int16) (int64, error)
 	ArchiveStageDuplicates(ctx context.Context, inOut *models.ApplicationVersion) error
 }
 
@@ -64,21 +57,49 @@ func (r *ApplicationVersionRepo) LoadCurrentStage(ctx context.Context, versionID
 	return stage, nil
 }
 
+func (r *ApplicationVersionRepo) FindStageVersionID(ctx context.Context, applicationID int64, configurationTerminalModelID int64, stage int16) (int64, error) {
+	switch stage {
+	case models.ApplicationStagePending, models.ApplicationStagePilot, models.ApplicationStageProduction, models.ApplicationStageArchived:
+	default:
+		return 0, gorm.ErrRecordNotFound
+	}
+	tx, err := portsrepos.TxFromContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+	var versionID int64
+	result := tx.Model(&models.ApplicationVersion{}).
+		Where(models.ColAppVersionApplicationID+" = ?", applicationID).
+		Where(models.ColAppVersionTerminalModelConfigurationID+" = ?", configurationTerminalModelID).
+		Where(models.ColAppVersionStage+" = ?", stage).
+		Where(models.ColAppVersionDeletedAt+" IS NULL").
+		Order(clause.OrderByColumn{Column: clause.Column{Name: models.ColAppVersionID}, Desc: true}).
+		Limit(1).
+		Pluck(models.ColAppVersionID, &versionID)
+	if err := result.Error; err != nil {
+		return 0, err
+	}
+	if result.RowsAffected == 0 {
+		return 0, gorm.ErrRecordNotFound
+	}
+	return versionID, nil
+}
+
 func validateArchiveVersionRequiredFields(inOut *models.ApplicationVersion) error {
 	if inOut == nil {
-		return errArchiveVersionModelRequired
+		return ErrInvalidApplicationVersionModel
 	}
 	if inOut.ApplicationVersionId == 0 {
-		return errArchiveVersionInvalidID
+		return ErrInvalidApplicationVersionID
 	}
 	if inOut.ApplicationId == 0 {
-		return errArchiveVersionInvalidAppID
+		return ErrInvalidApplicationID
 	}
 	if inOut.TerminalModelConfigurationId == 0 {
-		return errArchiveVersionInvalidTmID
+		return ErrInvalidConfigurationTerminalModelID
 	}
 	if !inOut.Stage.Valid {
-		return errArchiveVersionStageRequired
+		return ErrInvalidStage
 	}
 	return nil
 }

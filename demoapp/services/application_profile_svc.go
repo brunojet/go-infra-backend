@@ -6,32 +6,101 @@ import (
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
 	"github.com/brunojet/go-infra-backend/internal/ports/services"
-	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
-	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	internalservices "github.com/brunojet/go-infra-backend/internal/ports/services"
+	rpoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	"gorm.io/gorm"
 )
 
-// constants and errors moved to consts.go and errors.go
+type applicationProfileNestedMapper struct{}
 
-type ApplicationProfileService interface {
-	UpdateAndSyncCatalog(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error
+func (applicationProfileNestedMapper) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {
+	return queryScopes, nil
 }
 
-type applicationProfileService struct {
-	profileRepo repo.ApplicationProfileRepository
-	appCfgRepo  repoContracts.Repository[models.ApplicationConfiguration]
-	catalogRepo repo.ApplicationCatalogRepository
+func (m applicationProfileNestedMapper) ApplyParentQueryScopes(parentID string, queryScopes map[string]any) (map[string]any, error) {
+	mappedQueryScopes, err := m.ApplyQueryScopes(queryScopes)
+	if err != nil {
+		return nil, err
+	}
+	applicationProfileID, err := services.ParseScopeIntFromString[int64](parentID, 1)
+	if err != nil {
+		return nil, errNestedProfileApplicationIDRequired
+	}
+	mappedQueryScopes[models.ColAppProfileApplicationID] = applicationProfileID
+	return mappedQueryScopes, nil
 }
 
-func NewApplicationProfileService(
-	profileRepo repo.ApplicationProfileRepository,
-	appCfgRepo repoContracts.Repository[models.ApplicationConfiguration],
-	catalogRepo repo.ApplicationCatalogRepository,
-) ApplicationProfileService {
-	return &applicationProfileService{profileRepo: profileRepo, appCfgRepo: appCfgRepo, catalogRepo: catalogRepo}
+func (m applicationProfileNestedMapper) ApplyParentScopes(parentID string, model *models.ApplicationProfile) error {
+	applicationProfileID, err := services.ParseScopeIntFromString[int64](parentID, 1)
+	if err != nil {
+		return err
+	}
+	model.ApplicationId = applicationProfileID
+	return nil
 }
 
-func (s *applicationProfileService) UpdateAndSyncCatalog(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
-	return s.profileRepo.WithTx(ctx, func(txCtx context.Context) error {
+func (applicationProfileNestedMapper) ToModel(dto *models.ApplicationProfile, model *models.ApplicationProfile) {
+	*model = *dto
+}
+
+func (applicationProfileNestedMapper) ToDTO(model *models.ApplicationProfile, dto *models.ApplicationProfile) {
+	*dto = *model
+}
+
+func (applicationProfileNestedMapper) GetModelKey(id string) (map[string]any, error) {
+	profileID, err := services.ParseScopeIntFromString[int64](id, 0)
+	if err != nil {
+		return nil, errProfileScopeIDRequired
+	}
+	return map[string]any{models.ColAppProfileID: profileID}, nil
+}
+
+type ApplicationProfileNestedService interface {
+	svcContracts.NestedService[models.ApplicationProfile, models.ApplicationProfile]
+}
+
+type applicationProfileNestedService struct {
+	svcContracts.NestedService[models.ApplicationProfile, models.ApplicationProfile]
+	pRepo  repo.ApplicationProfileRepository
+	acRepo repo.ApplicationConfigurationRepository
+	vRepo  repo.ApplicationVersionRepository
+	cRepo  repo.ApplicationCatalogRepository
+	mapper applicationProfileNestedMapper
+}
+
+func NewApplicationProfileNestedService(p repo.ApplicationProfileRepository, a repo.ApplicationConfigurationRepository, v repo.ApplicationVersionRepository, c repo.ApplicationCatalogRepository) ApplicationProfileNestedService {
+	return &applicationProfileNestedService{
+		NestedService: internalservices.NewNestedServiceImpl(p, applicationProfileNestedMapper{}),
+		pRepo:         p,
+		acRepo:        a,
+		vRepo:         v,
+		cRepo:         c,
+		mapper:        applicationProfileNestedMapper{},
+	}
+}
+
+func (s *applicationProfileNestedService) createOneShot(ctx context.Context, inOut *models.ApplicationProfile) error {
+	return s.pRepo.WithTx(ctx, func(txCtx context.Context) error {
+		if err := s.pRepo.Create(txCtx, inOut); err != nil {
+			return err
+		}
+		return s.pRepo.ArchiveStageDuplicates(txCtx, inOut)
+	})
+}
+
+func (s *applicationProfileNestedService) CreateNested(ctx context.Context, parentID string, dto *models.ApplicationProfile) error {
+	var model models.ApplicationProfile
+	s.mapper.ToModel(dto, &model)
+	if err := s.mapper.ApplyParentScopes(parentID, &model); err != nil {
+		return err
+	}
+
+	return s.createOneShot(ctx, &model)
+}
+
+func (s *applicationProfileNestedService) UpdateAndSyncCatalog(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
+	return s.pRepo.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.validateProfileStageTransition(txCtx, scopes, inOut); err != nil {
 			return err
 		}
@@ -42,12 +111,12 @@ func (s *applicationProfileService) UpdateAndSyncCatalog(ctx context.Context, sc
 	})
 }
 
-func (s *applicationProfileService) validateProfileStageTransition(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
+func (s *applicationProfileNestedService) validateProfileStageTransition(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
 	profileID, err := services.ParseScopeInt[int64](scopes, models.ColAppProfileID, 1)
 	if err != nil {
 		return err
 	}
-	currentStage, err := s.profileRepo.LoadCurrentStage(ctx, profileID)
+	currentStage, err := s.pRepo.LoadCurrentStage(ctx, profileID)
 	if err != nil {
 		return err
 	}
@@ -55,17 +124,17 @@ func (s *applicationProfileService) validateProfileStageTransition(ctx context.C
 	return inOut.ValidateProfileStageTransition(currentStage)
 }
 
-func (s *applicationProfileService) updateProfile(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
-	if err := s.profileRepo.Update(ctx, scopes, inOut); err != nil {
+func (s *applicationProfileNestedService) updateProfile(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
+	if err := s.pRepo.Update(ctx, scopes, inOut); err != nil {
 		return err
 	}
 
-	return s.profileRepo.ArchiveStageDuplicates(ctx, inOut)
+	return s.pRepo.ArchiveStageDuplicates(ctx, inOut)
 }
 
-func (s *applicationProfileService) listApplicationConfigurationsPage(ctx context.Context, applicationID int64, page int) ([]models.ApplicationConfiguration, int64, error) {
-	params := repoContracts.ListParams{
-		QueryParams: repoContracts.QueryParams{
+func (s *applicationProfileNestedService) listApplicationConfigurationsPage(ctx context.Context, applicationID int64, page int) ([]models.ApplicationConfiguration, int64, error) {
+	params := rpoContracts.ListParams{
+		QueryParams: rpoContracts.QueryParams{
 			Scopes: map[string]any{models.ColAppProfileApplicationID: applicationID},
 		},
 		Page:    page,
@@ -74,19 +143,31 @@ func (s *applicationProfileService) listApplicationConfigurationsPage(ctx contex
 		Order:   profileSyncOrder,
 	}
 
-	return s.appCfgRepo.List(ctx, params)
+	return s.acRepo.List(ctx, params)
 }
 
-func (s *applicationProfileService) createCatalogsFromProfile(ctx context.Context, profile models.ApplicationProfile, configs []models.ApplicationConfiguration, stage int16) error {
-	for _, config := range configs {
-		catalog := models.ApplicationCatalog{
-			ApplicationId:                config.ApplicationId,
-			TerminalModelConfigurationId: config.TerminalModelConfigurationId,
-			Stage:                        stage,
-			ApplicationProfileId:         profile.ApplicationProfileId,
-		}
+func (s *applicationProfileNestedService) createCatalogFromProfile(ctx context.Context, config models.ApplicationConfiguration, profileId, versionId int64, stage int16) error {
+	catalog := models.ApplicationCatalog{
+		ApplicationId:                config.ApplicationId,
+		TerminalModelConfigurationId: config.TerminalModelConfigurationId,
+		Stage:                        stage,
+		ApplicationProfileId:         profileId,
+		ApplicationVersionId:         &versionId,
+	}
+	if err := s.cRepo.Create(ctx, &catalog); err != nil {
+		return err
+	}
 
-		if err := s.catalogRepo.Create(ctx, &catalog); err != nil {
+	return nil
+}
+
+func (s *applicationProfileNestedService) createCatalogsFromProfile(ctx context.Context, configs []models.ApplicationConfiguration, profileId int64, stage int16) error {
+	for _, config := range configs {
+		versionId, err := s.vRepo.FindStageVersionID(ctx, config.ApplicationId, config.TerminalModelConfigurationId, stage)
+		if err != nil && err != gorm.ErrRecordNotFound {
+			return err
+		}
+		if err := s.createCatalogFromProfile(ctx, config, profileId, versionId, stage); err != nil {
 			return err
 		}
 	}
@@ -94,7 +175,7 @@ func (s *applicationProfileService) createCatalogsFromProfile(ctx context.Contex
 	return nil
 }
 
-func (s *applicationProfileService) syncCatalogsFromProfile(ctx context.Context, profile models.ApplicationProfile, stage int16) error {
+func (s *applicationProfileNestedService) syncCatalogsFromProfile(ctx context.Context, profile models.ApplicationProfile, stage int16) error {
 	page := profileSyncInitialPage
 	for {
 		configs, total, err := s.listApplicationConfigurationsPage(ctx, profile.ApplicationId, page)
@@ -104,7 +185,7 @@ func (s *applicationProfileService) syncCatalogsFromProfile(ctx context.Context,
 		if len(configs) == 0 {
 			return nil
 		}
-		if err := s.createCatalogsFromProfile(ctx, profile, configs, stage); err != nil {
+		if err := s.createCatalogsFromProfile(ctx, configs, profile.ApplicationProfileId, stage); err != nil {
 			return err
 		}
 		if int64(page*profileSyncPageSize) >= total {
@@ -114,7 +195,7 @@ func (s *applicationProfileService) syncCatalogsFromProfile(ctx context.Context,
 	}
 }
 
-func (s *applicationProfileService) syncCatalogsFromProfileWithStages(ctx context.Context, profile models.ApplicationProfile, stages ...int16) error {
+func (s *applicationProfileNestedService) syncCatalogsFromProfileWithStages(ctx context.Context, profile models.ApplicationProfile, stages ...int16) error {
 	for _, stage := range stages {
 		if err := s.syncCatalogsFromProfile(ctx, profile, stage); err != nil {
 			return err
@@ -124,28 +205,13 @@ func (s *applicationProfileService) syncCatalogsFromProfileWithStages(ctx contex
 	return nil
 }
 
-func (s *applicationProfileService) syncCatalogFromProfile(ctx context.Context, profile models.ApplicationProfile) error {
+func (s *applicationProfileNestedService) syncCatalogFromProfile(ctx context.Context, profile models.ApplicationProfile) error {
 	switch profile.Stage.Int16 {
 	case models.ApplicationStageReview:
 		return s.syncCatalogsFromProfileWithStages(ctx, profile, models.ApplicationStageReview)
 	case models.ApplicationStageProduction:
-		if err := s.syncCatalogsFromProfileWithStages(ctx, profile, models.ApplicationStageReview); err != nil {
-			return err
-		}
-		return s.relinkVersionCatalogsToProductionProfile(ctx, profile)
+		return s.syncCatalogsFromProfileWithStages(ctx, profile, models.ApplicationStagePilot, models.ApplicationStageProduction)
 	default:
 		return nil
 	}
-}
-
-func (s *applicationProfileService) relinkVersionCatalogsToProductionProfile(ctx context.Context, profile models.ApplicationProfile) error {
-	tx, err := portsrepos.TxFromContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	return tx.Model(&models.ApplicationCatalog{}).
-		Where(models.ColAppProfileApplicationID+" = ?", profile.ApplicationId).
-		Where(models.ColAppProfileStage+" IN ?", []int16{models.ApplicationStagePilot, models.ApplicationStageProduction}).
-		Updates(map[string]any{models.ColAppProfileID: profile.ApplicationProfileId}).Error
 }

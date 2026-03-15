@@ -3,10 +3,8 @@ package repositories
 import (
 	"context"
 	"database/sql"
-	"errors"
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
-	internalrepos "github.com/brunojet/go-infra-backend/internal/ports/repositories"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
 	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
 	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
@@ -22,13 +20,6 @@ const (
 	whereProfileDelIsNil = models.ColAppProfileDeletedAt + " IS NULL"
 )
 
-var (
-	errArchiveProfileInvalidProfileID = portsrepos.NewBusinessRuleError(errors.New("application_profile_id must be valid"))
-	errArchiveProfileInvalidAppID     = portsrepos.NewBusinessRuleError(errors.New("application_id must be valid"))
-	errArchiveProfileStageRequired    = portsrepos.NewBusinessRuleError(errors.New("stage is required"))
-	errArchiveProfileModelRequired    = portsrepos.NewBusinessRuleError(errors.New("profile must be valid"))
-)
-
 type ApplicationProfileRepository interface {
 	contracts.Repository[models.ApplicationProfile]
 	LoadCurrentStage(ctx context.Context, profileID int64) (int16, error)
@@ -41,7 +32,7 @@ type ApplicationProfileRepo struct {
 }
 
 func NewApplicationProfileRepo(db dbcontracts.DatabaseAdapter) ApplicationProfileRepository {
-	return &ApplicationProfileRepo{Repository: internalrepos.NewGormRepository[models.ApplicationProfile](db)}
+	return &ApplicationProfileRepo{Repository: portsrepos.NewGormRepository[models.ApplicationProfile](db)}
 }
 
 func (r *ApplicationProfileRepo) LoadCurrentStage(ctx context.Context, profileID int64) (int16, error) {
@@ -90,16 +81,16 @@ func (r *ApplicationProfileRepo) FindCurrentProductionProfileID(ctx context.Cont
 
 func validateArchiveProfileRequiredFields(inOut *models.ApplicationProfile) error {
 	if inOut == nil {
-		return errArchiveProfileModelRequired
+		return ErrInvalidApplicationProfileModel
 	}
 	if inOut.ApplicationProfileId == 0 {
-		return errArchiveProfileInvalidProfileID
+		return ErrInvalidApplicationProfileID
 	}
 	if inOut.ApplicationId == 0 {
-		return errArchiveProfileInvalidAppID
+		return ErrInvalidApplicationID
 	}
 	if !inOut.Stage.Valid {
-		return errArchiveProfileStageRequired
+		return ErrInvalidStage
 	}
 	return nil
 }
