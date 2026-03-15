@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 
 	repoerrs "github.com/brunojet/go-infra-backend/internal/ports/repositories"
@@ -12,14 +13,12 @@ import (
 )
 
 var (
-	ErrInvalidJSONBody = errors.New("invalid JSON body")
-)
-
-const (
-	queryParamPage    = "page"
-	queryParamSize    = "size"
-	queryParamOrderBy = "orderBy"
-	queryParamOrder   = "order"
+	paginationIgnoredKeys = map[string]struct{}{
+		QueryParamPage:    {},
+		QueryParamSize:    {},
+		QueryParamOrderBy: {},
+		QueryParamOrder:   {},
+	}
 )
 
 func MapErrorToStatus(err error) int {
@@ -34,6 +33,14 @@ func MapErrorToStatus(err error) int {
 	}
 
 	return http.StatusInternalServerError
+}
+
+func GetValidatedIDFromParam(c *gin.Context, paramName string, validationRule *regexp.Regexp) (string, error) {
+	id := c.Param(paramName)
+	if validationRule != nil && !validationRule.MatchString(id) {
+		return "", ErrInvalidIDFormat
+	}
+	return id, nil
 }
 
 func SetResponseFromError(c *gin.Context, err error) {
@@ -55,15 +62,15 @@ func BindJSONToDTOPtr[D any](c *gin.Context) (*D, error) {
 }
 
 func ParsePaginationParams(values url.Values) (int, int) {
-	page, _ := strconv.Atoi(values.Get(queryParamPage))
-	size, _ := strconv.Atoi(values.Get(queryParamSize))
+	page, _ := strconv.Atoi(values.Get(QueryParamPage))
+	size, _ := strconv.Atoi(values.Get(QueryParamSize))
 	return page, size
 }
 
-func ExtractQueryScopes(values url.Values, ignoredKeys map[string]struct{}) map[string]any {
-	scopes := make(map[string]any)
+func ExtractQueryScopes(values url.Values) map[string]any {
+	scopes := make(map[string]any, len(values))
 	for key, vals := range values {
-		if _, ignored := ignoredKeys[key]; ignored {
+		if _, ignored := paginationIgnoredKeys[key]; ignored {
 			continue
 		}
 		if len(vals) == 0 {
@@ -77,21 +84,12 @@ func ExtractQueryScopes(values url.Values, ignoredKeys map[string]struct{}) map[
 func BuildListParamsFromRequest(c *gin.Context) svccontracts.ListParams {
 	query := c.Request.URL.Query()
 	page, size := ParsePaginationParams(query)
-
-	ignored := map[string]struct{}{
-		queryParamPage:    {},
-		queryParamSize:    {},
-		queryParamOrderBy: {},
-		queryParamOrder:   {},
-	}
-
-	orderBy := query.Get(queryParamOrderBy)
-
+	orderBy := query.Get(QueryParamOrderBy)
 	return svccontracts.ListParams{
-		QueryParams: svccontracts.QueryParams{Scopes: ExtractQueryScopes(query, ignored)},
+		QueryParams: svccontracts.QueryParams{Scopes: ExtractQueryScopes(query)},
 		Page:        page,
 		Size:        size,
 		OrderBy:     orderBy,
-		Order:       query.Get(queryParamOrder),
+		Order:       query.Get(QueryParamOrder),
 	}
 }

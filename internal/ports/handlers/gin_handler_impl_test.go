@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	repoerrs "github.com/brunojet/go-infra-backend/internal/ports/repositories"
+	hndcontracts "github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -30,7 +31,7 @@ type SimpleDTO struct {
 }
 
 // helper to create via GinHandler
-func createEntityForHandlerTest(t *testing.T, h *GinHandler[SimpleEntity, SimpleDTO], ms *MockService[SimpleDTO, SimpleEntity]) string {
+func createEntityForHandlerTest(t *testing.T, h hndcontracts.GenericHandler[SimpleEntity, SimpleDTO], ms *MockService[SimpleDTO, SimpleEntity]) string {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	body := `{"name":"bob"}`
@@ -55,7 +56,8 @@ func TestCreate_Handler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleEntity](ms)
+	hp := &HandlerParameters{IDValidationRule: Int64GtZero}
+	h := NewGenericHandler[SimpleEntity](hp, ms)
 
 	id := createEntityForHandlerTest(t, h, ms)
 	require.Equal(t, "created-id", id)
@@ -76,7 +78,8 @@ func TestGetByID_Handler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleEntity](ms)
+	hp := &HandlerParameters{IDValidationRule: Int64GtZero}
+	h := NewGenericHandler[SimpleEntity](hp, ms)
 
 	// success
 	rec := httptest.NewRecorder()
@@ -95,6 +98,14 @@ func TestGetByID_Handler(t *testing.T) {
 	ms.EXPECT().GetByID(gomock.Any(), "no").Return(SimpleDTO{}, repoerrs.ErrNotFound)
 	h.GetByID(c)
 	require.Equal(t, http.StatusNotFound, rec.Code)
+
+	// id inválido
+	rec = httptest.NewRecorder()
+	c, _ = gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
+	c.Params = gin.Params{{Key: "id", Value: "0"}} // inválido para Int64GtZero
+	h.GetByID(c)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
 func TestList_Handler(t *testing.T) {
@@ -102,7 +113,7 @@ func TestList_Handler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleEntity](ms)
+	h := NewGenericHandler[SimpleEntity](nil, ms)
 
 	// success
 	rec := httptest.NewRecorder()
@@ -126,7 +137,8 @@ func TestUpdate_Handler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleEntity](ms)
+	hp := &HandlerParameters{IDValidationRule: Int64GtZero}
+	h := NewGenericHandler[SimpleEntity](hp, ms)
 
 	// success
 	rec := httptest.NewRecorder()
@@ -148,6 +160,15 @@ func TestUpdate_Handler(t *testing.T) {
 	ms.EXPECT().Update(gomock.Any(), "no", gomock.AssignableToTypeOf(&SimpleDTO{})).Return(repoerrs.ErrNotFound)
 	h.Update(c)
 	require.Equal(t, http.StatusNotFound, rec.Code)
+
+	// id inválido
+	rec = httptest.NewRecorder()
+	c, _ = gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPut, "/", bytes.NewBufferString(upd))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Params = gin.Params{{Key: "id", Value: "0"}} // inválido
+	h.Update(c)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
 func TestDelete_Handler(t *testing.T) {
@@ -155,7 +176,8 @@ func TestDelete_Handler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleEntity](ms)
+	hp := &HandlerParameters{IDValidationRule: Int64GtZero}
+	h := NewGenericHandler[SimpleEntity](hp, ms)
 
 	// success
 	rec := httptest.NewRecorder()
@@ -174,6 +196,14 @@ func TestDelete_Handler(t *testing.T) {
 	ms.EXPECT().Delete(gomock.Any(), "del").Return(errors.New("boom"))
 	h.Delete(c)
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	// id inválido
+	rec = httptest.NewRecorder()
+	c, _ = gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodDelete, "/", nil)
+	c.Params = gin.Params{{Key: "id", Value: "0"}} // inválido
+	h.Delete(c)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
 func TestRegister_Handler(t *testing.T) {
@@ -181,7 +211,7 @@ func TestRegister_Handler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleEntity](ms)
+	h := NewGenericHandler[SimpleEntity](nil, ms)
 
 	// create real gin engine and group
 	engine := gin.New()
@@ -207,7 +237,7 @@ func TestCreate_Handler_InvalidJSON(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleEntity](ms)
+	h := NewGenericHandler[SimpleEntity](nil, ms)
 
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
@@ -223,7 +253,7 @@ func TestUpdate_Handler_InvalidJSON(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleEntity](ms)
+	h := NewGenericHandler[SimpleEntity](nil, ms)
 
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)

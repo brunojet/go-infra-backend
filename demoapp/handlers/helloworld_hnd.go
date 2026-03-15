@@ -3,16 +3,17 @@ package handlers
 import (
 	helloworldRepo "github.com/brunojet/go-infra-backend/demoapp/repositories"
 	helloworldSvc "github.com/brunojet/go-infra-backend/demoapp/services"
-	hnd "github.com/brunojet/go-infra-backend/internal/ports/handlers"
+	hnd "github.com/brunojet/go-infra-backend/pkg/ports/handlers"
+	hndcontracts "github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
 type HelloWorldHandler struct {
-	hnd.GinHandler[helloworldRepo.HelloWorld, helloworldSvc.HelloWorldDTO]
+	hndcontracts.GenericHandler[helloworldRepo.HelloWorld, helloworldSvc.HelloWorldDTO]
 }
 
 func NewHelloWorldHandler(s svcContracts.Service[helloworldSvc.HelloWorldDTO, helloworldRepo.HelloWorld]) *HelloWorldHandler {
 	return &HelloWorldHandler{
-		GinHandler: *hnd.NewGenericHandler[helloworldRepo.HelloWorld, helloworldSvc.HelloWorldDTO](s),
+		GenericHandler: hnd.NewGenericHandler[helloworldRepo.HelloWorld](IDInt64Parameters, s),
 	}
 }

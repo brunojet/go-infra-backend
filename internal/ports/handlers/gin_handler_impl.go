@@ -6,23 +6,25 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	repocontracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
-	svc "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	hndcontracts "github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
+	rpocontracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	svccontracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
-type GinHandler[E repocontracts.Entity, D any] struct {
-	service svc.Service[D, E]
+type ginHandler[E rpocontracts.Entity, D any] struct {
+	hp      *HandlerParameters
+	service svccontracts.Service[D, E]
 }
 
-func NewGenericHandler[E repocontracts.Entity, D any](s svc.Service[D, E]) *GinHandler[E, D] {
-	return &GinHandler[E, D]{service: s}
+func NewGenericHandler[E rpocontracts.Entity, D any](hp *HandlerParameters, s svccontracts.Service[D, E]) hndcontracts.GenericHandler[E, D] {
+	return &ginHandler[E, D]{hp: hp, service: s}
 }
 
-func (h *GinHandler[E, D]) Register(rg *gin.RouterGroup, method, path string, handler gin.HandlerFunc) {
+func (h *ginHandler[E, D]) Register(rg *gin.RouterGroup, method, path string, handler gin.HandlerFunc) {
 	rg.Handle(strings.ToUpper(method), path, handler)
 }
 
-func (h *GinHandler[E, D]) Create(c *gin.Context) {
+func (h *ginHandler[E, D]) Create(c *gin.Context) {
 	dto, err := BindJSONToDTOPtr[D](c)
 	if err != nil {
 		return
@@ -34,8 +36,12 @@ func (h *GinHandler[E, D]) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto)
 }
 
-func (h *GinHandler[E, D]) GetByID(c *gin.Context) {
-	id := c.Param("id")
+func (h *ginHandler[E, D]) GetByID(c *gin.Context) {
+	id, err := GetValidatedIDFromParam(c, "id", h.hp.IDValidationRule)
+	if err != nil {
+		SetResponseFromError(c, err)
+		return
+	}
 	dto, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
 		SetResponseFromError(c, err)
@@ -44,7 +50,7 @@ func (h *GinHandler[E, D]) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, dto)
 }
 
-func (h *GinHandler[E, D]) List(c *gin.Context) {
+func (h *ginHandler[E, D]) List(c *gin.Context) {
 	params := BuildListParamsFromRequest(c)
 	list, _, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
@@ -55,8 +61,12 @@ func (h *GinHandler[E, D]) List(c *gin.Context) {
 
 }
 
-func (h *GinHandler[E, D]) Update(c *gin.Context) {
-	id := c.Param("id")
+func (h *ginHandler[E, D]) Update(c *gin.Context) {
+	id, err := GetValidatedIDFromParam(c, "id", h.hp.IDValidationRule)
+	if err != nil {
+		SetResponseFromError(c, err)
+		return
+	}
 	dto, err := BindJSONToDTOPtr[D](c)
 	if err != nil {
 		return
@@ -68,8 +78,12 @@ func (h *GinHandler[E, D]) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, dto)
 }
 
-func (h *GinHandler[E, D]) Delete(c *gin.Context) {
-	id := c.Param("id")
+func (h *ginHandler[E, D]) Delete(c *gin.Context) {
+	id, err := GetValidatedIDFromParam(c, "id", h.hp.IDValidationRule)
+	if err != nil {
+		SetResponseFromError(c, err)
+		return
+	}
 	if err := h.service.Delete(c.Request.Context(), id); err != nil {
 		SetResponseFromError(c, err)
 		return
