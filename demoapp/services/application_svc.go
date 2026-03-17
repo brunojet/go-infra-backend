@@ -25,12 +25,16 @@ func (applicationMapper) ToDTO(model *models.Application, dto *models.Applicatio
 	*dto = *model
 }
 
-type ApplicationService struct {
+type ApplicationService interface {
 	svcContracts.Service[models.Application, models.Application]
 }
 
-func NewApplicationService(repo rpoContracts.Repository[models.Application]) *ApplicationService {
-	return &ApplicationService{
+type applicationService struct {
+	svcContracts.Service[models.Application, models.Application]
+}
+
+func NewApplicationService(repo rpoContracts.Repository[models.Application]) ApplicationService {
+	return &applicationService{
 		Service: services.NewServiceImpl(repo, applicationMapper{}),
 	}
 }
@@ -79,12 +83,16 @@ func (applicationConfigurationNestedMapper) GetModelKey(id string) (map[string]a
 	return map[string]any{models.ColApplicationConfigurationID: id}, nil
 }
 
-type ApplicationConfigurationNestedService struct {
+type ApplicationConfigurationNestedService interface {
 	svcContracts.NestedService[models.ApplicationConfiguration, models.ApplicationConfiguration]
 }
 
-func NewApplicationConfigurationNestedService(repo rpoContracts.Repository[models.ApplicationConfiguration]) *ApplicationConfigurationNestedService {
-	return &ApplicationConfigurationNestedService{
+type applicationConfigurationNestedService struct {
+	svcContracts.NestedService[models.ApplicationConfiguration, models.ApplicationConfiguration]
+}
+
+func NewApplicationConfigurationNestedService(repo rpoContracts.Repository[models.ApplicationConfiguration]) ApplicationConfigurationNestedService {
+	return &applicationConfigurationNestedService{
 		NestedService: services.NewNestedServiceImpl(repo, applicationConfigurationNestedMapper{}),
 	}
 }

@@ -28,8 +28,8 @@ func NewGenericHandler[E rpocontracts.Entity, D any](hp *HandlerParameters, s sv
 	return internalhandlers.NewGenericHandler[E](hp, s)
 }
 
-func NewNestedGenericHandler[E rpocontracts.Entity, D any](hp *HandlerParameters, php *HandlerParameters, s svccontracts.NestedService[D, E]) NestedGenericHandler[E, D] {
-	return internalhandlers.NewNestedGenericHandler[E](hp, php, s)
+func NewGenericNestedHandler[E rpocontracts.Entity, D any](hp *HandlerParameters, php *HandlerParameters, s svccontracts.NestedService[D, E]) NestedGenericHandler[E, D] {
+	return internalhandlers.NewGenericNestedHandler[E](hp, php, s)
 }
 
 func BindJSONToDTOPtr[D any](c *gin.Context) (*D, error) {

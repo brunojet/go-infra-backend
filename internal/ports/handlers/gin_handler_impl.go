@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -20,8 +21,12 @@ func NewGenericHandler[E rpocontracts.Entity, D any](hp *HandlerParameters, s sv
 	return &ginHandler[E, D]{hp: hp, service: s}
 }
 
-func (h *ginHandler[E, D]) Register(rg *gin.RouterGroup, method, path string, handler gin.HandlerFunc) {
-	rg.Handle(strings.ToUpper(method), path, handler)
+func (h *ginHandler[E, D]) Register(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
+	handlerPath := strings.Trim(h.hp.HandlerPath, "/")
+	if handlerPath == "" {
+		log.Default().Panic("HandlerPath cannot be empty")
+	}
+	rg.Handle(strings.ToUpper(method), handlerPath, handler)
 }
 
 func (h *ginHandler[E, D]) Create(c *gin.Context) {

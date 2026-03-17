@@ -25,17 +25,21 @@ func (terminalModelMapper) ToDTO(model *models.TerminalModel, dto *models.Termin
 	*dto = *model
 }
 
-type TerminalModelsService struct {
+type TerminalModelService interface {
 	svcContracts.Service[models.TerminalModel, models.TerminalModel]
 }
 
-func NewTerminalModelsService(repo repoContracts.Repository[models.TerminalModel]) *TerminalModelsService {
-	return &TerminalModelsService{
+type terminalModelService struct {
+	svcContracts.Service[models.TerminalModel, models.TerminalModel]
+}
+
+func NewTerminalModelService(repo repoContracts.Repository[models.TerminalModel]) TerminalModelService {
+	return &terminalModelService{
 		Service: services.NewServiceImpl(repo, terminalModelMapper{}),
 	}
 }
 
-// TerminalModelConfigurationNestedService: nested em TerminalModel
+// terminalModelConfigurationNestedService: nested em TerminalModel
 type terminalModelConfigurationNestedMapper struct{}
 
 func (terminalModelConfigurationNestedMapper) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {
@@ -73,12 +77,16 @@ func (terminalModelConfigurationNestedMapper) GetModelKey(id string) (map[string
 	return map[string]any{models.ColTerminalModelConfigurationID: id}, nil
 }
 
-type TerminalModelConfigurationNestedService struct {
+type TerminalModelConfigurationNestedService interface {
 	svcContracts.NestedService[models.TerminalModelConfiguration, models.TerminalModelConfiguration]
 }
 
-func NewTerminalModelConfigurationNestedService(repo repoContracts.Repository[models.TerminalModelConfiguration]) *TerminalModelConfigurationNestedService {
-	return &TerminalModelConfigurationNestedService{
+type terminalModelConfigurationNestedService struct {
+	svcContracts.NestedService[models.TerminalModelConfiguration, models.TerminalModelConfiguration]
+}
+
+func NewTerminalModelConfigurationNestedService(repo repoContracts.Repository[models.TerminalModelConfiguration]) TerminalModelConfigurationNestedService {
+	return &terminalModelConfigurationNestedService{
 		NestedService: services.NewNestedServiceImpl(repo, terminalModelConfigurationNestedMapper{}),
 	}
 }

@@ -7,7 +7,7 @@ import (
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
-// FilterTypeService: service simples (não nested)
+// filterTypeService: service simples (não nested)
 type filterTypeMapper struct{}
 
 func (filterTypeMapper) GetModelKey(id string) (map[string]any, error) {
@@ -25,12 +25,16 @@ func (filterTypeMapper) ToDTO(model *models.FilterType, dto *models.FilterType) 
 	*dto = *model
 }
 
-type FilterTypeService struct {
+type FilterTypeService interface {
 	svcContracts.Service[models.FilterType, models.FilterType]
 }
 
-func NewFilterTypeService(repo repoContracts.Repository[models.FilterType]) *FilterTypeService {
-	return &FilterTypeService{
+type filterTypeService struct {
+	svcContracts.Service[models.FilterType, models.FilterType]
+}
+
+func NewFilterTypeService(repo repoContracts.Repository[models.FilterType]) FilterTypeService {
+	return &filterTypeService{
 		Service: services.NewServiceImpl(repo, filterTypeMapper{}),
 	}
 }
@@ -76,12 +80,16 @@ func (filterNestedMapper) GetModelKey(id string) (map[string]any, error) {
 	return map[string]any{models.ColFilterID: id}, nil
 }
 
-type FilterNestedService struct {
+type FilterNestedService interface {
 	svcContracts.NestedService[models.Filter, models.Filter]
 }
 
-func NewFilterNestedService(repo repoContracts.Repository[models.Filter]) *FilterNestedService {
-	return &FilterNestedService{
+type filterNestedService struct {
+	svcContracts.NestedService[models.Filter, models.Filter]
+}
+
+func NewFilterNestedService(repo repoContracts.Repository[models.Filter]) FilterNestedService {
+	return &filterNestedService{
 		NestedService: services.NewNestedServiceImpl(repo, filterNestedMapper{}),
 	}
 }

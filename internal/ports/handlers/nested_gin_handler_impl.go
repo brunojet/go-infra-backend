@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -18,7 +19,7 @@ type nestedGinHandler[E rpocontracts.Entity, D any] struct {
 	basehandler hndcontracts.GenericHandler[E, D]
 }
 
-func NewNestedGenericHandler[E rpocontracts.Entity, D any](hp *HandlerParameters, php *HandlerParameters, s svccontracts.NestedService[D, E]) hndcontracts.NestedGenericHandler[E, D] {
+func NewGenericNestedHandler[E rpocontracts.Entity, D any](php *HandlerParameters, hp *HandlerParameters, s svccontracts.NestedService[D, E]) hndcontracts.NestedGenericHandler[E, D] {
 	return &nestedGinHandler[E, D]{
 		php:         php,
 		svc:         s,
@@ -26,8 +27,13 @@ func NewNestedGenericHandler[E rpocontracts.Entity, D any](hp *HandlerParameters
 	}
 }
 
-func (h *nestedGinHandler[E, D]) RegisterNested(rg *gin.RouterGroup, method, parentPath, path string, handler gin.HandlerFunc) {
-	fullPath := fmt.Sprintf("%s/:parentID/%s", strings.Trim(parentPath, "/"), strings.Trim(path, "/"))
+func (h *nestedGinHandler[E, D]) RegisterNested(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
+	handlerNestedPath := strings.Trim(h.php.HandlerPath, "/")
+	handlerPath := strings.Trim(h.basehandler.(*ginHandler[E, D]).hp.HandlerPath, "/")
+	if handlerNestedPath == "" || handlerPath == "" {
+		log.Default().Panic("HandlerPath cannot be empty")
+	}
+	fullPath := fmt.Sprintf("%s/:parentID/%s", handlerNestedPath, handlerPath)
 	rg.Handle(strings.ToUpper(method), fullPath, handler)
 }
 
@@ -63,8 +69,8 @@ func (h *nestedGinHandler[E, D]) ListNested(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
-func (h *nestedGinHandler[E, D]) Register(rg *gin.RouterGroup, method, path string, handler gin.HandlerFunc) {
-	h.basehandler.Register(rg, method, path, handler)
+func (h *nestedGinHandler[E, D]) Register(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
+	h.basehandler.Register(rg, method, handler)
 }
 
 func (h *nestedGinHandler[E, D]) GetByID(c *gin.Context) {

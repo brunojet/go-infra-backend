@@ -49,7 +49,7 @@ func (applicationProfileNestedMapper) ToDTO(model *models.ApplicationProfile, dt
 }
 
 func (applicationProfileNestedMapper) GetModelKey(id string) (map[string]any, error) {
-	profileID, err := services.ParseScopeIntFromString[int64](id, 0)
+	profileID, err := services.ParseScopeIntFromString[int64](id, 1)
 	if err != nil {
 		return nil, errProfileScopeIDRequired
 	}
@@ -99,7 +99,11 @@ func (s *applicationProfileNestedService) CreateNested(ctx context.Context, pare
 	return s.createOneShot(ctx, &model)
 }
 
-func (s *applicationProfileNestedService) UpdateAndSyncCatalog(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
+func (s *applicationProfileNestedService) Update(ctx context.Context, id string, inOut *models.ApplicationProfile) error {
+	scopes, err := s.mapper.GetModelKey(id)
+	if err != nil {
+		return err
+	}
 	return s.pRepo.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.validateProfileStageTransition(txCtx, scopes, inOut); err != nil {
 			return err

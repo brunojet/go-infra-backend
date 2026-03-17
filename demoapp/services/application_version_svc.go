@@ -46,7 +46,7 @@ func (applicationVersionNestedMapper) ToDTO(model *models.ApplicationVersion, dt
 }
 
 func (applicationVersionNestedMapper) GetModelKey(id string) (map[string]any, error) {
-	versionID, err := services.ParseScopeIntFromString[int64](id, 0)
+	versionID, err := services.ParseScopeIntFromString[int64](id, 1)
 	if err != nil {
 		return nil, errNestedVersionIDRequired
 	}

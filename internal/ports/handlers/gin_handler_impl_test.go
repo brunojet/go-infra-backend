@@ -211,14 +211,14 @@ func TestRegister_Handler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleEntity](nil, ms)
+	h := NewGenericHandler[SimpleEntity](&HandlerParameters{HandlerPath: "/ping"}, ms)
 
 	// create real gin engine and group
 	engine := gin.New()
 	rg := engine.Group("/api")
 
 	// register a simple handler using lowercase method to exercise ToUpper
-	h.Register(rg, "get", "/ping", func(c *gin.Context) {
+	h.Register(rg, "get", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"pong": true})
 	})
 

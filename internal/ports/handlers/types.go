@@ -18,5 +18,6 @@ var (
 )
 
 type HandlerParameters struct {
+	HandlerPath      string
 	IDValidationRule *regexp.Regexp
 }
