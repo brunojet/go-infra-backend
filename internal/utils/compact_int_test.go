@@ -127,7 +127,7 @@ func TestReadVarintFromBufferAt_Errors(t *testing.T) {
 
 func BenchmarkAppendVarintToBuffer_Int32(b *testing.B) {
 	buf := make([]byte, 0, 8)
-	for i := 0; i < b.N; i++ {
+	for i := 0; b.Loop(); i++ {
 		_, err := appendVarintToBuffer(buf[:0], int32(i))
 		if err != nil {
 			b.Fatalf("erro: %v", err)
@@ -138,7 +138,7 @@ func BenchmarkAppendVarintToBuffer_Int32(b *testing.B) {
 func BenchmarkReadVarintFromBufferAt_Int32(b *testing.B) {
 	buf, _ := appendVarintToBuffer(make([]byte, 0, 8), int32(123456))
 	var out int32
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := readVarintFromBufferAt(buf, 0, &out)
 		if err != nil {
 			b.Fatalf("erro: %v", err)
