@@ -4,22 +4,10 @@ package utils
 // and small helpers). Keep related magic numbers in one place so callers
 // in this package use named symbols instead of literals.
 const (
-	// compact varint encoding constants
-	compactVarintPrefixBase = 0x80
-	compactVarintPrefixMax  = 0x87
-	compactVarintMsb        = 0x80
-	compactVarintMaxBytes   = 7
-
 	// compact int special headers
-	compactIntZeroHeader = 0x80
-	compactIntTestPrefix = 0xAA // used in tests for prefixing buffers
-
-	// byte/shift helpers
-	zeroByte            = 0x00
-	shiftInt16ToTopByte = 24
-	shiftInt64ToTopByte = 56
-	zigZagSignShift     = 63
-	byteSizeShift       = 8
+	compactIntZeroHeader    = 0x00 // Header para valor zero
+	compactIntHeaderMask    = 0x80 // MSB indica header compactado
+	compactIntRealBytesMask = 0x7F // 7 bits menos significativos: número de bytes
 
 	// composite id encoding
 	compositeMaxPartSize = 8

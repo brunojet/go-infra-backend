@@ -16,12 +16,10 @@ var (
 	errCompositeKeyValuesRequired = errors.New("composite key values required")
 	_                             = errors.New("unsupported type for compact encoding")
 	errOffsetOutOfRange           = errors.New("offset out of range")
-	errDstNil                     = errors.New("dst is nil")
 	_                             = errors.New("value must be positive")
 
 	// compact_int related errors
-	errInvalidCompactInt        = errors.New("invalid compact int value: must be positive")
-	errInvalidCompactIntPayload = errors.New("invalid compact int payload: insufficient data for declared length")
+	errInvalidCompactInt = errors.New("invalid compact int value: must be positive")
 
 	// Centralized errors for compact_int.go
 	errBufferInsuficiente       = errors.New("buffer insuficiente")
@@ -34,12 +32,4 @@ func errInvalidCompositeKeyEncoding(err error) error {
 
 func errInsufficientBuffer(needed int) error {
 	return fmt.Errorf("insufficient buffer capacity: need %d free bytes", needed)
-}
-
-func errInvalidCompactIntPrefix(prefix byte) error {
-	return fmt.Errorf("invalid compact int prefix: %x", prefix)
-}
-
-func errCompactVarintTooLarge(needed int) error {
-	return fmt.Errorf("compact varint too large: needs %d bytes", needed)
 }

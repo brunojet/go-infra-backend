@@ -1,3 +1,5 @@
+package utils
+
 // Pacote utils provê utilitários para manipulação eficiente de inteiros compactados em buffers binários.
 //
 // Este arquivo implementa funções para serializar e desserializar inteiros (int16, int32, int64) em formato compacto,
@@ -8,10 +10,12 @@
 //   - readVarintFromBufferAt: Lê um inteiro compactado de um buffer de bytes a partir de um offset.
 //
 // Uso típico: serialização/deserialização de identificadores, índices ou outros valores inteiros em protocolos binários customizados.
-package utils
 
 // appendVarintToBuffer serializa um valor inteiro v do tipo T para o slice de bytes dst,
-// utilizando um formato compacto que economiza espaço para valores pequenos.
+// utilizando um formato compacto:
+//   - Para valores zero, grava apenas o header compactIntZeroHeader (0x00).
+//   - Para valores pequenos, grava apenas os bytes significativos e um header compactado (MSB 1, 7 bits = n de bytes).
+//   - Para valores grandes, grava todos os bytes do tipo.
 //
 // Parâmetros:
 //   - dst: slice de bytes de destino (deve ter capacidade suficiente).
@@ -60,12 +64,11 @@ func appendVarintToBuffer[T AnyInt](dst []byte, v T) ([]byte, error) {
 
 	if !started {
 		dst = dst[:startOffset+1]
-		dst[startOffset] = 0x80
+		dst[startOffset] = compactIntHeaderMask
 		return dst, nil
 	} else if isCompressReady {
 		n := pos - startOffset - 1
-		dst[startOffset] = 0x80 | byte(n)
-		// Ajusta o comprimento do slice para refletir apenas os bytes realmente usados
+		dst[startOffset] = compactIntHeaderMask | byte(n)
 		dst = dst[:pos]
 	}
 
@@ -74,6 +77,11 @@ func appendVarintToBuffer[T AnyInt](dst []byte, v T) ([]byte, error) {
 
 // readVarintFromBufferAt desserializa um valor inteiro do tipo T a partir do slice de bytes src,
 // começando no offset informado, armazenando o resultado em out.
+//
+// Interpretação:
+//   - Se o header for compactIntZeroHeader (0x00), retorna zero.
+//   - Se o header tiver MSB 1, os 7 bits menos significativos indicam quantos bytes seguem.
+//   - Caso contrário, lê todos os bytes do tipo.
 //
 // Parâmetros:
 //   - src: slice de bytes de origem.
@@ -93,19 +101,18 @@ func readVarintFromBufferAt[T AnyInt](src []byte, offset int, out *T) (int, erro
 
 	first := src[offset]
 
-	// Regra customizada: header compactIntZeroHeader significa valor zero
+	// Header zero: valor zero
 	if first == compactIntZeroHeader {
 		*out = T(0)
 		return offset + 1, nil // consome só o header
-	} else if first > compactIntZeroHeader { // compactado: header tem MSB 0, os 7 bits restantes indicam quantos bytes seguem
-		realBytes := int(first & 0x7F)
+	} else if first&compactIntHeaderMask != 0 { // Header compactado: MSB 1
+		realBytes := int(first & compactIntRealBytesMask)
 		if realBytes+1 > needed {
 			return 0, errVarintCompactadoInvalido
 		}
 		offset++ // pula o header
 		needed = realBytes
 	}
-
 	if offset+needed > bufLen {
 		return 0, errBufferInsuficiente
 	}
