@@ -20,6 +20,14 @@ func NewNestedServiceImpl[D any, E repoContracts.Entity](
 	return &nestedServiceImpl[D, E]{nestRpo: r, nestMap: m, baseSvc: NewServiceImpl(r, m)}
 }
 
+func (s *nestedServiceImpl[D, E]) Create(ctx context.Context, dto *D) error {
+	return s.baseSvc.Create(ctx, dto)
+}
+
+func (s *nestedServiceImpl[D, E]) List(ctx context.Context, params svcContracts.ListParams) ([]D, int64, error) {
+	return s.baseSvc.List(ctx, params)
+}
+
 func (s *nestedServiceImpl[D, E]) GetByID(ctx context.Context, id string) (D, error) {
 	return s.baseSvc.GetByID(ctx, id)
 }

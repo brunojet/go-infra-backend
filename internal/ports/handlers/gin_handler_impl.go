@@ -21,12 +21,23 @@ func NewGenericHandler[E rpocontracts.Entity, D any](hp *HandlerParameters, s sv
 	return &ginHandler[E, D]{hp: hp, service: s}
 }
 
-func (h *ginHandler[E, D]) Register(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
+// RegisterCollection registers collection-level routes (e.g., /items)
+func (h *ginHandler[E, D]) RegisterCollection(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
 	handlerPath := strings.Trim(h.hp.HandlerPath, "/")
 	if handlerPath == "" {
 		log.Default().Panic("HandlerPath cannot be empty")
 	}
 	rg.Handle(strings.ToUpper(method), handlerPath, handler)
+}
+
+// RegisterInstance registers instance-level routes (e.g., /items/:id)
+func (h *ginHandler[E, D]) RegisterInstance(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
+	handlerPath := strings.Trim(h.hp.HandlerPath, "/")
+	if handlerPath == "" {
+		log.Default().Panic("HandlerPath cannot be empty")
+	}
+	fullPath := handlerPath + "/:id"
+	rg.Handle(strings.ToUpper(method), fullPath, handler)
 }
 
 func (h *ginHandler[E, D]) Create(c *gin.Context) {

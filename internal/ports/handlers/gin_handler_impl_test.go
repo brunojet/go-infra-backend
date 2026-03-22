@@ -218,7 +218,7 @@ func TestRegister_Handler(t *testing.T) {
 	rg := engine.Group("/api")
 
 	// register a simple handler using lowercase method to exercise ToUpper
-	h.Register(rg, "get", func(c *gin.Context) {
+	h.RegisterCollection(rg, "get", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"pong": true})
 	})
 

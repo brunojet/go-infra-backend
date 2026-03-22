@@ -41,6 +41,10 @@ func main() {
 		log.Fatalf("failed to setup demoapp module: %v", err)
 	}
 
+	if err := demoapp.SetupStoreProviderModule(db, api); err != nil {
+		log.Fatalf("failed to setup demoapp module: %v", err)
+	}
+
 	if err := httpServer.StartAndWaitTermination(); err != nil {
 		log.Printf("http server error: %v", err)
 	}

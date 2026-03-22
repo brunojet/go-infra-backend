@@ -14,9 +14,9 @@ func NewHelloWorldHandler(rg *gin.RouterGroup, s svcContracts.Service[helloworld
 		IDValidationRule: hnd.Int64GtZero,
 	}
 	handler := hnd.NewGenericHandler[helloworldRepo.HelloWorld](handlerParameters, s)
-	handler.Register(rg, "POST", handler.Create)
-	handler.Register(rg, "GET", handler.List)
-	handler.Register(rg, "GET", handler.GetByID)
-	handler.Register(rg, "PUT", handler.Update)
-	handler.Register(rg, "DELETE", handler.Delete)
+	handler.RegisterCollection(rg, "POST", handler.Create)
+	handler.RegisterCollection(rg, "GET", handler.List)
+	handler.RegisterInstance(rg, "GET", handler.GetByID)
+	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }

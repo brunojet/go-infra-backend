@@ -13,12 +13,6 @@ type ServiceMapper[D any, E repoContracts.Entity] interface {
 	ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error)
 }
 
-type InstanceMethods[D any] interface {
-	GetByID(ctx context.Context, id string) (D, error)
-	Update(ctx context.Context, id string, dto *D) error
-	Delete(ctx context.Context, id string) error
-}
-
 type QueryParams struct {
 	Scopes map[string]any
 }
@@ -32,9 +26,11 @@ type ListParams struct {
 }
 
 type Service[D any, E repoContracts.Entity] interface {
-	InstanceMethods[D]
 	Create(ctx context.Context, dto *D) error
 	List(ctx context.Context, params ListParams) ([]D, int64, error)
+	GetByID(ctx context.Context, id string) (D, error)
+	Update(ctx context.Context, id string, dto *D) error
+	Delete(ctx context.Context, id string) error
 }
 
 type NestedServiceMapper[D any, E repoContracts.Entity] interface {
@@ -44,7 +40,7 @@ type NestedServiceMapper[D any, E repoContracts.Entity] interface {
 }
 
 type NestedService[D any, E repoContracts.Entity] interface {
-	InstanceMethods[D]
+	Service[D, E]
 	CreateNested(ctx context.Context, parentID string, dto *D) error
 	ListNested(ctx context.Context, parentID string, params ListParams) ([]D, int64, error)
 }

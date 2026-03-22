@@ -13,11 +13,11 @@ func NewFilterTypeHandler(rg *gin.RouterGroup, s svc.FilterTypeService) {
 		IDValidationRule: hnd.Int64GtZero,
 	}
 	handler := hnd.NewGenericHandler[models.FilterType](handlerParameters, s)
-	handler.Register(rg, "POST", handler.Create)
-	handler.Register(rg, "GET", handler.List)
-	handler.Register(rg, "GET", handler.GetByID)
-	handler.Register(rg, "PUT", handler.Update)
-	handler.Register(rg, "DELETE", handler.Delete)
+	handler.RegisterCollection(rg, "POST", handler.Create)
+	handler.RegisterCollection(rg, "GET", handler.List)
+	handler.RegisterInstance(rg, "GET", handler.GetByID)
+	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }
 
 func NewFiltersHandler(rg *gin.RouterGroup, s svc.FilterNestedService) {
@@ -30,11 +30,11 @@ func NewFiltersHandler(rg *gin.RouterGroup, s svc.FilterNestedService) {
 		IDValidationRule: hnd.Int64GtZero,
 	}
 	handler := hnd.NewGenericNestedHandler[models.Filter](handlerNestedParameters, handlerParameters, s)
-	handler.RegisterNested(rg, "POST", handler.CreateNested)
-	handler.RegisterNested(rg, "GET", handler.ListNested)
-	handler.Register(rg, "GET", handler.GetByID)
-	handler.Register(rg, "PUT", handler.Update)
-	handler.Register(rg, "DELETE", handler.Delete)
+	handler.RegisterCollection(rg, "POST", handler.CreateNested)
+	handler.RegisterCollection(rg, "GET", handler.ListNested)
+	handler.RegisterInstance(rg, "GET", handler.GetByID)
+	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }
 
 func NewTerminalModelHandler(rg *gin.RouterGroup, s svc.TerminalModelService) {
@@ -43,11 +43,11 @@ func NewTerminalModelHandler(rg *gin.RouterGroup, s svc.TerminalModelService) {
 		IDValidationRule: hnd.Int64GtZero,
 	}
 	handler := hnd.NewGenericHandler[models.TerminalModel](handlerParameters, s)
-	handler.Register(rg, "POST", handler.Create)
-	handler.Register(rg, "GET", handler.List)
-	handler.Register(rg, "GET", handler.GetByID)
-	handler.Register(rg, "PUT", handler.Update)
-	handler.Register(rg, "DELETE", handler.Delete)
+	handler.RegisterCollection(rg, "POST", handler.Create)
+	handler.RegisterCollection(rg, "GET", handler.List)
+	handler.RegisterInstance(rg, "GET", handler.GetByID)
+	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }
 
 func NewTerminalModelConfigurationHandler(rg *gin.RouterGroup, s svc.TerminalModelConfigurationNestedService) {
@@ -60,11 +60,11 @@ func NewTerminalModelConfigurationHandler(rg *gin.RouterGroup, s svc.TerminalMod
 		IDValidationRule: hnd.Int64GtZero,
 	}
 	handler := hnd.NewGenericNestedHandler[models.TerminalModelConfiguration](handlerNestedParameters, handlerParameters, s)
-	handler.RegisterNested(rg, "POST", handler.CreateNested)
-	handler.RegisterNested(rg, "GET", handler.ListNested)
-	handler.Register(rg, "GET", handler.GetByID)
-	handler.Register(rg, "PUT", handler.Update)
-	handler.Register(rg, "DELETE", handler.Delete)
+	handler.RegisterCollection(rg, "POST", handler.CreateNested)
+	handler.RegisterCollection(rg, "GET", handler.ListNested)
+	handler.RegisterInstance(rg, "GET", handler.GetByID)
+	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }
 
 func NewApplicationHandler(rg *gin.RouterGroup, s svc.ApplicationService) {
@@ -73,11 +73,11 @@ func NewApplicationHandler(rg *gin.RouterGroup, s svc.ApplicationService) {
 		IDValidationRule: hnd.Int64GtZero,
 	}
 	handler := hnd.NewGenericHandler[models.Application](handlerParameters, s)
-	handler.Register(rg, "POST", handler.Create)
-	handler.Register(rg, "GET", handler.List)
-	handler.Register(rg, "GET", handler.GetByID)
-	handler.Register(rg, "PUT", handler.Update)
-	handler.Register(rg, "DELETE", handler.Delete)
+	handler.RegisterCollection(rg, "POST", handler.Create)
+	handler.RegisterCollection(rg, "GET", handler.List)
+	handler.RegisterInstance(rg, "GET", handler.GetByID)
+	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }
 
 func NewApplicationConfigurationHandler(rg *gin.RouterGroup, s svc.ApplicationConfigurationNestedService) {
@@ -90,11 +90,11 @@ func NewApplicationConfigurationHandler(rg *gin.RouterGroup, s svc.ApplicationCo
 		IDValidationRule: hnd.Base64UrlSafe,
 	}
 	handler := hnd.NewGenericNestedHandler[models.ApplicationConfiguration](handlerNestedParameters, handlerParameters, s)
-	handler.RegisterNested(rg, "POST", handler.CreateNested)
-	handler.RegisterNested(rg, "GET", handler.ListNested)
-	handler.Register(rg, "GET", handler.GetByID)
-	handler.Register(rg, "PUT", handler.Update)
-	handler.Register(rg, "DELETE", handler.Delete)
+	handler.RegisterCollection(rg, "POST", handler.CreateNested)
+	handler.RegisterCollection(rg, "GET", handler.ListNested)
+	handler.RegisterInstance(rg, "GET", handler.GetByID)
+	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }
 
 func NewApplicationProfileHandler(rg *gin.RouterGroup, s svc.ApplicationProfileNestedService) {
@@ -107,11 +107,11 @@ func NewApplicationProfileHandler(rg *gin.RouterGroup, s svc.ApplicationProfileN
 		IDValidationRule: hnd.Int64GtZero,
 	}
 	handler := hnd.NewGenericNestedHandler[models.ApplicationProfile](handlerNestedParameters, handlerParameters, s)
-	handler.RegisterNested(rg, "POST", handler.CreateNested)
-	handler.RegisterNested(rg, "GET", handler.ListNested)
-	handler.Register(rg, "GET", handler.GetByID)
-	handler.Register(rg, "PUT", handler.Update)
-	handler.Register(rg, "DELETE", handler.Delete)
+	handler.RegisterCollection(rg, "POST", handler.CreateNested)
+	handler.RegisterCollection(rg, "GET", handler.ListNested)
+	handler.RegisterInstance(rg, "GET", handler.GetByID)
+	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }
 
 func NewApplicationVersionHandler(rg *gin.RouterGroup, s svc.ApplicationVersionNestedService) {
@@ -124,9 +124,9 @@ func NewApplicationVersionHandler(rg *gin.RouterGroup, s svc.ApplicationVersionN
 		IDValidationRule: hnd.Int64GtZero,
 	}
 	handler := hnd.NewGenericNestedHandler[models.ApplicationVersion](handlerNestedParameters, handlerParameters, s)
-	handler.RegisterNested(rg, "POST", handler.CreateNested)
-	handler.RegisterNested(rg, "GET", handler.ListNested)
-	handler.Register(rg, "GET", handler.GetByID)
-	handler.Register(rg, "PUT", handler.Update)
-	handler.Register(rg, "DELETE", handler.Delete)
+	handler.RegisterCollection(rg, "POST", handler.CreateNested)
+	handler.RegisterCollection(rg, "GET", handler.ListNested)
+	handler.RegisterInstance(rg, "GET", handler.GetByID)
+	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }

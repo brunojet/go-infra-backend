@@ -20,25 +20,36 @@ type nestedGinHandler[E rpocontracts.Entity, D any] struct {
 }
 
 func NewGenericNestedHandler[E rpocontracts.Entity, D any](php *HandlerParameters, hp *HandlerParameters, s svccontracts.NestedService[D, E]) hndcontracts.NestedGenericHandler[E, D] {
+	var base hndcontracts.GenericHandler[E, D]
+	if svc, ok := s.(svccontracts.Service[D, E]); ok {
+		base = NewGenericHandler[E](hp, svc)
+	} else {
+		base = nil
+	}
 	return &nestedGinHandler[E, D]{
 		php:         php,
 		svc:         s,
-		basehandler: NewGenericHandler[E](hp, s.(svccontracts.Service[D, E])), // Use the base service for non-nested operations
+		basehandler: base, // Use the base service for non-nested operations
 	}
 }
 
-func (h *nestedGinHandler[E, D]) RegisterNested(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
+// RegisterCollection registers collection-level routes for nested resources (e.g., /parent/:parentId/items)
+func (h *nestedGinHandler[E, D]) RegisterCollection(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
 	handlerNestedPath := strings.Trim(h.php.HandlerPath, "/")
 	handlerPath := strings.Trim(h.basehandler.(*ginHandler[E, D]).hp.HandlerPath, "/")
 	if handlerNestedPath == "" || handlerPath == "" {
 		log.Default().Panic("HandlerPath cannot be empty")
 	}
-	fullPath := fmt.Sprintf("%s/:parentID/%s", handlerNestedPath, handlerPath)
+	fullPath := fmt.Sprintf("%s/:id/%s", handlerNestedPath, handlerPath)
 	rg.Handle(strings.ToUpper(method), fullPath, handler)
 }
 
+func (h *nestedGinHandler[E, D]) RegisterInstance(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
+	h.basehandler.RegisterInstance(rg, method, handler)
+}
+
 func (h *nestedGinHandler[E, D]) CreateNested(c *gin.Context) {
-	parentID, err := GetValidatedIDFromParam(c, "parentID", h.php.IDValidationRule)
+	parentID, err := GetValidatedIDFromParam(c, "id", h.php.IDValidationRule)
 	if err != nil {
 		SetResponseFromError(c, err)
 		return
@@ -55,7 +66,7 @@ func (h *nestedGinHandler[E, D]) CreateNested(c *gin.Context) {
 }
 
 func (h *nestedGinHandler[E, D]) ListNested(c *gin.Context) {
-	parentID, err := GetValidatedIDFromParam(c, "parentID", h.php.IDValidationRule)
+	parentID, err := GetValidatedIDFromParam(c, "id", h.php.IDValidationRule)
 	if err != nil {
 		SetResponseFromError(c, err)
 		return
@@ -67,10 +78,6 @@ func (h *nestedGinHandler[E, D]) ListNested(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, list)
-}
-
-func (h *nestedGinHandler[E, D]) Register(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
-	h.basehandler.Register(rg, method, handler)
 }
 
 func (h *nestedGinHandler[E, D]) GetByID(c *gin.Context) {
