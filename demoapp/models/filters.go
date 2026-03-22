@@ -40,7 +40,7 @@ type Filter struct {
 	UpdatedAt    sql.NullTime   `gorm:"autoUpdateTime;index:idx_filter_del_updated,priority:2"`
 	DeletedAt    gorm.DeletedAt `gorm:"index:idx_filter_del_created,priority:1;index:idx_filter_del_updated,priority:1"`
 
-	FilterType *FilterType `gorm:"-"`
+	FilterType *FilterType
 }
 
 func (Filter) TableName() string { return tableFilter }
