@@ -53,3 +53,23 @@ func TestDecodeCompositeKey_Errors(t *testing.T) {
 		t.Error("esperado erro para base64 inválido")
 	}
 }
+
+func BenchmarkEncodeCompositeKey_Int32(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, err := EncodeCompositeKey(int32(i), int32(i+1), int32(i+2))
+		if err != nil {
+			b.Fatalf("erro: %v", err)
+		}
+	}
+}
+
+func BenchmarkDecodeCompositeKey_Int32(b *testing.B) {
+	key, _ := EncodeCompositeKey(int32(1), int32(2), int32(3))
+	var a, c, d int32
+	for i := 0; i < b.N; i++ {
+		err := DecodeCompositeKey(key, &a, &c, &d)
+		if err != nil {
+			b.Fatalf("erro: %v", err)
+		}
+	}
+}
