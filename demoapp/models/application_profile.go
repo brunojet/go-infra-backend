@@ -58,8 +58,8 @@ type ApplicationProfileScreenshot struct {
 	UpdatedAt            sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_profile_screenshot_del_updated,priority:2"`
 	DeletedAt            gorm.DeletedAt `gorm:"index:idx_application_profile_screenshot_del_created,priority:1;index:idx_application_profile_screenshot_del_updated,priority:1"`
 
-	ApplicationProfile *ApplicationProfile
-	ApplicationImage   *ApplicationImage
+	ApplicationProfile *ApplicationProfile `gorm:"-"`
+	ApplicationImage   *ApplicationImage   `gorm:"-"`
 }
 
 func (ApplicationProfileScreenshot) TableName() string { return tableApplicationProfileScreenshot }

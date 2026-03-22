@@ -120,10 +120,10 @@ type ApplicationConfiguration struct {
 	UpdatedAt                    sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_configuration_del_updated,priority:2"`
 	DeletedAt                    gorm.DeletedAt `gorm:"index:idx_application_configuration_del_created,priority:1;index:idx_application_configuration_del_updated,priority:1"`
 
-	Application                *Application
-	TerminalModelConfiguration *TerminalModelConfiguration
-	ApplicationVersions        []ApplicationVersion `gorm:"foreignKey:ApplicationId,TerminalModelConfigurationId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
-	ApplicationCatalogs        []ApplicationCatalog `gorm:"foreignKey:ApplicationId,TerminalModelConfigurationId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
+	Application                *Application                `gorm:"-"`
+	TerminalModelConfiguration *TerminalModelConfiguration `gorm:"-"`
+	ApplicationVersions        []ApplicationVersion        `gorm:"foreignKey:ApplicationId,TerminalModelConfigurationId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
+	ApplicationCatalogs        []ApplicationCatalog        `gorm:"foreignKey:ApplicationId,TerminalModelConfigurationId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
 }
 
 func (ApplicationConfiguration) TableName() string { return tableApplicationConfiguration }

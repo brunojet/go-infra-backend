@@ -23,10 +23,8 @@ func (filterTypeMapper) ApplyQueryScopes(queryScopes map[string]any) (map[string
 
 // DTO -> Model
 func (filterTypeMapper) ToModel(dto *dtos.FilterTypeDTO, model *models.FilterType) {
-	model.FilterTypeId = dto.FilterTypeId
 	model.Name = sql.NullString{String: dto.Name, Valid: dto.Name != ""}
 	model.Description = sql.NullString{String: dto.Description, Valid: dto.Description != ""}
-	// Datas não são preenchidas no ToModel (normalmente gerenciadas pelo banco)
 }
 
 // Model -> DTO

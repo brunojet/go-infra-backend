@@ -41,7 +41,7 @@ type TerminalModelConfiguration struct {
 	UpdatedAt                    sql.NullTime   `gorm:"autoUpdateTime;index:idx_terminal_model_configuration_del_updated,priority:2"`
 	DeletedAt                    gorm.DeletedAt `gorm:"index:idx_terminal_model_configuration_del_created,priority:1;index:idx_terminal_model_configuration_del_updated,priority:1"`
 
-	TerminalModel *TerminalModel
+	TerminalModel *TerminalModel `gorm:"-"`
 }
 
 func (TerminalModelConfiguration) TableName() string { return tableTerminalModelConfiguration }

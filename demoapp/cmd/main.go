@@ -26,10 +26,17 @@ func main() {
 
 	// AutoMigrate all domain models in dependency order (parents before children).
 	if err := gormDb.AutoMigrate(
-		&models.ApplicationCatalog{},
-		&models.ApplicationConfiguration{},
-		&models.ApplicationProfileScreenshot{},
+		&models.FilterType{},
+		&models.Filter{},
+		&models.TerminalModel{},
+		&models.TerminalModelConfiguration{},
+		&models.Application{},
+		&models.ApplicationImage{},
 		&models.ApplicationProfile{},
+		&models.ApplicationProfileScreenshot{},
+		&models.ApplicationConfiguration{},
+		&models.ApplicationVersion{},
+		&models.ApplicationCatalog{},
 	); err != nil {
 		log.Fatalf("failed to migrate: %v", err)
 	}
