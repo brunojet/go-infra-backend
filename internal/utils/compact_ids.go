@@ -8,14 +8,15 @@ func EncodeCompositeKey[T AnyInt](srcs ...T) (string, error) {
 	if len(srcs) == 0 {
 		return "", errCompositeKeyValuesRequired
 	}
+	var err error
 	buf := make([]byte, 0, len(srcs)*compositeMaxPartSize)
 	for _, src := range srcs {
-		if err := appendVarIntToBuffer(&buf, src); err != nil {
+		buf, err = appendVarintToBuffer(buf, src)
+		if err != nil {
 			return "", err
 		}
 	}
-	used := len(buf)
-	return base64.RawURLEncoding.EncodeToString(buf[:used]), nil
+	return base64.RawURLEncoding.EncodeToString(buf), nil
 }
 
 func DecodeCompositeKey[T AnyInt](encoded string, dsts ...*T) error {
@@ -28,7 +29,7 @@ func DecodeCompositeKey[T AnyInt](encoded string, dsts ...*T) error {
 	}
 	idx := 0
 	for _, d := range dsts {
-		nextIdx, err := restoreVarIntFromBuffer(payload, idx, d)
+		nextIdx, err := readVarintFromBufferAt(payload, idx, d)
 		if err != nil {
 			return err
 		}

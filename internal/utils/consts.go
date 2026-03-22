@@ -10,6 +10,10 @@ const (
 	compactVarintMsb        = 0x80
 	compactVarintMaxBytes   = 7
 
+	// compact int special headers
+	compactIntZeroHeader = 0x80
+	compactIntTestPrefix = 0xAA // used in tests for prefixing buffers
+
 	// byte/shift helpers
 	zeroByte            = 0x00
 	shiftInt16ToTopByte = 24

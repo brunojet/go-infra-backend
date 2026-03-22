@@ -1,178 +1,120 @@
+// Pacote utils provê utilitários para manipulação eficiente de inteiros compactados em buffers binários.
+//
+// Este arquivo implementa funções para serializar e desserializar inteiros (int16, int32, int64) em formato compacto,
+// otimizando o uso de espaço em buffers binários, especialmente para valores pequenos.
+//
+// Funções principais:
+//   - appendVarintToBuffer: Serializa um inteiro para um buffer de bytes em formato compacto.
+//   - readVarintFromBufferAt: Lê um inteiro compactado de um buffer de bytes a partir de um offset.
+//
+// Uso típico: serialização/deserialização de identificadores, índices ou outros valores inteiros em protocolos binários customizados.
 package utils
 
-import "encoding/binary"
-
-// convertInt64ToTPtr converts an int64 to the specified integer type T and stores it in dst.
-// It returns an error if dst is nil, src is negative, or if the value cannot be represented in type T.
-func convertInt64ToTPtr[T AnyInt](src int64, dst *T) error {
-	if dst == nil {
-		return errDstNil
-	}
-	if src < 0 {
-		return errInvalidCompactInt
-	}
-	v, err := convertInt64ToT[T](src)
-	if err != nil {
-		return err
-	}
-	*dst = v
-	return nil
-}
-
-// reserveAndWrite checks available capacity, reslices dst to make room for
-// `needed` bytes, and then calls writeFn(pos) to perform the actual write at
-// the starting position. It returns an error when capacity is insufficient.
-func reserveAndWrite(dst *[]byte, needed int, writeFn func(pos int)) error {
-	if dst == nil {
-		return errDstNil
-	}
-	free := cap(*dst) - len(*dst)
-	if free < needed {
-		return errInsufficientBuffer(needed)
-	}
-	old := len(*dst)
-	*dst = (*dst)[:old+needed]
-	writeFn(old)
-	return nil
-}
-
-func isReadyForCompressedEncoding[T AnyInt](src T) bool {
-	switch any(src).(type) {
-	case int16:
-		return false
-	case int32:
-		vv := int64(src)
-		return byte(uint64(vv)>>shiftInt16ToTopByte) == zeroByte
-	default:
-		vv := int64(src)
-		return byte(uint64(vv)>>shiftInt64ToTopByte) == zeroByte
-	}
-}
-
-// appendVarintCompressed writes a zig-zag varint for value into *dst using available
-// capacity; it does not allocate. If there isn't enough free capacity it
-// returns an error. The caller must ensure dst is non-nil.
-func appendVarintCompressed[T AnyInt](dst *[]byte, src T) error {
-	vv := int64(src)
-	if vv <= 0 {
-		return errInvalidCompactInt
-	}
-	// zig-zag encode and emit as 7-bit LEB128 groups with 1-byte prefix
-	ux := uint64((vv << 1) ^ (vv >> zigZagSignShift))
-	needed := 1
-	tmp := ux
-	for tmp >= uint64(compactVarintMsb) {
-		needed++
-		tmp >>= 7
-	}
-	if needed > compactVarintMaxBytes {
-		return errCompactVarintTooLarge(needed)
-	}
-	// inline reservation to avoid closure allocation in hot path
-	dataBytes := needed
-	total := dataBytes + 1
-	if dst == nil {
-		return errDstNil
-	}
-	free := cap(*dst) - len(*dst)
-	if free < total {
-		return errInsufficientBuffer(total)
-	}
-	old := len(*dst)
-	*dst = (*dst)[:old+total]
-	pos := old
-	(*dst)[pos] = byte(compactVarintPrefixBase + byte(dataBytes))
-	pos++
-	dataBytes-- // adjust to number of data bytes following prefix
-	for i := 0; i < dataBytes; i++ {
-		(*dst)[pos+i] = byte(ux) | compactVarintMsb
-		ux >>= 7
-	}
-	(*dst)[pos+dataBytes] = byte(ux)
-	return nil
-}
-
-func appendVarintUncompressed[T AnyInt](dst *[]byte, src T) error {
-	vv := int64(src)
-	if vv < 0 {
-		return errInvalidCompactInt
-	}
-	if dst == nil {
-		return errDstNil
-	}
+// appendVarintToBuffer serializa um valor inteiro v do tipo T para o slice de bytes dst,
+// utilizando um formato compacto que economiza espaço para valores pequenos.
+//
+// Parâmetros:
+//   - dst: slice de bytes de destino (deve ter capacidade suficiente).
+//   - v: valor inteiro a ser serializado (int16, int32 ou int64).
+//
+// Retorna:
+//   - Slice de bytes resultante com o valor serializado.
+//   - Erro caso o buffer seja insuficiente ou o valor seja inválido.
+func appendVarintToBuffer[T AnyInt](dst []byte, v T) ([]byte, error) {
 	needed := getIntTypeLen[T]()
-	// inline reservation to avoid closure allocation in hot path
-	free := cap(*dst) - len(*dst)
+	free := cap(dst) - len(dst)
+
 	if free < needed {
-		return errInsufficientBuffer(needed)
+		return dst, errInsufficientBuffer(needed)
 	}
-	old := len(*dst)
-	*dst = (*dst)[:old+needed]
-	pos := old
-	// write big-endian using encoding/binary for common sizes
-	switch needed {
-	case int16Size:
-		binary.BigEndian.PutUint16((*dst)[pos:pos+int16Size], uint16(vv))
-	case int32Size:
-		binary.BigEndian.PutUint32((*dst)[pos:pos+int32Size], uint32(vv))
-	default:
-		binary.BigEndian.PutUint64((*dst)[pos:pos+int64Size], uint64(vv))
+
+	vv := int64(v)
+	if vv < 0 {
+		return dst, errInvalidCompactInt
 	}
-	return nil
+
+	startOffset := len(dst)
+
+	dst = dst[:startOffset+needed]
+
+	isCompressReady := needed > 2 && byte(vv>>((needed*8)-8)) == 0x00
+	pos := startOffset
+	started := true
+
+	if isCompressReady {
+		pos += 1
+		started = false
+	}
+
+	for i := needed - 1; i >= 0; i-- {
+		b := byte(vv >> (i * 8))
+		if !started {
+			if b == 0 {
+				continue
+			}
+			started = true
+		}
+		dst[pos] = b
+		pos++
+	}
+
+	if !started {
+		dst = dst[:1]
+		dst[len(dst)-1] = 0x80
+		return dst, nil
+	} else if isCompressReady {
+		n := pos - startOffset - 1
+		dst[startOffset] = 0x80 | byte(n)
+		// Ajusta o comprimento do slice para refletir apenas os bytes realmente usados
+		dst = dst[:pos]
+	}
+
+	return dst, nil
 }
 
-func appendVarIntToBuffer[T AnyInt](dst *[]byte, src T) error {
-	if isReadyForCompressedEncoding(src) {
-		return appendVarintCompressed(dst, src)
+// readVarintFromBufferAt desserializa um valor inteiro do tipo T a partir do slice de bytes src,
+// começando no offset informado, armazenando o resultado em out.
+//
+// Parâmetros:
+//   - src: slice de bytes de origem.
+//   - offset: posição inicial para leitura.
+//   - out: ponteiro para variável onde o valor lido será armazenado.
+//
+// Retorna:
+//   - Quantidade de bytes consumidos na leitura.
+//   - Erro caso o buffer seja insuficiente ou o formato seja inválido.
+func readVarintFromBufferAt[T AnyInt](src []byte, offset int, out *T) (int, error) {
+	needed := getIntTypeLen[T]()
+	bufLen := len(src)
 
-	}
-	return appendVarintUncompressed(dst, src)
-}
-
-func restoreVarIntFromBuffer[T AnyInt](src []byte, startOffset int, dst *T) (int, error) {
-	if startOffset < 0 || startOffset >= len(src) {
+	if offset > bufLen {
 		return 0, errOffsetOutOfRange
 	}
-	prefix := src[startOffset]
-	if prefix == compactVarintMsb || prefix > compactVarintPrefixMax {
-		return 0, errInvalidCompactIntPrefix(prefix)
-	}
-	var headerLen int
-	var dataLen int
-	if prefix > compactVarintPrefixBase {
-		headerLen = 1
-		dataLen = int(prefix - compactVarintPrefixBase)
-	} else {
-		dataLen = getIntTypeLen[T]()
-	}
-	dataStart := startOffset + headerLen
-	endOffset := dataStart + dataLen
-	if endOffset > len(src) {
-		return 0, errInvalidCompactIntPayload
-	}
-	var value int64
-	if prefix > compactVarintPrefixBase {
-		// compressed: data are LEB128 little-endian 7-bit groups
-		var ux uint64
-		shift := 0
-		for i := dataStart; i < endOffset; i++ {
-			b := src[i]
-			ux |= uint64(b&0x7F) << uint(shift)
-			shift += 7
+
+	first := src[offset]
+	pos := offset
+
+	// Regra customizada: header compactIntZeroHeader significa valor zero
+	if first == compactIntZeroHeader {
+		*out = T(0)
+		return 1, nil // consome só o header
+	} else if first > compactIntZeroHeader { // compactado: header tem MSB 0, os 7 bits restantes indicam quantos bytes seguem
+		realBytes := int(first & 0x7F)
+		if realBytes+1 > needed {
+			return 0, errVarintCompactadoInvalido
 		}
-		// zig-zag decode
-		// original: ux = uint64((vv << 1) ^ (vv >> 63))
-		// decode back to signed int64
-		vv := int64((ux >> 1) ^ uint64((-(ux & 1))))
-		value = vv
-	} else {
-		// uncompressed: big-endian integer bytes
-		for i := dataStart; i < endOffset; i++ {
-			value = (value << byteSizeShift) | int64(src[i])
-		}
+		pos++ // pula o header
+		needed = realBytes
 	}
-	if err := convertInt64ToTPtr(value, dst); err != nil {
-		return 0, err
+
+	if pos+needed > bufLen {
+		return 0, errBufferInsuficiente
 	}
-	return endOffset, nil
+	var v int64
+	for i := 0; i < needed; i++ {
+		v = (v << 8) | int64(src[pos+i])
+	}
+	*out = T(v)
+	consumed := pos + needed - offset
+	return consumed, nil
 }

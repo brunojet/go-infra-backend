@@ -22,6 +22,10 @@ var (
 	// compact_int related errors
 	errInvalidCompactInt        = errors.New("invalid compact int value: must be positive")
 	errInvalidCompactIntPayload = errors.New("invalid compact int payload: insufficient data for declared length")
+
+	// Centralized errors for compact_int.go
+	errBufferInsuficiente       = errors.New("buffer insuficiente")
+	errVarintCompactadoInvalido = errors.New("varint compactado inválido: realBytes excede limite do tipo")
 )
 
 func errInvalidCompositeKeyEncoding(err error) error {
