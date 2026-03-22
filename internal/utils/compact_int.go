@@ -121,6 +121,14 @@ func appendVarintUncompressed[T AnyInt](dst *[]byte, src T) error {
 	return nil
 }
 
+func appendVarIntToBuffer[T AnyInt](dst *[]byte, src T) error {
+	if isReadyForCompressedEncoding(src) {
+		return appendVarintCompressed(dst, src)
+
+	}
+	return appendVarintUncompressed(dst, src)
+}
+
 func restoreVarIntFromBuffer[T AnyInt](src []byte, startOffset int, dst *T) (int, error) {
 	if startOffset < 0 || startOffset >= len(src) {
 		return 0, errOffsetOutOfRange

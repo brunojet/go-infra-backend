@@ -10,14 +10,8 @@ func EncodeCompositeKey[T AnyInt](srcs ...T) (string, error) {
 	}
 	buf := make([]byte, 0, len(srcs)*compositeMaxPartSize)
 	for _, src := range srcs {
-		if isReadyForCompressedEncoding(src) {
-			if err := appendVarintCompressed(&buf, src); err != nil {
-				return "", err
-			}
-		} else {
-			if err := appendVarintUncompressed(&buf, src); err != nil {
-				return "", err
-			}
+		if err := appendVarIntToBuffer(&buf, src); err != nil {
+			return "", err
 		}
 	}
 	used := len(buf)
