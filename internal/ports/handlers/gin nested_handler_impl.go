@@ -20,16 +20,16 @@ type nestedGinHandler[E rpocontracts.Entity, D any] struct {
 }
 
 func NewGenericNestedHandler[E rpocontracts.Entity, D any](php *HandlerParameters, hp *HandlerParameters, s svccontracts.NestedService[D, E]) hndcontracts.NestedGenericHandler[E, D] {
-	var base hndcontracts.GenericHandler[E, D]
+	var baseHandler hndcontracts.GenericHandler[E, D]
 	if svc, ok := s.(svccontracts.Service[D, E]); ok {
-		base = NewGenericHandler[E](hp, svc)
+		baseHandler = NewGenericHandler[E](hp, svc)
 	} else {
-		base = nil
+		panic("provided service does not implement Service[D, E]")
 	}
 	return &nestedGinHandler[E, D]{
 		php:         php,
 		svc:         s,
-		basehandler: base, // Use the base service for non-nested operations
+		basehandler: baseHandler, // Use the base service for non-nested operations
 	}
 }
 
