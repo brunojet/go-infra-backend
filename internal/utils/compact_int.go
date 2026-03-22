@@ -59,8 +59,8 @@ func appendVarintToBuffer[T AnyInt](dst []byte, v T) ([]byte, error) {
 	}
 
 	if !started {
-		dst = dst[:1]
-		dst[len(dst)-1] = 0x80
+		dst = dst[:startOffset+1]
+		dst[startOffset] = 0x80
 		return dst, nil
 	} else if isCompressReady {
 		n := pos - startOffset - 1
@@ -92,29 +92,27 @@ func readVarintFromBufferAt[T AnyInt](src []byte, offset int, out *T) (int, erro
 	}
 
 	first := src[offset]
-	pos := offset
 
 	// Regra customizada: header compactIntZeroHeader significa valor zero
 	if first == compactIntZeroHeader {
 		*out = T(0)
-		return 1, nil // consome só o header
+		return offset + 1, nil // consome só o header
 	} else if first > compactIntZeroHeader { // compactado: header tem MSB 0, os 7 bits restantes indicam quantos bytes seguem
 		realBytes := int(first & 0x7F)
 		if realBytes+1 > needed {
 			return 0, errVarintCompactadoInvalido
 		}
-		pos++ // pula o header
+		offset++ // pula o header
 		needed = realBytes
 	}
 
-	if pos+needed > bufLen {
+	if offset+needed > bufLen {
 		return 0, errBufferInsuficiente
 	}
 	var v int64
 	for i := 0; i < needed; i++ {
-		v = (v << 8) | int64(src[pos+i])
+		v = (v << 8) | int64(src[offset+i])
 	}
 	*out = T(v)
-	consumed := pos + needed - offset
-	return consumed, nil
+	return offset + needed, nil
 }

@@ -30,3 +30,26 @@ func TestEncodeDecodeCompositeKey_Table(t *testing.T) {
 		require.Equal(t, c, rc)
 	})
 }
+
+func TestEncodeCompositeKey_Errors(t *testing.T) {
+	// srcs vazio
+	_, err := EncodeCompositeKey[int32]()
+	if err == nil {
+		t.Error("esperado erro para srcs vazio")
+	}
+}
+
+func TestDecodeCompositeKey_Errors(t *testing.T) {
+	// dsts vazio
+	err := DecodeCompositeKey[int32]("abc")
+	if err == nil {
+		t.Error("esperado erro para dsts vazio")
+	}
+
+	// base64 inválido
+	var v int32
+	err = DecodeCompositeKey("!!!", &v)
+	if err == nil {
+		t.Error("esperado erro para base64 inválido")
+	}
+}
