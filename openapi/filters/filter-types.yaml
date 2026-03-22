@@ -13,14 +13,6 @@ tags:
     description: Operações relacionadas a tipos de filtro
 paths:
   /filter-types:
-    get:
-      summary: Listar tipos de filtro
-      description: Retorna a lista de tipos de filtro.
-      operationId: listFilterTypes
-      tags: ["filter-types"]
-      responses:
-        '200':
-          description: OK
     post:
       summary: Criar tipo de filtro
       description: Cria um novo tipo de filtro.
@@ -35,6 +27,14 @@ paths:
       responses:
         '201':
           description: Criado
+    get:
+      summary: Listar tipos de filtro
+      description: Retorna a lista de tipos de filtro.
+      operationId: listFilterTypes
+      tags: ["filter-types"]
+      responses:
+        '200':
+          description: OK
   /filter-types/{filterTypeId}:
     get:
       summary: Detalhar tipo de filtro

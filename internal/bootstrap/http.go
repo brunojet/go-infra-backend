@@ -27,6 +27,7 @@ type HttpServer struct {
 func NewHttpServerWithObservability(sm bootcontracts.ShutdownManager) *HttpServer {
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(middlewares.CORSMiddleware())
 	router.Use(middlewares.OtelGinMiddleware())
 	router.Use(middlewares.OTLPErrorLogMiddleware(middlewares.WithMinStatus(http.StatusBadRequest)))
 	addr := config.GetEnv(httpAddrEnv, defaultHTTPAddr)
