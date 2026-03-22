@@ -5,7 +5,6 @@ package utils
 // in this package use named symbols instead of literals.
 const (
 	// compact int special headers
-	compactIntZeroHeader    = 0x00 // Header para valor zero
 	compactIntHeaderMask    = 0x80 // MSB indica header compactado
 	compactIntRealBytesMask = 0x7F // 7 bits menos significativos: número de bytes
 

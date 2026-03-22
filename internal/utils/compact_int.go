@@ -13,7 +13,7 @@ package utils
 
 // appendVarintToBuffer serializa um valor inteiro v do tipo T para o slice de bytes dst,
 // utilizando um formato compacto:
-//   - Para valores zero, grava apenas o header compactIntZeroHeader (0x00).
+//   - Para valores zero, grava apenas o header compactIntHeaderMask (0x80).
 //   - Para valores pequenos, grava apenas os bytes significativos e um header compactado (MSB 1, 7 bits = n de bytes).
 //   - Para valores grandes, grava todos os bytes do tipo.
 //
@@ -79,7 +79,7 @@ func appendVarintToBuffer[T AnyInt](dst []byte, v T) ([]byte, error) {
 // começando no offset informado, armazenando o resultado em out.
 //
 // Interpretação:
-//   - Se o header for compactIntZeroHeader (0x00), retorna zero.
+//   - Se o header for compactIntHeaderMask (0x80), retorna zero.
 //   - Se o header tiver MSB 1, os 7 bits menos significativos indicam quantos bytes seguem.
 //   - Caso contrário, lê todos os bytes do tipo.
 //
@@ -102,7 +102,7 @@ func readVarintFromBufferAt[T AnyInt](src []byte, offset int, out *T) (int, erro
 	first := src[offset]
 
 	// Header zero: valor zero
-	if first == compactIntZeroHeader {
+	if first == compactIntHeaderMask {
 		*out = T(0)
 		return offset + 1, nil // consome só o header
 	} else if first&compactIntHeaderMask != 0 { // Header compactado: MSB 1
