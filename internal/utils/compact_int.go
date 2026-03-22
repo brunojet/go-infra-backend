@@ -105,7 +105,7 @@ func readVarintFromBufferAt[T AnyInt](src []byte, offset int, out *T) (int, erro
 	if first == compactIntHeaderMask {
 		*out = T(0)
 		return offset + 1, nil // consome só o header
-	} else if first&compactIntHeaderMask != 0 { // Header compactado: MSB 1
+	} else if first > compactIntHeaderMask { // Header compactado: MSB 1
 		realBytes := int(first & compactIntRealBytesMask)
 		if realBytes+1 > needed {
 			return 0, errVarintCompactadoInvalido
