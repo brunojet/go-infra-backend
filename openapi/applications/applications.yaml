@@ -1,0 +1,78 @@
+openapi: 3.0.0
+info:
+  title: Applications API
+  version: 1.0.0
+  description: API para gerenciamento de aplicações.
+paths:
+  /applications:
+    get:
+      summary: Listar aplicações
+      description: Retorna a lista de aplicações.
+      operationId: listApplications
+      tags: ["applications"]
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Criar aplicação
+      description: Cria uma nova aplicação.
+      operationId: createApplication
+      tags: ["applications"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas.yaml#/components/schemas/Application'
+      responses:
+        '201':
+          description: Criado
+  /applications/{applicationId}:
+    get:
+      summary: Detalhar aplicação
+      description: Retorna detalhes da aplicação informada.
+      operationId: getApplicationById
+      tags: ["applications"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+    put:
+      summary: Atualizar aplicação
+      description: Atualiza a aplicação informada.
+      operationId: updateApplicationById
+      tags: ["applications"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas.yaml#/components/schemas/Application'
+      responses:
+        '200':
+          description: Atualizado
+    delete:
+      summary: Remover aplicação
+      description: Remove a aplicação informada.
+      operationId: deleteApplicationById
+      tags: ["applications"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Removido

@@ -1,0 +1,86 @@
+openapi: 3.0.0
+servers:
+  - url: http://localhost:8080
+info:
+  title: Filter Types API
+  version: 1.0.0
+  description: API para gerenciamento de tipos de filtro.
+  contact:
+    name: Suporte
+    email: suporte@example.com
+tags:
+  - name: filter-types
+    description: Operações relacionadas a tipos de filtro
+paths:
+  /filter-types:
+    get:
+      summary: Listar tipos de filtro
+      description: Retorna a lista de tipos de filtro.
+      operationId: listFilterTypes
+      tags: ["filter-types"]
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Criar tipo de filtro
+      description: Cria um novo tipo de filtro.
+      operationId: createFilterType
+      tags: ["filter-types"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas.yaml#/components/schemas/FilterType'
+      responses:
+        '201':
+          description: Criado
+  /filter-types/{filterTypeId}:
+    get:
+      summary: Detalhar tipo de filtro
+      description: Retorna detalhes do tipo de filtro informado.
+      operationId: getFilterTypeById
+      tags: ["filter-types"]
+      parameters:
+        - in: path
+          name: filterTypeId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+    put:
+      summary: Atualizar tipo de filtro
+      description: Atualiza o tipo de filtro informado.
+      operationId: updateFilterTypeById
+      tags: ["filter-types"]
+      parameters:
+        - in: path
+          name: filterTypeId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas.yaml#/components/schemas/FilterType'
+      responses:
+        '200':
+          description: Atualizado
+    delete:
+      summary: Remover tipo de filtro
+      description: Remove o tipo de filtro informado.
+      operationId: deleteFilterTypeById
+      tags: ["filter-types"]
+      parameters:
+        - in: path
+          name: filterTypeId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Removido

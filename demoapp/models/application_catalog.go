@@ -38,10 +38,8 @@ type ApplicationCatalog struct {
 	UpdatedAt                    sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_catalog_del_updated,priority:2"`
 	DeletedAt                    gorm.DeletedAt `gorm:"index:idx_application_catalog_del_created,priority:1;index:idx_application_catalog_del_updated,priority:1"`
 
-	Application                *Application
-	TerminalModelConfiguration *TerminalModelConfiguration
-	ApplicationProfile         *ApplicationProfile
-	ApplicationVersion         *ApplicationVersion
+	ApplicationProfile *ApplicationProfile
+	ApplicationVersion *ApplicationVersion
 }
 
 func (ApplicationCatalog) TableName() string { return "application_catalog" }

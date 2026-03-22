@@ -124,7 +124,6 @@ type ApplicationConfiguration struct {
 	TerminalModelConfiguration *TerminalModelConfiguration
 	ApplicationVersions        []ApplicationVersion `gorm:"foreignKey:ApplicationId,TerminalModelConfigurationId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
 	ApplicationCatalogs        []ApplicationCatalog `gorm:"foreignKey:ApplicationId,TerminalModelConfigurationId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
-	Filters                    []Filter             `gorm:"many2many:application_configuration_filter;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT;"`
 }
 
 func (ApplicationConfiguration) TableName() string { return tableApplicationConfiguration }

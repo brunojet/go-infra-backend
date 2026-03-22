@@ -1,0 +1,21 @@
+openapi: 3.0.0
+info:
+  title: Schemas Application Configurations
+  version: 1.0.0
+components:
+  schemas:
+    ApplicationConfiguration:
+      type: object
+      properties:
+        id:
+          type: integer
+        applicationId:
+          type: integer
+        key:
+          type: string
+        value:
+          type: string
+      required:
+        - applicationId
+        - key
+        - value
