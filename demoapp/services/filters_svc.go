@@ -1,6 +1,10 @@
 package services
 
 import (
+	"database/sql"
+	"time"
+
+	"github.com/brunojet/go-infra-backend/demoapp/dtos"
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	"github.com/brunojet/go-infra-backend/internal/ports/services"
 	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
@@ -17,20 +21,46 @@ func (filterTypeMapper) ApplyQueryScopes(queryScopes map[string]any) (map[string
 	return queryScopes, nil
 }
 
-func (filterTypeMapper) ToModel(dto *models.FilterType, model *models.FilterType) {
-	*model = *dto
+// DTO -> Model
+func (filterTypeMapper) ToModel(dto *dtos.FilterTypeDTO, model *models.FilterType) {
+	model.FilterTypeId = dto.FilterTypeId
+	model.Name = sql.NullString{String: dto.Name, Valid: dto.Name != ""}
+	model.Description = sql.NullString{String: dto.Description, Valid: dto.Description != ""}
+	// Datas não são preenchidas no ToModel (normalmente gerenciadas pelo banco)
 }
 
-func (filterTypeMapper) ToDTO(model *models.FilterType, dto *models.FilterType) {
-	*dto = *model
+// Model -> DTO
+func (filterTypeMapper) ToDTO(model *models.FilterType, dto *dtos.FilterTypeDTO) {
+	dto.FilterTypeId = model.FilterTypeId
+	dto.Name = model.Name.String
+	if model.Description.Valid {
+		dto.Description = model.Description.String
+	} else {
+		dto.Description = ""
+	}
+	if model.CreatedAt.Valid {
+		dto.CreatedAt = model.CreatedAt.Time.Format(time.RFC3339)
+	} else {
+		dto.CreatedAt = ""
+	}
+	if model.UpdatedAt.Valid {
+		dto.UpdatedAt = model.UpdatedAt.Time.Format(time.RFC3339)
+	} else {
+		dto.UpdatedAt = ""
+	}
+	if model.DeletedAt.Valid {
+		dto.DeletedAt = model.DeletedAt.Time.Format(time.RFC3339)
+	} else {
+		dto.DeletedAt = ""
+	}
 }
 
 type FilterTypeService interface {
-	svcContracts.Service[models.FilterType, models.FilterType]
+	svcContracts.Service[dtos.FilterTypeDTO, models.FilterType]
 }
 
 type filterTypeService struct {
-	svcContracts.Service[models.FilterType, models.FilterType]
+	svcContracts.Service[dtos.FilterTypeDTO, models.FilterType]
 }
 
 func NewFilterTypeService(repo repoContracts.Repository[models.FilterType]) FilterTypeService {
@@ -68,12 +98,48 @@ func (m filterNestedMapper) ApplyParentScopes(parentID string, model *models.Fil
 	return nil
 }
 
-func (filterNestedMapper) ToModel(dto *models.Filter, model *models.Filter) {
-	*model = *dto
+// DTO -> Model
+func (filterNestedMapper) ToModel(dto *dtos.FilterDTO, model *models.Filter) {
+	model.FilterId = dto.FilterId
+	model.FilterTypeId = dto.FilterTypeId
+	model.Name = sql.NullString{String: dto.Name, Valid: dto.Name != ""}
+	model.Description = sql.NullString{String: dto.Description, Valid: dto.Description != ""}
+	// Datas não são preenchidas no ToModel (normalmente gerenciadas pelo banco)
 }
 
-func (filterNestedMapper) ToDTO(model *models.Filter, dto *models.Filter) {
-	*dto = *model
+// Model -> DTO
+func (filterNestedMapper) ToDTO(model *models.Filter, dto *dtos.FilterDTO) {
+	dto.FilterId = model.FilterId
+	dto.FilterTypeId = model.FilterTypeId
+	dto.Name = model.Name.String
+	if model.Description.Valid {
+		dto.Description = model.Description.String
+	} else {
+		dto.Description = ""
+	}
+	if model.CreatedAt.Valid {
+		dto.CreatedAt = model.CreatedAt.Time.Format(time.RFC3339)
+	} else {
+		dto.CreatedAt = ""
+	}
+	if model.UpdatedAt.Valid {
+		dto.UpdatedAt = model.UpdatedAt.Time.Format(time.RFC3339)
+	} else {
+		dto.UpdatedAt = ""
+	}
+	if model.DeletedAt.Valid {
+		dto.DeletedAt = model.DeletedAt.Time.Format(time.RFC3339)
+	} else {
+		dto.DeletedAt = ""
+	}
+	// Mapear FilterType aninhado, se presente
+	if model.FilterType != nil {
+		var filterTypeDTO dtos.FilterTypeDTO
+		filterTypeMapper{}.ToDTO(model.FilterType, &filterTypeDTO)
+		dto.FilterType = filterTypeDTO
+	} else {
+		dto.FilterType = dtos.FilterTypeDTO{}
+	}
 }
 
 func (filterNestedMapper) GetModelKey(id string) (map[string]any, error) {
@@ -81,11 +147,11 @@ func (filterNestedMapper) GetModelKey(id string) (map[string]any, error) {
 }
 
 type FilterNestedService interface {
-	svcContracts.NestedService[models.Filter, models.Filter]
+	svcContracts.NestedService[dtos.FilterDTO, models.Filter]
 }
 
 type filterNestedService struct {
-	svcContracts.NestedService[models.Filter, models.Filter]
+	svcContracts.NestedService[dtos.FilterDTO, models.Filter]
 }
 
 func NewFilterNestedService(repo repoContracts.Repository[models.Filter]) FilterNestedService {
