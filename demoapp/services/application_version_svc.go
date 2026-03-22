@@ -55,7 +55,6 @@ func (applicationVersionNestedMapper) GetModelKey(id string) (map[string]any, er
 
 type ApplicationVersionNestedService interface {
 	svcContracts.NestedService[models.ApplicationVersion, models.ApplicationVersion]
-	UpdateAndSyncCatalog(ctx context.Context, scopes map[string]any, inOut *models.ApplicationVersion) error
 }
 
 type applicationVersionNestedService struct {
@@ -95,7 +94,11 @@ func (s *applicationVersionNestedService) CreateNested(ctx context.Context, pare
 	return s.createOneShot(ctx, &model)
 }
 
-func (s *applicationVersionNestedService) UpdateAndSyncCatalog(ctx context.Context, scopes map[string]any, inOut *models.ApplicationVersion) error {
+func (s *applicationVersionNestedService) Update(ctx context.Context, id string, inOut *models.ApplicationVersion) error {
+	scopes, err := s.mapper.GetModelKey(id)
+	if err != nil {
+		return err
+	}
 	return s.vRepo.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.validateVersionStageTransition(txCtx, scopes, inOut); err != nil {
 			return err
