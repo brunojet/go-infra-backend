@@ -23,7 +23,7 @@ const (
 
 type ApplicationVersionRepository interface {
 	contracts.Repository[models.ApplicationVersion]
-	LoadCurrentStage(ctx context.Context, versionID int64) (int16, error)
+	LoadCurrentStage(ctx context.Context, scope map[string]any) (int16, error)
 	FindStageVersionID(ctx context.Context, applicationID int64, configurationTerminalModelID int64, stage int16) (int64, error)
 	ArchiveStageDuplicates(ctx context.Context, inOut *models.ApplicationVersion) error
 }
@@ -36,15 +36,14 @@ func NewApplicationVersionRepo(db dbcontracts.DatabaseAdapter) ApplicationVersio
 	return &ApplicationVersionRepo{Repository: internalrepos.NewGormRepository[models.ApplicationVersion](db)}
 }
 
-func (r *ApplicationVersionRepo) LoadCurrentStage(ctx context.Context, versionID int64) (int16, error) {
+func (r *ApplicationVersionRepo) LoadCurrentStage(ctx context.Context, scope map[string]any) (int16, error) {
 	tx, err := portsrepos.TxFromContext(ctx)
 	if err != nil {
 		return 0, err
 	}
-
 	var stage int16
 	result := tx.Model(&models.ApplicationVersion{}).
-		Where(models.ColAppVersionID+" = ?", versionID).
+		Where(scope).
 		Limit(1).
 		Pluck(models.ColAppVersionStage, &stage)
 	if err := result.Error; err != nil {

@@ -127,12 +127,7 @@ func (s *applicationVersionNestedService) Update(ctx context.Context, id string,
 }
 
 func (s *applicationVersionNestedService) validateVersionStageTransition(ctx context.Context, scopes map[string]any, inOut *models.ApplicationVersion) error {
-	versionID, err := services.ParseScopeInt[int64](scopes, models.ColAppVersionID, 1)
-	if err != nil {
-		return err
-	}
-
-	currentStage, err := s.vRepo.LoadCurrentStage(ctx, versionID)
+	currentStage, err := s.vRepo.LoadCurrentStage(ctx, scopes)
 	if err != nil {
 		return err
 	}
