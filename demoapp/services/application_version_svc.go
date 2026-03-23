@@ -3,14 +3,17 @@ package services
 import (
 	"context"
 
+	"github.com/brunojet/go-infra-backend/demoapp/dtos"
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
-	"github.com/brunojet/go-infra-backend/internal/utils"
 	"github.com/brunojet/go-infra-backend/pkg/ports/services"
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	utils "github.com/brunojet/go-infra-backend/pkg/utils"
 )
 
 type applicationVersionNestedMapper struct{}
+
+// Converte de DTO para Model
 
 func (applicationVersionNestedMapper) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {
 	return queryScopes, nil
@@ -36,12 +39,20 @@ func (m applicationVersionNestedMapper) ApplyParentScopes(parentID string, model
 	return nil
 }
 
-func (applicationVersionNestedMapper) ToModel(dto *models.ApplicationVersion, model *models.ApplicationVersion) {
-	*model = *dto
+// Converte de DTO para Model
+func (applicationVersionNestedMapper) ToModel(_ *dtos.ApplicationVersionDTO, _ *models.ApplicationVersion) {
 }
 
-func (applicationVersionNestedMapper) ToDTO(model *models.ApplicationVersion, dto *models.ApplicationVersion) {
-	*dto = *model
+// Converte de Model para DTO
+func (applicationVersionNestedMapper) ToDTO(model *models.ApplicationVersion, dto *dtos.ApplicationVersionDTO) {
+	dto.ApplicationVersionId = model.ApplicationVersionId
+	dto.Stage = utils.FromNullInt16(model.Stage)
+	dto.ReviewAt = utils.FromNullTimeRFC3339(model.ReviewAt)
+	dto.ProductionAt = utils.FromNullTimeRFC3339(model.ProductionAt)
+	dto.CreatedAt = utils.FromNullTimeRFC3339(model.CreatedAt)
+	dto.UpdatedAt = utils.FromNullTimeRFC3339(model.UpdatedAt)
+	dto.DeletedAt = utils.FromNullTimeRFC3339(model.DeletedAt)
+	// parentID (ApplicationConfigurationId) pode ser gerado a partir dos IDs se necessário
 }
 
 func (applicationVersionNestedMapper) GetModelKey(id string) (map[string]any, error) {
@@ -53,11 +64,11 @@ func (applicationVersionNestedMapper) GetModelKey(id string) (map[string]any, er
 }
 
 type ApplicationVersionNestedService interface {
-	svcContracts.NestedService[models.ApplicationVersion, models.ApplicationVersion]
+	svcContracts.NestedService[dtos.ApplicationVersionDTO, models.ApplicationVersion]
 }
 
 type applicationVersionNestedService struct {
-	svcContracts.NestedService[models.ApplicationVersion, models.ApplicationVersion]
+	svcContracts.NestedService[dtos.ApplicationVersionDTO, models.ApplicationVersion]
 	vRepo  repo.ApplicationVersionRepository
 	pRepo  repo.ApplicationProfileRepository
 	cRepo  repo.ApplicationCatalogRepository
@@ -83,7 +94,7 @@ func (s *applicationVersionNestedService) createOneShot(ctx context.Context, inO
 	})
 }
 
-func (s *applicationVersionNestedService) CreateNested(ctx context.Context, parentID string, dto *models.ApplicationVersion) error {
+func (s *applicationVersionNestedService) CreateNested(ctx context.Context, parentID string, dto *dtos.ApplicationVersionDTO) error {
 	var model models.ApplicationVersion
 	s.mapper.ToModel(dto, &model)
 	if err := s.mapper.ApplyParentScopes(parentID, &model); err != nil {
@@ -93,20 +104,26 @@ func (s *applicationVersionNestedService) CreateNested(ctx context.Context, pare
 	return s.createOneShot(ctx, &model)
 }
 
-func (s *applicationVersionNestedService) Update(ctx context.Context, id string, inOut *models.ApplicationVersion) error {
+func (s *applicationVersionNestedService) Update(ctx context.Context, id string, inOut *dtos.ApplicationVersionDTO) error {
 	scopes, err := s.mapper.GetModelKey(id)
 	if err != nil {
 		return err
 	}
-	return s.vRepo.WithTx(ctx, func(txCtx context.Context) error {
-		if err := s.validateVersionStageTransition(txCtx, scopes, inOut); err != nil {
+	var model models.ApplicationVersion
+	s.mapper.ToModel(inOut, &model)
+	err = s.vRepo.WithTx(ctx, func(txCtx context.Context) error {
+		if err := s.validateVersionStageTransition(txCtx, scopes, &model); err != nil {
 			return err
 		}
-		if err := s.updateVersion(txCtx, scopes, inOut); err != nil {
+		if err := s.updateVersion(txCtx, scopes, &model); err != nil {
 			return err
 		}
-		return s.syncCatalogFromVersion(txCtx, *inOut)
+		return s.syncCatalogFromVersion(txCtx, model)
 	})
+	if err != nil {
+		s.mapper.ToDTO(&model, inOut)
+	}
+	return err
 }
 
 func (s *applicationVersionNestedService) validateVersionStageTransition(ctx context.Context, scopes map[string]any, inOut *models.ApplicationVersion) error {
