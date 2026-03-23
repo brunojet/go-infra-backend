@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"strconv"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // Int64ToString formats an int64 to base-10 string without extra allocations.
@@ -43,9 +45,15 @@ func ToNullTime(t *time.Time) sql.NullTime {
 
 // FromNullTime returns a pointer to UTC time or nil when invalid.
 func FromNullTime(nt any) *time.Time {
-	if v, ok := nt.(sql.NullTime); ok {
-		if v.Valid {
-			tt := v.Time.UTC()
+	switch t := nt.(type) {
+	case sql.NullTime:
+		if t.Valid {
+			tt := t.Time.UTC()
+			return &tt
+		}
+	case gorm.DeletedAt:
+		if t.Valid {
+			tt := t.Time.UTC()
 			return &tt
 		}
 	}

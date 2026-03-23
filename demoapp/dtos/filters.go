@@ -1,7 +1,7 @@
 package dtos
 
 type FilterTypeDTO struct {
-	FilterTypeId int64  `json:"filterTypeId"`
+	FilterTypeId int64  `json:"filterTypeId,string"`
 	Name         string `json:"name"`
 	Description  string `json:"description,omitempty"`
 	CreatedAt    string `json:"createdAt,omitempty"`
@@ -10,8 +10,8 @@ type FilterTypeDTO struct {
 }
 
 type FilterDTO struct {
-	FilterId     int64         `json:"filterId"`
-	FilterTypeId int64         `json:"filterTypeId"`
+	FilterId     int64         `json:"filterId,string"`
+	FilterTypeId int64         `json:"filterTypeId,string"`
 	Name         string        `json:"name"`
 	Description  string        `json:"description,omitempty"`
 	CreatedAt    string        `json:"createdAt,omitempty"`
