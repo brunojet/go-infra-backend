@@ -5,9 +5,8 @@ import (
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
-	"github.com/brunojet/go-infra-backend/internal/ports/services"
-	internalservices "github.com/brunojet/go-infra-backend/internal/ports/services"
 	"github.com/brunojet/go-infra-backend/internal/utils"
+	"github.com/brunojet/go-infra-backend/pkg/ports/services"
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
@@ -67,7 +66,7 @@ type applicationVersionNestedService struct {
 
 func NewApplicationVersionNestedService(r repo.ApplicationVersionRepository, p repo.ApplicationProfileRepository, c repo.ApplicationCatalogRepository) ApplicationVersionNestedService {
 	return &applicationVersionNestedService{
-		NestedService: internalservices.NewNestedServiceImpl(r, applicationVersionNestedMapper{}),
+		NestedService: services.NewNestedServiceImpl(r, applicationVersionNestedMapper{}),
 		vRepo:         r,
 		pRepo:         p,
 		cRepo:         c,

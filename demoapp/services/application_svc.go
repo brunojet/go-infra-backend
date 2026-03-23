@@ -2,8 +2,8 @@ package services
 
 import (
 	"github.com/brunojet/go-infra-backend/demoapp/models"
-	"github.com/brunojet/go-infra-backend/internal/ports/services"
 	rpoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/services"
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 

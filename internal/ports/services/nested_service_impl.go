@@ -8,36 +8,16 @@ import (
 )
 
 type nestedServiceImpl[D any, E repoContracts.Entity] struct {
+	svcContracts.Service[D, E]
 	nestRpo repoContracts.Repository[E]
 	nestMap svcContracts.NestedServiceMapper[D, E]
-	baseSvc svcContracts.Service[D, E]
 }
 
 func NewNestedServiceImpl[D any, E repoContracts.Entity](
 	r repoContracts.Repository[E],
 	m svcContracts.NestedServiceMapper[D, E],
 ) svcContracts.NestedService[D, E] {
-	return &nestedServiceImpl[D, E]{nestRpo: r, nestMap: m, baseSvc: NewServiceImpl(r, m)}
-}
-
-func (s *nestedServiceImpl[D, E]) Create(ctx context.Context, dto *D) error {
-	return s.baseSvc.Create(ctx, dto)
-}
-
-func (s *nestedServiceImpl[D, E]) List(ctx context.Context, params svcContracts.ListParams) ([]D, int64, error) {
-	return s.baseSvc.List(ctx, params)
-}
-
-func (s *nestedServiceImpl[D, E]) GetByID(ctx context.Context, id string) (D, error) {
-	return s.baseSvc.GetByID(ctx, id)
-}
-
-func (s *nestedServiceImpl[D, E]) Update(ctx context.Context, id string, dto *D) error {
-	return s.baseSvc.Update(ctx, id, dto)
-}
-
-func (s *nestedServiceImpl[D, E]) Delete(ctx context.Context, id string) error {
-	return s.baseSvc.Delete(ctx, id)
+	return &nestedServiceImpl[D, E]{Service: NewServiceImpl(r, m), nestRpo: r, nestMap: m}
 }
 
 func (s *nestedServiceImpl[D, E]) CreateNested(ctx context.Context, parentID string, dto *D) error {

@@ -6,11 +6,8 @@ import (
 	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 )
 
-type ServiceMapper[D any, E repoContracts.Entity] interface {
-	ToModel(dto *D, model *E)
-	ToDTO(model *E, dto *D)
-	GetModelKey(id string) (map[string]any, error)
-	ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error)
+type AnyInt interface {
+	~int64 | ~int32 | ~int16
 }
 
 type QueryParams struct {
@@ -23,6 +20,13 @@ type ListParams struct {
 	Size    int
 	OrderBy string
 	Order   string
+}
+
+type ServiceMapper[D any, E repoContracts.Entity] interface {
+	ToModel(dto *D, model *E)
+	ToDTO(model *E, dto *D)
+	GetModelKey(id string) (map[string]any, error)
+	ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error)
 }
 
 type Service[D any, E repoContracts.Entity] interface {

@@ -5,10 +5,8 @@ import (
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
-	"github.com/brunojet/go-infra-backend/internal/ports/services"
-	internalservices "github.com/brunojet/go-infra-backend/internal/ports/services"
 	rpoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
-	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/services"
 	"gorm.io/gorm"
 )
 
@@ -57,11 +55,11 @@ func (applicationProfileNestedMapper) GetModelKey(id string) (map[string]any, er
 }
 
 type ApplicationProfileNestedService interface {
-	svcContracts.NestedService[models.ApplicationProfile, models.ApplicationProfile]
+	services.NestedService[models.ApplicationProfile, models.ApplicationProfile]
 }
 
 type applicationProfileNestedService struct {
-	svcContracts.NestedService[models.ApplicationProfile, models.ApplicationProfile]
+	services.NestedService[models.ApplicationProfile, models.ApplicationProfile]
 	pRepo  repo.ApplicationProfileRepository
 	acRepo repo.ApplicationConfigurationRepository
 	vRepo  repo.ApplicationVersionRepository
@@ -71,7 +69,7 @@ type applicationProfileNestedService struct {
 
 func NewApplicationProfileNestedService(p repo.ApplicationProfileRepository, a repo.ApplicationConfigurationRepository, v repo.ApplicationVersionRepository, c repo.ApplicationCatalogRepository) ApplicationProfileNestedService {
 	return &applicationProfileNestedService{
-		NestedService: internalservices.NewNestedServiceImpl(p, applicationProfileNestedMapper{}),
+		NestedService: services.NewNestedServiceImpl(p, applicationProfileNestedMapper{}),
 		pRepo:         p,
 		acRepo:        a,
 		vRepo:         v,

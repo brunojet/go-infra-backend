@@ -14,9 +14,9 @@ import (
 )
 
 type nestedGinHandler[E rpocontracts.Entity, D any] struct {
-	php         *HandlerParameters
-	svc         svccontracts.NestedService[D, E]
-	basehandler hndcontracts.GenericHandler[E, D]
+	hndcontracts.GenericHandler[E, D]
+	php *HandlerParameters
+	svc svccontracts.NestedService[D, E]
 }
 
 func NewGenericNestedHandler[E rpocontracts.Entity, D any](php *HandlerParameters, hp *HandlerParameters, s svccontracts.NestedService[D, E]) hndcontracts.NestedGenericHandler[E, D] {
@@ -24,28 +24,24 @@ func NewGenericNestedHandler[E rpocontracts.Entity, D any](php *HandlerParameter
 	if svc, ok := s.(svccontracts.Service[D, E]); ok {
 		baseHandler = NewGenericHandler[E](hp, svc)
 	} else {
-		panic("provided service does not implement Service[D, E]")
+		log.Default().Panic("provided service does not implement Service[D, E]")
 	}
 	return &nestedGinHandler[E, D]{
-		php:         php,
-		svc:         s,
-		basehandler: baseHandler, // Use the base service for non-nested operations
+		GenericHandler: baseHandler, // Use the base service for non-nested operations
+		php:            php,
+		svc:            s,
 	}
 }
 
 // RegisterCollection registers collection-level routes for nested resources (e.g., /parent/:parentId/items)
 func (h *nestedGinHandler[E, D]) RegisterCollection(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
 	handlerNestedPath := strings.Trim(h.php.HandlerPath, "/")
-	handlerPath := strings.Trim(h.basehandler.(*ginHandler[E, D]).hp.HandlerPath, "/")
+	handlerPath := strings.Trim(h.GenericHandler.(*ginHandler[E, D]).hp.HandlerPath, "/")
 	if handlerNestedPath == "" || handlerPath == "" {
 		log.Default().Panic("HandlerPath cannot be empty")
 	}
 	fullPath := fmt.Sprintf("%s/:id/%s", handlerNestedPath, handlerPath)
 	rg.Handle(strings.ToUpper(method), fullPath, handler)
-}
-
-func (h *nestedGinHandler[E, D]) RegisterInstance(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
-	h.basehandler.RegisterInstance(rg, method, handler)
 }
 
 func (h *nestedGinHandler[E, D]) CreateNested(c *gin.Context) {
@@ -78,16 +74,4 @@ func (h *nestedGinHandler[E, D]) ListNested(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, list)
-}
-
-func (h *nestedGinHandler[E, D]) GetByID(c *gin.Context) {
-	h.basehandler.GetByID(c)
-}
-
-func (h *nestedGinHandler[E, D]) Update(c *gin.Context) {
-	h.basehandler.Update(c)
-}
-
-func (h *nestedGinHandler[E, D]) Delete(c *gin.Context) {
-	h.basehandler.Delete(c)
 }
