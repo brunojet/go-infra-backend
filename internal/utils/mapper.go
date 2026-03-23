@@ -42,12 +42,22 @@ func ToNullTime(t *time.Time) sql.NullTime {
 }
 
 // FromNullTime returns a pointer to UTC time or nil when invalid.
-func FromNullTime(nt sql.NullTime) *time.Time {
-	if !nt.Valid {
-		return nil
+func FromNullTime(nt any) *time.Time {
+	if v, ok := nt.(sql.NullTime); ok {
+		if v.Valid {
+			tt := v.Time.UTC()
+			return &tt
+		}
 	}
-	tt := nt.Time.UTC()
-	return &tt
+	return nil
+}
+
+func FromNullTimeRFC3339(nt any) string {
+	tt := FromNullTime(nt)
+	if tt != nil {
+		return tt.Format(time.RFC3339)
+	}
+	return ""
 }
 
 // ToNullInt converts an int to sql.NullInt64.

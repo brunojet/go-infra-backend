@@ -1,7 +1,6 @@
 package services
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/brunojet/go-infra-backend/demoapp/dtos"
@@ -9,6 +8,7 @@ import (
 	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/services"
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/utils"
 )
 
 // filterTypeService: service simples (não nested)
@@ -23,34 +23,18 @@ func (filterTypeMapper) ApplyQueryScopes(queryScopes map[string]any) (map[string
 
 // DTO -> Model
 func (filterTypeMapper) ToModel(dto *dtos.FilterTypeDTO, model *models.FilterType) {
-	model.Name = sql.NullString{String: dto.Name, Valid: dto.Name != ""}
-	model.Description = sql.NullString{String: dto.Description, Valid: dto.Description != ""}
+	model.Name = utils.ToNullString(dto.Name)
+	model.Description = utils.ToNullString(dto.Description)
 }
 
 // Model -> DTO
 func (filterTypeMapper) ToDTO(model *models.FilterType, dto *dtos.FilterTypeDTO) {
 	dto.FilterTypeId = model.FilterTypeId
-	dto.Name = model.Name.String
-	if model.Description.Valid {
-		dto.Description = model.Description.String
-	} else {
-		dto.Description = ""
-	}
-	if model.CreatedAt.Valid {
-		dto.CreatedAt = model.CreatedAt.Time.Format(time.RFC3339)
-	} else {
-		dto.CreatedAt = ""
-	}
-	if model.UpdatedAt.Valid {
-		dto.UpdatedAt = model.UpdatedAt.Time.Format(time.RFC3339)
-	} else {
-		dto.UpdatedAt = ""
-	}
-	if model.DeletedAt.Valid {
-		dto.DeletedAt = model.DeletedAt.Time.Format(time.RFC3339)
-	} else {
-		dto.DeletedAt = ""
-	}
+	dto.Name = utils.FromNullString(model.Name)
+	dto.Description = utils.FromNullString(model.Description)
+	dto.CreatedAt = utils.FromNullTimeRFC3339(model.CreatedAt)
+	dto.UpdatedAt = utils.FromNullTimeRFC3339(model.UpdatedAt)
+	dto.DeletedAt = utils.FromNullTimeRFC3339(model.DeletedAt)
 }
 
 type FilterTypeService interface {
@@ -100,8 +84,8 @@ func (m filterNestedMapper) ApplyParentScopes(parentID string, model *models.Fil
 func (filterNestedMapper) ToModel(dto *dtos.FilterDTO, model *models.Filter) {
 	model.FilterId = dto.FilterId
 	model.FilterTypeId = dto.FilterTypeId
-	model.Name = sql.NullString{String: dto.Name, Valid: dto.Name != ""}
-	model.Description = sql.NullString{String: dto.Description, Valid: dto.Description != ""}
+	model.Name = utils.ToNullString(dto.Name)
+	model.Description = utils.ToNullString(dto.Description)
 	// Datas não são preenchidas no ToModel (normalmente gerenciadas pelo banco)
 }
 
@@ -109,12 +93,8 @@ func (filterNestedMapper) ToModel(dto *dtos.FilterDTO, model *models.Filter) {
 func (filterNestedMapper) ToDTO(model *models.Filter, dto *dtos.FilterDTO) {
 	dto.FilterId = model.FilterId
 	dto.FilterTypeId = model.FilterTypeId
-	dto.Name = model.Name.String
-	if model.Description.Valid {
-		dto.Description = model.Description.String
-	} else {
-		dto.Description = ""
-	}
+	dto.Name = utils.FromNullString(model.Name)
+	dto.Description = utils.FromNullString(model.Description)
 	if model.CreatedAt.Valid {
 		dto.CreatedAt = model.CreatedAt.Time.Format(time.RFC3339)
 	} else {

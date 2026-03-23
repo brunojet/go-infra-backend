@@ -32,8 +32,10 @@ func StringToInt64(s string) (int64, error) { return utils.StringToInt64(s) }
 func ToNullString(s string) sql.NullString    { return utils.ToNullString(s) }
 func FromNullString(ns sql.NullString) string { return utils.FromNullString(ns) }
 
-func ToNullTime(t *time.Time) sql.NullTime    { return utils.ToNullTime(t) }
-func FromNullTime(nt sql.NullTime) *time.Time { return utils.FromNullTime(nt) }
+// Time mappers
+func ToNullTime(t *time.Time) sql.NullTime { return utils.ToNullTime(t) }
+func FromNullTime(nt any) *time.Time       { return utils.FromNullTime(nt) }
+func FromNullTimeRFC3339(nt any) string    { return utils.FromNullTimeRFC3339(nt) }
 
 func ToNullInt(i int) sql.NullInt64    { return utils.ToNullInt(i) }
 func FromNullInt(ni sql.NullInt64) int { return utils.FromNullInt(ni) }
