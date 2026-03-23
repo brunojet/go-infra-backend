@@ -100,8 +100,11 @@ func (s *applicationVersionNestedService) CreateNested(ctx context.Context, pare
 	if err := s.mapper.ApplyParentScopes(parentID, &model); err != nil {
 		return err
 	}
-
-	return s.createOneShot(ctx, &model)
+	if err := s.createOneShot(ctx, &model); err != nil {
+		return err
+	}
+	s.mapper.ToDTO(&model, dto)
+	return nil
 }
 
 func (s *applicationVersionNestedService) Update(ctx context.Context, id string, inOut *dtos.ApplicationVersionDTO) error {
@@ -111,7 +114,7 @@ func (s *applicationVersionNestedService) Update(ctx context.Context, id string,
 	}
 	var model models.ApplicationVersion
 	s.mapper.ToModel(inOut, &model)
-	err = s.vRepo.WithTx(ctx, func(txCtx context.Context) error {
+	if err := s.vRepo.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.validateVersionStageTransition(txCtx, scopes, &model); err != nil {
 			return err
 		}
@@ -119,11 +122,11 @@ func (s *applicationVersionNestedService) Update(ctx context.Context, id string,
 			return err
 		}
 		return s.syncCatalogFromVersion(txCtx, model)
-	})
-	if err != nil {
-		s.mapper.ToDTO(&model, inOut)
+	}); err != nil {
+		return err
 	}
-	return err
+	s.mapper.ToDTO(&model, inOut)
+	return nil
 }
 
 func (s *applicationVersionNestedService) validateVersionStageTransition(ctx context.Context, scopes map[string]any, inOut *models.ApplicationVersion) error {

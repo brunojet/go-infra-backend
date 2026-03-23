@@ -52,7 +52,6 @@ func (r *ApplicationVersionRepo) LoadCurrentStage(ctx context.Context, scope map
 	if result.RowsAffected == 0 {
 		return 0, gorm.ErrRecordNotFound
 	}
-
 	return stage, nil
 }
 

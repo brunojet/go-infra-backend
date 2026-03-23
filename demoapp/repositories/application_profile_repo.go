@@ -22,7 +22,7 @@ const (
 
 type ApplicationProfileRepository interface {
 	contracts.Repository[models.ApplicationProfile]
-	LoadCurrentStage(ctx context.Context, profileID int64) (int16, error)
+	LoadCurrentStage(ctx context.Context, scope map[string]any) (int16, error)
 	FindCurrentProductionProfileID(ctx context.Context, applicationID int64) (int64, error)
 	ArchiveStageDuplicates(ctx context.Context, inOut *models.ApplicationProfile) error
 }
@@ -35,15 +35,14 @@ func NewApplicationProfileRepo(db dbcontracts.DatabaseAdapter) ApplicationProfil
 	return &ApplicationProfileRepo{Repository: portsrepos.NewGormRepository[models.ApplicationProfile](db)}
 }
 
-func (r *ApplicationProfileRepo) LoadCurrentStage(ctx context.Context, profileID int64) (int16, error) {
+func (r *ApplicationProfileRepo) LoadCurrentStage(ctx context.Context, scope map[string]any) (int16, error) {
 	tx, err := portsrepos.TxFromContext(ctx)
 	if err != nil {
 		return 0, err
 	}
-
 	var stage int16
 	result := tx.Model(&models.ApplicationProfile{}).
-		Where(whereProfileIDEq, profileID).
+		Where(scope).
 		Limit(1).
 		Pluck(models.ColAppProfileStage, &stage)
 	if err := result.Error; err != nil {
@@ -52,7 +51,6 @@ func (r *ApplicationProfileRepo) LoadCurrentStage(ctx context.Context, profileID
 	if result.RowsAffected == 0 {
 		return 0, gorm.ErrRecordNotFound
 	}
-
 	return stage, nil
 }
 
@@ -61,7 +59,6 @@ func (r *ApplicationProfileRepo) FindCurrentProductionProfileID(ctx context.Cont
 	if err != nil {
 		return 0, err
 	}
-
 	var profileID int64
 	result := tx.Model(&models.ApplicationProfile{}).
 		Where(whereProfileAppIDEq, applicationID).
@@ -75,7 +72,6 @@ func (r *ApplicationProfileRepo) FindCurrentProductionProfileID(ctx context.Cont
 	if result.RowsAffected == 0 {
 		return 0, gorm.ErrRecordNotFound
 	}
-
 	return profileID, nil
 }
 
@@ -99,18 +95,15 @@ func (r *ApplicationProfileRepo) ArchiveStageDuplicates(ctx context.Context, inO
 	if err := validateArchiveProfileRequiredFields(inOut); err != nil {
 		return err
 	}
-
 	tx, err := portsrepos.TxFromContext(ctx)
 	if err != nil {
 		return err
 	}
-
 	query := tx.Session(&gorm.Session{SkipHooks: true}).Model(&models.ApplicationProfile{}).
 		Where(whereProfileIDNeq, inOut.ApplicationProfileId).
 		Where(whereProfileAppIDEq, inOut.ApplicationId).
 		Where(whereProfileStageEq, inOut.Stage.Int16).
 		Where(whereProfileDelIsNil)
-
 	return query.Updates(map[string]any{
 		models.ColAppProfileStage:     models.ApplicationStageArchived,
 		models.ColAppProfileDeletedAt: sql.NullTime{Time: tx.NowFunc(), Valid: true},

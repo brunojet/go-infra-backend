@@ -112,8 +112,11 @@ func (s *applicationProfileNestedService) CreateNested(ctx context.Context, pare
 	if err := s.mapper.ApplyParentScopes(parentID, &model); err != nil {
 		return err
 	}
-
-	return s.createOneShot(ctx, &model)
+	if err := s.createOneShot(ctx, &model); err != nil {
+		return err
+	}
+	s.mapper.ToDTO(&model, dto)
+	return nil
 }
 
 func (s *applicationProfileNestedService) Update(ctx context.Context, id string, inOut *dtos.ApplicationProfileDTO) error {
@@ -123,8 +126,7 @@ func (s *applicationProfileNestedService) Update(ctx context.Context, id string,
 	}
 	var model models.ApplicationProfile
 	s.mapper.ToModel(inOut, &model)
-
-	return s.pRepo.WithTx(ctx, func(txCtx context.Context) error {
+	if err := s.pRepo.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.validateProfileStageTransition(txCtx, scopes, &model); err != nil {
 			return err
 		}
@@ -132,19 +134,18 @@ func (s *applicationProfileNestedService) Update(ctx context.Context, id string,
 			return err
 		}
 		return s.syncCatalogFromProfile(txCtx, model)
-	})
+	}); err != nil {
+		return err
+	}
+	s.mapper.ToDTO(&model, inOut)
+	return nil
 }
 
 func (s *applicationProfileNestedService) validateProfileStageTransition(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
-	profileID, err := services.ParseScopeInt[int64](scopes, models.ColAppProfileID, 1)
+	currentStage, err := s.pRepo.LoadCurrentStage(ctx, scopes)
 	if err != nil {
 		return err
 	}
-	currentStage, err := s.pRepo.LoadCurrentStage(ctx, profileID)
-	if err != nil {
-		return err
-	}
-
 	return inOut.ValidateProfileStageTransition(currentStage)
 }
 
@@ -152,7 +153,6 @@ func (s *applicationProfileNestedService) updateProfile(ctx context.Context, sco
 	if err := s.pRepo.Update(ctx, scopes, inOut); err != nil {
 		return err
 	}
-
 	return s.pRepo.ArchiveStageDuplicates(ctx, inOut)
 }
 
@@ -166,7 +166,6 @@ func (s *applicationProfileNestedService) listApplicationConfigurationsPage(ctx 
 		OrderBy: profileSyncOrderBy,
 		Order:   profileSyncOrder,
 	}
-
 	return s.acRepo.List(ctx, params)
 }
 
@@ -181,7 +180,6 @@ func (s *applicationProfileNestedService) createCatalogFromProfile(ctx context.C
 	if err := s.cRepo.Create(ctx, &catalog); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -195,7 +193,6 @@ func (s *applicationProfileNestedService) createCatalogsFromProfile(ctx context.
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -225,7 +222,6 @@ func (s *applicationProfileNestedService) syncCatalogsFromProfileWithStages(ctx 
 			return err
 		}
 	}
-
 	return nil
 }
 
