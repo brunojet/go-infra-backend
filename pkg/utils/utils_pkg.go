@@ -37,8 +37,11 @@ func ToNullTime(t *time.Time) sql.NullTime { return utils.ToNullTime(t) }
 func FromNullTime(nt any) *time.Time       { return utils.FromNullTime(nt) }
 func FromNullTimeRFC3339(nt any) string    { return utils.FromNullTimeRFC3339(nt) }
 
-func ToNullInt(i int) sql.NullInt64    { return utils.ToNullInt(i) }
-func FromNullInt(ni sql.NullInt64) int { return utils.FromNullInt(ni) }
+func ToNullInt16(i int16) sql.NullInt16    { return utils.ToNullInt16(i) }
+func FromNullInt16(ni sql.NullInt16) int16 { return utils.FromNullInt16(ni) }
+
+func ToNullInt64(i int) sql.NullInt64    { return utils.ToNullInt64(i) }
+func FromNullInt64(ni sql.NullInt64) int { return utils.FromNullInt64(ni) }
 
 func ToNullBool(b bool) sql.NullBool    { return utils.ToNullBool(b) }
 func FromNullBool(nb sql.NullBool) bool { return utils.FromNullBool(nb) }

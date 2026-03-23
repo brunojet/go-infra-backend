@@ -68,16 +68,30 @@ func FromNullTimeRFC3339(nt any) string {
 	return ""
 }
 
-// ToNullInt converts an int to sql.NullInt64.
-func ToNullInt(i int) sql.NullInt64 {
+func ToNullInt16(i int16) sql.NullInt16 {
+	if i == 0 {
+		return sql.NullInt16{Valid: false}
+	}
+	return sql.NullInt16{Int16: i, Valid: true}
+}
+
+func FromNullInt16(ni sql.NullInt16) int16 {
+	if ni.Valid {
+		return ni.Int16
+	}
+	return 0
+}
+
+// ToNullInt64 converts an int to sql.NullInt64.
+func ToNullInt64(i int) sql.NullInt64 {
 	if i == 0 {
 		return sql.NullInt64{Valid: false}
 	}
 	return sql.NullInt64{Int64: int64(i), Valid: true}
 }
 
-// FromNullInt converts sql.NullInt64 to int (zero when NULL).
-func FromNullInt(ni sql.NullInt64) int {
+// FromNullInt64 converts sql.NullInt64 to int (zero when NULL).
+func FromNullInt64(ni sql.NullInt64) int {
 	if ni.Valid {
 		return int(ni.Int64)
 	}

@@ -51,13 +51,13 @@ func TestNullTimeHelpers(t *testing.T) {
 
 func TestNullIntBoolFloat(t *testing.T) {
 	a := assert.New(t)
-	n := ToNullInt(0)
+	n := ToNullInt64(0)
 	a.False(n.Valid)
-	a.Equal(0, FromNullInt(n))
+	a.Equal(0, FromNullInt64(n))
 
-	n2 := ToNullInt(5)
+	n2 := ToNullInt64(5)
 	a.True(n2.Valid)
-	a.Equal(5, FromNullInt(n2))
+	a.Equal(5, FromNullInt64(n2))
 
 	nb := ToNullBool(true)
 	a.True(nb.Valid)
