@@ -13,13 +13,14 @@ type ApplicationDTO struct {
 
 type ApplicationConfigurationDTO struct {
 	// Chave composta encodada em base64
-	ApplicationConfigurationId string                         `json:"applicationConfigurationId"`
-	PackageName                string                         `json:"packageName"`
-	CreatedAt                  string                         `json:"createdAt,omitempty"`
-	UpdatedAt                  string                         `json:"updatedAt,omitempty"`
-	DeletedAt                  string                         `json:"deletedAt,omitempty"`
-	Application                *ApplicationDTO                `json:"application,omitempty"`
-	TerminalModelConfiguration *TerminalModelConfigurationDTO `json:"terminalModelConfiguration,omitempty"`
+	ApplicationConfigurationId   string                         `json:"applicationConfigurationId"`
+	TerminalModelConfigurationId int64                          `json:"terminalModelConfigurationId,string"`
+	PackageName                  string                         `json:"packageName"`
+	CreatedAt                    string                         `json:"createdAt,omitempty"`
+	UpdatedAt                    string                         `json:"updatedAt,omitempty"`
+	DeletedAt                    string                         `json:"deletedAt,omitempty"`
+	Application                  *ApplicationDTO                `json:"application,omitempty"`
+	TerminalModelConfiguration   *TerminalModelConfigurationDTO `json:"terminalModelConfiguration,omitempty"`
 }
 
 // ApplicationCatalogDTO representa o catálogo de aplicações, com relacionamentos aninhados

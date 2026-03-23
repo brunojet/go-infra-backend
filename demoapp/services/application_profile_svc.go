@@ -3,10 +3,12 @@ package services
 import (
 	"context"
 
+	"github.com/brunojet/go-infra-backend/demoapp/dtos"
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
 	rpoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/services"
+	utils "github.com/brunojet/go-infra-backend/pkg/utils"
 	"gorm.io/gorm"
 )
 
@@ -38,12 +40,29 @@ func (m applicationProfileNestedMapper) ApplyParentScopes(parentID string, model
 	return nil
 }
 
-func (applicationProfileNestedMapper) ToModel(dto *models.ApplicationProfile, model *models.ApplicationProfile) {
-	*model = *dto
+// Converte de DTO para Model
+func (applicationProfileNestedMapper) ToModel(dto *dtos.ApplicationProfileDTO, model *models.ApplicationProfile) {
+	model.ApplicationId = dto.ApplicationId
+	model.Stage = utils.ToNullInt16(dto.Stage)
+	model.Name = utils.ToNullString(dto.Name)
+	model.Description = utils.ToNullString(dto.Description)
+	model.ApplicationImageId = dto.ApplicationImageId
 }
 
-func (applicationProfileNestedMapper) ToDTO(model *models.ApplicationProfile, dto *models.ApplicationProfile) {
-	*dto = *model
+// Converte de Model para DTO
+func (applicationProfileNestedMapper) ToDTO(model *models.ApplicationProfile, dto *dtos.ApplicationProfileDTO) {
+	dto.ApplicationProfileId = model.ApplicationProfileId
+	dto.ApplicationId = model.ApplicationId
+	dto.Stage = utils.FromNullInt16(model.Stage)
+	dto.Name = utils.FromNullString(model.Name)
+	dto.Description = utils.FromNullString(model.Description)
+	dto.ApplicationImageId = model.ApplicationImageId
+	dto.ReviewAt = utils.FromNullTimeRFC3339(model.ReviewAt)
+	dto.ProductionAt = utils.FromNullTimeRFC3339(model.ProductionAt)
+	dto.CreatedAt = utils.FromNullTimeRFC3339(model.CreatedAt)
+	dto.UpdatedAt = utils.FromNullTimeRFC3339(model.UpdatedAt)
+	dto.DeletedAt = utils.FromNullTimeRFC3339(model.DeletedAt)
+	// TODO: Mapear relacionamentos aninhados se necessário
 }
 
 func (applicationProfileNestedMapper) GetModelKey(id string) (map[string]any, error) {
@@ -55,11 +74,11 @@ func (applicationProfileNestedMapper) GetModelKey(id string) (map[string]any, er
 }
 
 type ApplicationProfileNestedService interface {
-	services.NestedService[models.ApplicationProfile, models.ApplicationProfile]
+	services.NestedService[dtos.ApplicationProfileDTO, models.ApplicationProfile]
 }
 
 type applicationProfileNestedService struct {
-	services.NestedService[models.ApplicationProfile, models.ApplicationProfile]
+	services.NestedService[dtos.ApplicationProfileDTO, models.ApplicationProfile]
 	pRepo  repo.ApplicationProfileRepository
 	acRepo repo.ApplicationConfigurationRepository
 	vRepo  repo.ApplicationVersionRepository
@@ -87,7 +106,7 @@ func (s *applicationProfileNestedService) createOneShot(ctx context.Context, inO
 	})
 }
 
-func (s *applicationProfileNestedService) CreateNested(ctx context.Context, parentID string, dto *models.ApplicationProfile) error {
+func (s *applicationProfileNestedService) CreateNested(ctx context.Context, parentID string, dto *dtos.ApplicationProfileDTO) error {
 	var model models.ApplicationProfile
 	s.mapper.ToModel(dto, &model)
 	if err := s.mapper.ApplyParentScopes(parentID, &model); err != nil {
@@ -97,19 +116,22 @@ func (s *applicationProfileNestedService) CreateNested(ctx context.Context, pare
 	return s.createOneShot(ctx, &model)
 }
 
-func (s *applicationProfileNestedService) Update(ctx context.Context, id string, inOut *models.ApplicationProfile) error {
+func (s *applicationProfileNestedService) Update(ctx context.Context, id string, inOut *dtos.ApplicationProfileDTO) error {
 	scopes, err := s.mapper.GetModelKey(id)
 	if err != nil {
 		return err
 	}
+	var model models.ApplicationProfile
+	s.mapper.ToModel(inOut, &model)
+
 	return s.pRepo.WithTx(ctx, func(txCtx context.Context) error {
-		if err := s.validateProfileStageTransition(txCtx, scopes, inOut); err != nil {
+		if err := s.validateProfileStageTransition(txCtx, scopes, &model); err != nil {
 			return err
 		}
-		if err := s.updateProfile(txCtx, scopes, inOut); err != nil {
+		if err := s.updateProfile(txCtx, scopes, &model); err != nil {
 			return err
 		}
-		return s.syncCatalogFromProfile(txCtx, *inOut)
+		return s.syncCatalogFromProfile(txCtx, model)
 	})
 }
 

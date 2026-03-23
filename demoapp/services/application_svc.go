@@ -1,13 +1,36 @@
 package services
 
 import (
+	"log"
+
+	"github.com/brunojet/go-infra-backend/demoapp/dtos"
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	rpoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/services"
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	utils "github.com/brunojet/go-infra-backend/pkg/utils"
 )
 
 type applicationMapper struct{}
+
+// Converte de DTO para Model
+func (applicationMapper) ToModel(dto *dtos.ApplicationDTO, model *models.Application) {
+	model.CustomerId = utils.ToNullString(dto.CustomerId)
+	model.Name = utils.ToNullString(dto.Name)
+	model.Description = utils.ToNullString(dto.Description)
+}
+
+// Converte de Model para DTO
+func (applicationMapper) ToDTO(model *models.Application, dto *dtos.ApplicationDTO) {
+	dto.ApplicationId = model.ApplicationId
+	dto.CustomerId = utils.FromNullString(model.CustomerId)
+	dto.Name = utils.FromNullString(model.Name)
+	dto.Description = utils.FromNullString(model.Description)
+	dto.CreatedAt = utils.FromNullTimeRFC3339(model.CreatedAt)
+	dto.UpdatedAt = utils.FromNullTimeRFC3339(model.UpdatedAt)
+	dto.DeletedAt = utils.FromNullTimeRFC3339(model.DeletedAt)
+	// TODO: Mapear relacionamentos aninhados se necessário
+}
 
 func (applicationMapper) GetModelKey(id string) (map[string]any, error) {
 	return map[string]any{models.ColApplicationID: id}, nil
@@ -17,20 +40,12 @@ func (applicationMapper) ApplyQueryScopes(queryScopes map[string]any) (map[strin
 	return queryScopes, nil
 }
 
-func (applicationMapper) ToModel(dto *models.Application, model *models.Application) {
-	*model = *dto
-}
-
-func (applicationMapper) ToDTO(model *models.Application, dto *models.Application) {
-	*dto = *model
-}
-
 type ApplicationService interface {
-	svcContracts.Service[models.Application, models.Application]
+	svcContracts.Service[dtos.ApplicationDTO, models.Application]
 }
 
 type applicationService struct {
-	svcContracts.Service[models.Application, models.Application]
+	svcContracts.Service[dtos.ApplicationDTO, models.Application]
 }
 
 func NewApplicationService(repo rpoContracts.Repository[models.Application]) ApplicationService {
@@ -71,12 +86,23 @@ func (m applicationConfigurationNestedMapper) ApplyParentScopes(parentID string,
 	return nil
 }
 
-func (applicationConfigurationNestedMapper) ToModel(dto *models.ApplicationConfiguration, model *models.ApplicationConfiguration) {
-	*model = *dto
+// Converte de DTO para Model
+func (applicationConfigurationNestedMapper) ToModel(dto *dtos.ApplicationConfigurationDTO, model *models.ApplicationConfiguration) {
+	model.TerminalModelConfigurationId = dto.TerminalModelConfigurationId
+	model.PackageName = utils.ToNullString(dto.PackageName)
 }
 
-func (applicationConfigurationNestedMapper) ToDTO(model *models.ApplicationConfiguration, dto *models.ApplicationConfiguration) {
-	*dto = *model
+// Converte de Model para DTO
+func (applicationConfigurationNestedMapper) ToDTO(model *models.ApplicationConfiguration, dto *dtos.ApplicationConfigurationDTO) {
+	var err error
+	dto.ApplicationConfigurationId, err = utils.EncodeCompositeKey(model.ApplicationId, model.TerminalModelConfigurationId)
+	if err != nil {
+		log.Panicf("failed to encode composite key for ApplicationConfiguration: %v", err)
+	}
+	dto.PackageName = utils.FromNullString(model.PackageName)
+	dto.CreatedAt = utils.FromNullTimeRFC3339(model.CreatedAt)
+	dto.UpdatedAt = utils.FromNullTimeRFC3339(model.UpdatedAt)
+	dto.DeletedAt = utils.FromNullTimeRFC3339(model.DeletedAt)
 }
 
 func (applicationConfigurationNestedMapper) GetModelKey(id string) (map[string]any, error) {
@@ -84,11 +110,11 @@ func (applicationConfigurationNestedMapper) GetModelKey(id string) (map[string]a
 }
 
 type ApplicationConfigurationNestedService interface {
-	svcContracts.NestedService[models.ApplicationConfiguration, models.ApplicationConfiguration]
+	svcContracts.NestedService[dtos.ApplicationConfigurationDTO, models.ApplicationConfiguration]
 }
 
 type applicationConfigurationNestedService struct {
-	svcContracts.NestedService[models.ApplicationConfiguration, models.ApplicationConfiguration]
+	svcContracts.NestedService[dtos.ApplicationConfigurationDTO, models.ApplicationConfiguration]
 }
 
 func NewApplicationConfigurationNestedService(repo rpoContracts.Repository[models.ApplicationConfiguration]) ApplicationConfigurationNestedService {
