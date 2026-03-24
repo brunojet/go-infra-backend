@@ -38,10 +38,10 @@ func createEntityForHandlerTest(t *testing.T, h hndcontracts.GenericHandler[Simp
 	c.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
-	ms.EXPECT().Create(gomock.Any(), gomock.AssignableToTypeOf(&SimpleDTO{})).DoAndReturn(func(ctx context.Context, dto any) error {
-		d := dto.(*SimpleDTO)
+	ms.EXPECT().Create(gomock.Any(), gomock.AssignableToTypeOf(SimpleDTO{})).DoAndReturn(func(ctx context.Context, dto any) (SimpleDTO, error) {
+		d := dto.(SimpleDTO)
 		d.ID = "created-id"
-		return nil
+		return d, nil
 	})
 
 	h.Create(c)
@@ -84,25 +84,25 @@ func TestGetByID_Handler(t *testing.T) {
 	// success
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
-	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
-	c.Params = gin.Params{{Key: "id", Value: "the-id"}}
-	ms.EXPECT().GetByID(gomock.Any(), "the-id").Return(SimpleDTO{ID: "the-id"}, nil)
+	c.Request = httptest.NewRequest(http.MethodGet, "/1", nil)
+	c.Params = gin.Params{{Key: "id", Value: "1"}}
+	ms.EXPECT().GetByID(gomock.Any(), "1").Return(SimpleDTO{ID: "1"}, nil)
 	h.GetByID(c)
 	require.Equal(t, http.StatusOK, rec.Code)
 
 	// not found
 	rec = httptest.NewRecorder()
 	c, _ = gin.CreateTestContext(rec)
-	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
-	c.Params = gin.Params{{Key: "id", Value: "no"}}
-	ms.EXPECT().GetByID(gomock.Any(), "no").Return(SimpleDTO{}, repoerrs.ErrNotFound)
+	c.Request = httptest.NewRequest(http.MethodGet, "/2", nil)
+	c.Params = gin.Params{{Key: "id", Value: "2"}}
+	ms.EXPECT().GetByID(gomock.Any(), "2").Return(SimpleDTO{}, repoerrs.ErrNotFound)
 	h.GetByID(c)
 	require.Equal(t, http.StatusNotFound, rec.Code)
 
 	// id inválido
 	rec = httptest.NewRecorder()
 	c, _ = gin.CreateTestContext(rec)
-	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, "/0", nil)
 	c.Params = gin.Params{{Key: "id", Value: "0"}} // inválido para Int64GtZero
 	h.GetByID(c)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
