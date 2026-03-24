@@ -56,7 +56,7 @@ func TestCreate_Handler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
-	hp := &HandlerParameters{IDValidationRule: Int64GtZero}
+	hp := HandlerParameters{IDValidationRule: Int64GtZero}
 	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
 
 	id := createEntityForHandlerTest(t, h, ms)
@@ -78,7 +78,7 @@ func TestGetByID_Handler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
-	hp := &HandlerParameters{IDValidationRule: Int64GtZero}
+	hp := HandlerParameters{IDValidationRule: Int64GtZero}
 	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
 
 	// success
@@ -113,7 +113,8 @@ func TestList_Handler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](nil, ms)
+	hp := HandlerParameters{IDValidationRule: Int64GtZero}
+	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
 
 	// success
 	rec := httptest.NewRecorder()
@@ -137,7 +138,7 @@ func TestUpdate_Handler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
-	hp := &HandlerParameters{IDValidationRule: Int64GtZero}
+	hp := HandlerParameters{IDValidationRule: Int64GtZero}
 	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
 
 	// success
@@ -146,8 +147,8 @@ func TestUpdate_Handler(t *testing.T) {
 	upd := `{"name":"joe"}`
 	c.Request = httptest.NewRequest(http.MethodPut, "/", bytes.NewBufferString(upd))
 	c.Request.Header.Set("Content-Type", "application/json")
-	c.Params = gin.Params{{Key: "id", Value: "the-id"}}
-	ms.EXPECT().Update(gomock.Any(), "the-id", gomock.AssignableToTypeOf(SimpleDTO{})).Return(SimpleDTO{}, nil)
+	c.Params = gin.Params{{Key: "id", Value: "1"}} // id válido para Int64GtZero
+	ms.EXPECT().Update(gomock.Any(), "1", gomock.AssignableToTypeOf(SimpleDTO{})).Return(SimpleDTO{}, nil)
 	h.Update(c)
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -156,8 +157,8 @@ func TestUpdate_Handler(t *testing.T) {
 	c, _ = gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodPut, "/", bytes.NewBufferString(upd))
 	c.Request.Header.Set("Content-Type", "application/json")
-	c.Params = gin.Params{{Key: "id", Value: "no"}}
-	ms.EXPECT().Update(gomock.Any(), "no", gomock.AssignableToTypeOf(SimpleDTO{})).Return(SimpleDTO{}, repoerrs.ErrNotFound)
+	c.Params = gin.Params{{Key: "id", Value: "2"}} // outro id válido
+	ms.EXPECT().Update(gomock.Any(), "2", gomock.AssignableToTypeOf(SimpleDTO{})).Return(SimpleDTO{}, repoerrs.ErrNotFound)
 	h.Update(c)
 	require.Equal(t, http.StatusNotFound, rec.Code)
 
@@ -176,15 +177,15 @@ func TestDelete_Handler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
-	hp := &HandlerParameters{IDValidationRule: Int64GtZero}
+	hp := HandlerParameters{IDValidationRule: Int64GtZero}
 	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
 
 	// success
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodDelete, "/", nil)
-	c.Params = gin.Params{{Key: "id", Value: "del"}}
-	ms.EXPECT().Delete(gomock.Any(), "del").Return(nil)
+	c.Params = gin.Params{{Key: "id", Value: "1"}}
+	ms.EXPECT().Delete(gomock.Any(), "1").Return(nil)
 	h.Delete(c)
 	require.Equal(t, http.StatusNoContent, rec.Code)
 
@@ -192,8 +193,8 @@ func TestDelete_Handler(t *testing.T) {
 	rec = httptest.NewRecorder()
 	c, _ = gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodDelete, "/", nil)
-	c.Params = gin.Params{{Key: "id", Value: "del"}}
-	ms.EXPECT().Delete(gomock.Any(), "del").Return(errors.New("boom"))
+	c.Params = gin.Params{{Key: "id", Value: "1"}}
+	ms.EXPECT().Delete(gomock.Any(), "1").Return(errors.New("boom"))
 	h.Delete(c)
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
 
@@ -211,7 +212,8 @@ func TestRegister_Handler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](&HandlerParameters{HandlerPath: "/ping"}, ms)
+	hp := HandlerParameters{HandlerPath: "/ping"}
+	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
 
 	// create real gin engine and group
 	engine := gin.New()
@@ -237,7 +239,8 @@ func TestCreate_Handler_InvalidJSON(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](nil, ms)
+	hp := HandlerParameters{IDValidationRule: Int64GtZero}
+	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
 
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
@@ -253,13 +256,14 @@ func TestUpdate_Handler_InvalidJSON(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](nil, ms)
+	hp := HandlerParameters{IDValidationRule: Int64GtZero}
+	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
 
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodPut, "/", bytes.NewBufferString("not-json"))
 	c.Request.Header.Set("Content-Type", "application/json")
-	c.Params = gin.Params{{Key: "id", Value: "the-id"}}
+	c.Params = gin.Params{{Key: "id", Value: "1"}} // id válido para Int64GtZero
 
 	h.Update(c)
 	require.Equal(t, http.StatusBadRequest, rec.Code)

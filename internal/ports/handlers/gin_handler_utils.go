@@ -38,7 +38,7 @@ func MapErrorToStatus(err error) int {
 	return http.StatusInternalServerError
 }
 
-func GetHandlerPath(handlerParameters *HandlerParameters) string {
+func GetHandlerPath(handlerParameters HandlerParameters) string {
 	handlerPath := strings.Trim(handlerParameters.HandlerPath, "/")
 	if handlerPath == "" {
 		log.Default().Panic("HandlerPath cannot be empty")

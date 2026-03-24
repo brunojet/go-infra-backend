@@ -114,7 +114,7 @@ func TestNestedService_CreateNested(t *testing.T) {
 		return nil
 	})
 
-	out, err := svc.CreateNested(ctx, "42", &dto)
+	out, err := svc.CreateNested(ctx, "42", dto)
 	assert.NoError(t, err)
 	assert.Equal(t, "7", out.ID)
 	assert.Equal(t, int64(42), out.ParentID)
@@ -130,13 +130,13 @@ func TestNestedService_CreateNested_Errors(t *testing.T) {
 
 	repo1 := NewMockRepository[nestedUnitModel](ctrl)
 	svc1 := NewNestedServiceImpl(repoContracts.Repository[nestedUnitModel](repo1), nestedTestMapper{applyParentScopesErr: errors.New("parent error")})
-	_, err := svc1.CreateNested(ctx, "42", &dto)
+	_, err := svc1.CreateNested(ctx, "42", dto)
 	assert.Error(t, err)
 
 	repo2 := NewMockRepository[nestedUnitModel](ctrl)
 	svc2 := NewNestedServiceImpl(repoContracts.Repository[nestedUnitModel](repo2), nestedTestMapper{})
 	repo2.EXPECT().Create(gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
-	_, err = svc2.CreateNested(ctx, "42", &dto)
+	_, err = svc2.CreateNested(ctx, "42", dto)
 	assert.Error(t, err)
 }
 

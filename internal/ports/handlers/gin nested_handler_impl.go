@@ -15,11 +15,11 @@ import (
 
 type nestedGinHandler[C, R, U any, E rpocontracts.Entity] struct {
 	hndcontracts.GenericHandler[C, R, U, E]
-	php *HandlerParameters
+	php HandlerParameters
 	svc svccontracts.NestedService[C, R, U, E]
 }
 
-func NewGenericNestedHandler[C, R, U any, E rpocontracts.Entity](php *HandlerParameters, hp *HandlerParameters, s svccontracts.NestedService[C, R, U, E]) hndcontracts.NestedGenericHandler[C, R, U, E] {
+func NewGenericNestedHandler[C, R, U any, E rpocontracts.Entity](php HandlerParameters, hp HandlerParameters, s svccontracts.NestedService[C, R, U, E]) hndcontracts.NestedGenericHandler[C, R, U, E] {
 	var baseHandler hndcontracts.GenericHandler[C, R, U, E]
 	if svc, ok := s.(svccontracts.Service[C, R, U, E]); ok {
 		baseHandler = NewGenericHandler[C, R, U, E](hp, svc)

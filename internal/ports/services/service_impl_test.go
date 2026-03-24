@@ -144,7 +144,7 @@ func TestGenericService_Create(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl[TestDTO, TestDTO, TestDTO, TestModel](repo, TestMapper{})
+	svc := NewServiceImpl(repo, TestMapper{})
 	ctx := context.Background()
 
 	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *TestModel) error {
@@ -163,7 +163,7 @@ func TestGenericService_GetByID(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl[TestDTO, TestDTO, TestDTO, TestModel](repoContracts.Repository[TestModel](repo), TestMapper{})
+	svc := NewServiceImpl(repoContracts.Repository[TestModel](repo), TestMapper{})
 	ctx := context.Background()
 
 	var createdModel TestModel
@@ -190,7 +190,7 @@ func TestGenericService_List(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl[TestDTO, TestDTO, TestDTO, TestModel](repoContracts.Repository[TestModel](repo), TestMapper{})
+	svc := NewServiceImpl(repoContracts.Repository[TestModel](repo), TestMapper{})
 	ctx := context.Background()
 
 	var inTestData = []TestDTO{
@@ -225,7 +225,7 @@ func TestGenericService_Update(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl[TestDTO, TestDTO, TestDTO, TestModel](repoContracts.Repository[TestModel](repo), TestMapper{})
+	svc := NewServiceImpl(repoContracts.Repository[TestModel](repo), TestMapper{})
 	ctx := context.Background()
 
 	var created TestModel
@@ -262,7 +262,7 @@ func TestGenericService_Delete(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl[TestDTO, TestDTO, TestDTO, TestModel](repoContracts.Repository[TestModel](repo), TestMapper{})
+	svc := NewServiceImpl(repoContracts.Repository[TestModel](repo), TestMapper{})
 	ctx := context.Background()
 
 	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *TestModel) error {
@@ -309,7 +309,7 @@ func TestGenericService_Errors(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl[TestDTO, TestDTO, TestDTO, TestModel](repo, TestMapper{})
+	svc := NewServiceImpl(repo, TestMapper{})
 	ctx := context.Background()
 
 	// Create repo error
@@ -349,7 +349,7 @@ func TestGenericService_List_MapperApplyQueryScopesError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl[TestDTO, TestDTO, TestDTO, TestModel](repo, testMapperQueryScopesError{})
+	svc := NewServiceImpl(repo, testMapperQueryScopesError{})
 	ctx := context.Background()
 
 	_, _, err := svc.List(ctx, contracts.ListParams{Page: 1, Size: 10, OrderBy: "id", Order: "asc"})
@@ -360,7 +360,7 @@ func TestGenericService_GetByID_RepoError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl[TestDTO, TestDTO, TestDTO, TestModel](repo, TestMapper{})
+	svc := NewServiceImpl(repo, TestMapper{})
 	ctx := context.Background()
 
 	repo.EXPECT().GetByID(gomock.Any(), gomock.Any()).Return(TestModel{}, errors.New("repo error"))
@@ -373,7 +373,7 @@ func TestGenericService_Update_RepoError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl[TestDTO, TestDTO, TestDTO, TestModel](repo, TestMapper{})
+	svc := NewServiceImpl(repo, TestMapper{})
 	ctx := context.Background()
 
 	repo.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("repo error"))

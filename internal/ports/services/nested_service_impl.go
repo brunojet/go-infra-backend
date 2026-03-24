@@ -17,12 +17,12 @@ func NewNestedServiceImpl[C, R, U any, E repoContracts.Entity](
 	r repoContracts.Repository[E],
 	m svcContracts.NestedServiceMapper[C, R, U, E],
 ) svcContracts.NestedService[C, R, U, E] {
-	return &nestedServiceImpl[C, R, U, E]{Service: NewServiceImpl[C, R, U, E](r, m), nestRpo: r, nestMap: m}
+	return &nestedServiceImpl[C, R, U, E]{Service: NewServiceImpl(r, m), nestRpo: r, nestMap: m}
 }
 
-func (s *nestedServiceImpl[C, R, U, E]) CreateNested(ctx context.Context, parentID string, dto *C) (R, error) {
+func (s *nestedServiceImpl[C, R, U, E]) CreateNested(ctx context.Context, parentID string, dto C) (R, error) {
 	var model E
-	s.nestMap.ToPostModel(*dto, &model)
+	s.nestMap.ToPostModel(dto, &model)
 	if err := s.nestMap.ApplyParentScopes(parentID, &model); err != nil {
 		var zero R
 		return zero, err

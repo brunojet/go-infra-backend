@@ -12,11 +12,11 @@ import (
 )
 
 type ginHandler[C, R, U any, E rpocontracts.Entity] struct {
-	hp      *HandlerParameters
+	hp      HandlerParameters
 	service svccontracts.Service[C, R, U, E]
 }
 
-func NewGenericHandler[C, R, U any, E rpocontracts.Entity](hp *HandlerParameters, s svccontracts.Service[C, R, U, E]) hndcontracts.GenericHandler[C, R, U, E] {
+func NewGenericHandler[C, R, U any, E rpocontracts.Entity](hp HandlerParameters, s svccontracts.Service[C, R, U, E]) hndcontracts.GenericHandler[C, R, U, E] {
 	return &ginHandler[C, R, U, E]{hp: hp, service: s}
 }
 
