@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
@@ -12,40 +11,32 @@ import (
 	svccontracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
-type ginHandler[C any, R any, U any, E rpocontracts.Entity] struct {
+type ginHandler[C, R, U any, E rpocontracts.Entity] struct {
 	hp      *HandlerParameters
 	service svccontracts.Service[C, R, U, E]
 }
 
-func NewGenericHandler[C any, R any, U any, E rpocontracts.Entity](hp *HandlerParameters, s svccontracts.Service[C, R, U, E]) hndcontracts.GenericHandler[E, C] {
+func NewGenericHandler[C, R, U any, E rpocontracts.Entity](hp *HandlerParameters, s svccontracts.Service[C, R, U, E]) hndcontracts.GenericHandler[C, R, U, E] {
 	return &ginHandler[C, R, U, E]{hp: hp, service: s}
 }
 
 // RegisterCollection registers collection-level routes (e.g., /items)
 func (h *ginHandler[C, R, U, E]) RegisterCollection(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
-	handlerPath := strings.Trim(h.hp.HandlerPath, "/")
-	if handlerPath == "" {
-		log.Default().Panic("HandlerPath cannot be empty")
-	}
+	handlerPath := GetHandlerPath(h.hp)
 	rg.Handle(strings.ToUpper(method), handlerPath, handler)
 }
 
 // RegisterInstance registers instance-level routes (e.g., /items/:id)
 func (h *ginHandler[C, R, U, E]) RegisterInstance(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
-	handlerPath := strings.Trim(h.hp.HandlerPath, "/")
-	if handlerPath == "" {
-		log.Default().Panic("HandlerPath cannot be empty")
-	}
-	fullPath := handlerPath + "/:id"
+	fullPath := GetHandlerPath(h.hp) + "/:id"
 	rg.Handle(strings.ToUpper(method), fullPath, handler)
 }
 
 func (h *ginHandler[C, R, U, E]) Create(c *gin.Context) {
-	dtoPtr, err := BindJSONToDTOPtr[C](c)
-	if err != nil {
+	var dto C
+	if !BindJSONToDTO(c, &dto) {
 		return
 	}
-	dto := *dtoPtr
 	created, err := h.service.Create(c.Request.Context(), dto)
 	if err != nil {
 		SetResponseFromError(c, err)
@@ -55,9 +46,8 @@ func (h *ginHandler[C, R, U, E]) Create(c *gin.Context) {
 }
 
 func (h *ginHandler[C, R, U, E]) GetByID(c *gin.Context) {
-	id, err := GetValidatedIDFromParam(c, "id", h.hp.IDValidationRule)
-	if err != nil {
-		SetResponseFromError(c, err)
+	id, ok := GetValidatedIDFromParam(c, "id", h.hp.IDValidationRule)
+	if !ok {
 		return
 	}
 	dto, err := h.service.GetByID(c.Request.Context(), id)
@@ -80,16 +70,14 @@ func (h *ginHandler[C, R, U, E]) List(c *gin.Context) {
 }
 
 func (h *ginHandler[C, R, U, E]) Update(c *gin.Context) {
-	id, err := GetValidatedIDFromParam(c, "id", h.hp.IDValidationRule)
-	if err != nil {
-		SetResponseFromError(c, err)
+	id, ok := GetValidatedIDFromParam(c, "id", h.hp.IDValidationRule)
+	if !ok {
 		return
 	}
-	dtoPtr, err := BindJSONToDTOPtr[U](c)
-	if err != nil {
+	var dto U
+	if !BindJSONToDTO(c, &dto) {
 		return
 	}
-	dto := *dtoPtr
 	updated, err := h.service.Update(c.Request.Context(), id, dto)
 	if err != nil {
 		SetResponseFromError(c, err)
@@ -99,9 +87,8 @@ func (h *ginHandler[C, R, U, E]) Update(c *gin.Context) {
 }
 
 func (h *ginHandler[C, R, U, E]) Delete(c *gin.Context) {
-	id, err := GetValidatedIDFromParam(c, "id", h.hp.IDValidationRule)
-	if err != nil {
-		SetResponseFromError(c, err)
+	id, ok := GetValidatedIDFromParam(c, "id", h.hp.IDValidationRule)
+	if !ok {
 		return
 	}
 	if err := h.service.Delete(c.Request.Context(), id); err != nil {

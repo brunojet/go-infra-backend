@@ -13,58 +13,56 @@ import (
 	svccontracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
-type nestedGinHandler[E rpocontracts.Entity, D any] struct {
-	hndcontracts.GenericHandler[E, D]
+type nestedGinHandler[C, R, U any, E rpocontracts.Entity] struct {
+	hndcontracts.GenericHandler[C, R, U, E]
 	php *HandlerParameters
-	svc svccontracts.NestedService[D, D, D, E]
+	hp  *HandlerParameters
+	svc svccontracts.NestedService[C, R, U, E]
 }
 
-func NewGenericNestedHandler[E rpocontracts.Entity, D any](php *HandlerParameters, hp *HandlerParameters, s svccontracts.NestedService[D, D, D, E]) hndcontracts.NestedGenericHandler[E, D] {
-	var baseHandler hndcontracts.GenericHandler[E, D]
-	if svc, ok := s.(svccontracts.Service[D, D, D, E]); ok {
-		baseHandler = NewGenericHandler[E](hp, svc)
+func NewGenericNestedHandler[C, R, U any, E rpocontracts.Entity](php *HandlerParameters, hp *HandlerParameters, s svccontracts.NestedService[C, R, U, E]) hndcontracts.NestedGenericHandler[C, R, U, E] {
+	var baseHandler hndcontracts.GenericHandler[C, R, U, E]
+	if svc, ok := s.(svccontracts.Service[C, R, U, E]); ok {
+		baseHandler = NewGenericHandler[C, R, U, E](hp, svc)
 	} else {
 		log.Default().Panic("provided service does not implement Service[D, D, D, E]")
 	}
-	return &nestedGinHandler[E, D]{
+	return &nestedGinHandler[C, R, U, E]{
 		GenericHandler: baseHandler, // Use the base service for non-nested operations
 		php:            php,
+		hp:             hp,
 		svc:            s,
 	}
 }
 
 // RegisterCollection registers collection-level routes for nested resources (e.g., /parent/:parentId/items)
-func (h *nestedGinHandler[E, D]) RegisterCollection(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
-	handlerNestedPath := strings.Trim(h.php.HandlerPath, "/")
-	handlerPath := strings.Trim(h.GenericHandler.(*ginHandler[E, D]).hp.HandlerPath, "/")
-	if handlerNestedPath == "" || handlerPath == "" {
-		log.Default().Panic("HandlerPath cannot be empty")
-	}
-	fullPath := fmt.Sprintf("%s/:id/%s", handlerNestedPath, handlerPath)
+func (h *nestedGinHandler[C, R, U, E]) RegisterCollection(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
+	nestedPath := GetHandlerPath(h.php)
+	path := GetHandlerPath(h.hp)
+	fullPath := fmt.Sprintf("%s/:id/%s", nestedPath, path)
 	rg.Handle(strings.ToUpper(method), fullPath, handler)
 }
 
-func (h *nestedGinHandler[E, D]) CreateNested(c *gin.Context) {
-	parentID, err := GetValidatedIDFromParam(c, "id", h.php.IDValidationRule)
+func (h *nestedGinHandler[C, R, U, E]) CreateNested(c *gin.Context) {
+	parentID, ok := GetValidatedIDFromParam(c, "id", h.php.IDValidationRule)
+	if !ok {
+		return
+	}
+	var dto C
+	if !BindJSONToDTO(c, &dto) {
+		return
+	}
+	reponse, err := h.svc.CreateNested(c.Request.Context(), parentID, dto)
 	if err != nil {
 		SetResponseFromError(c, err)
 		return
 	}
-	dto, err := BindJSONToDTOPtr[D](c)
-	if err != nil {
-		return
-	}
-	if err := h.svc.CreateNested(c.Request.Context(), parentID, dto); err != nil {
-		SetResponseFromError(c, err)
-		return
-	}
-	c.JSON(http.StatusCreated, dto)
+	c.JSON(http.StatusCreated, reponse)
 }
 
-func (h *nestedGinHandler[E, D]) ListNested(c *gin.Context) {
-	parentID, err := GetValidatedIDFromParam(c, "id", h.php.IDValidationRule)
-	if err != nil {
-		SetResponseFromError(c, err)
+func (h *nestedGinHandler[C, R, U, E]) ListNested(c *gin.Context) {
+	parentID, ok := GetValidatedIDFromParam(c, "id", h.php.IDValidationRule)
+	if !ok {
 		return
 	}
 	params := BuildListParamsFromRequest(c)

@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 
 	repoerrs "github.com/brunojet/go-infra-backend/internal/ports/repositories"
 	svccontracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
@@ -35,12 +37,21 @@ func MapErrorToStatus(err error) int {
 	return http.StatusInternalServerError
 }
 
-func GetValidatedIDFromParam(c *gin.Context, paramName string, validationRule *regexp.Regexp) (string, error) {
+func GetHandlerPath(handlerParameters *HandlerParameters) string {
+	handlerPath := strings.Trim(handlerParameters.HandlerPath, "/")
+	if handlerPath == "" {
+		log.Default().Panic("HandlerPath cannot be empty")
+	}
+	return handlerPath
+}
+
+func GetValidatedIDFromParam(c *gin.Context, paramName string, validationRule *regexp.Regexp) (string, bool) {
 	id := c.Param(paramName)
 	if validationRule != nil && !validationRule.MatchString(id) {
-		return "", ErrInvalidIDFormat
+		SetResponseFromError(c, ErrInvalidIDFormat)
+		return "", false
 	}
-	return id, nil
+	return id, true
 }
 
 func SetResponseFromError(c *gin.Context, err error) {
@@ -52,13 +63,12 @@ func SetResponseFromError(c *gin.Context, err error) {
 
 // BindJSONToDTOPtr lê o corpo JSON do request e vincula em um DTO genérico `D`.
 // Retorna ponteiro para `D` ou erro já tratado na resposta HTTP.
-func BindJSONToDTOPtr[D any](c *gin.Context) (*D, error) {
-	var dto D
-	if err := c.ShouldBindJSON(&dto); err != nil {
+func BindJSONToDTO(c *gin.Context, dto any) bool {
+	if err := c.ShouldBindJSON(dto); err != nil {
 		SetResponseFromError(c, ErrInvalidJSONBody)
-		return nil, ErrInvalidJSONBody
+		return false
 	}
-	return &dto, nil
+	return true
 }
 
 func ParsePaginationParams(values url.Values) (int, int) {

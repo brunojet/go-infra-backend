@@ -7,13 +7,13 @@ import (
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
-type nestedServiceImpl[C any, R any, U any, E repoContracts.Entity] struct {
+type nestedServiceImpl[C, R, U any, E repoContracts.Entity] struct {
 	svcContracts.Service[C, R, U, E]
 	nestRpo repoContracts.Repository[E]
 	nestMap svcContracts.NestedServiceMapper[C, R, U, E]
 }
 
-func NewNestedServiceImpl[C any, R any, U any, E repoContracts.Entity](
+func NewNestedServiceImpl[C, R, U any, E repoContracts.Entity](
 	r repoContracts.Repository[E],
 	m svcContracts.NestedServiceMapper[C, R, U, E],
 ) svcContracts.NestedService[C, R, U, E] {

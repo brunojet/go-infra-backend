@@ -16,18 +16,18 @@ var _ svcContracts.Service[any, any, any, repoContracts.Entity] = (*MockService[
 var _ svcContracts.ServiceMapper[any, any, any, repoContracts.Entity] = (*MockServiceMapper[any, any, any, repoContracts.Entity])(nil)
 
 // MockServiceMapper is a mock of ServiceMapper interface.
-type MockServiceMapper[C any, R any, U any, E repoContracts.Entity] struct {
+type MockServiceMapper[C, R, U any, E repoContracts.Entity] struct {
 	ctrl     *gomock.Controller
 	recorder *MockServiceMapperMockRecorder[C, R, U, E]
 }
 
 // MockServiceMapperMockRecorder is the mock recorder for MockServiceMapper.
-type MockServiceMapperMockRecorder[C any, R any, U any, E repoContracts.Entity] struct {
+type MockServiceMapperMockRecorder[C, R, U any, E repoContracts.Entity] struct {
 	mock *MockServiceMapper[C, R, U, E]
 }
 
 // NewMockServiceMapper creates a new mock instance.
-func NewMockServiceMapper[C any, R any, U any, E repoContracts.Entity](ctrl *gomock.Controller) *MockServiceMapper[C, R, U, E] {
+func NewMockServiceMapper[C, R, U any, E repoContracts.Entity](ctrl *gomock.Controller) *MockServiceMapper[C, R, U, E] {
 	mock := &MockServiceMapper[C, R, U, E]{ctrl: ctrl}
 	mock.recorder = &MockServiceMapperMockRecorder[C, R, U, E]{mock}
 	return mock
@@ -105,18 +105,18 @@ func (mr *MockServiceMapperMockRecorder[C, R, U, E]) ToPatchModel(dto, model int
 }
 
 // MockService is a mock of Service interface.
-type MockService[C any, R any, U any, E repoContracts.Entity] struct {
+type MockService[C, R, U any, E repoContracts.Entity] struct {
 	ctrl     *gomock.Controller
 	recorder *MockServiceMockRecorder[C, R, U, E]
 }
 
 // MockServiceMockRecorder is the mock recorder for MockService.
-type MockServiceMockRecorder[C any, R any, U any, E repoContracts.Entity] struct {
+type MockServiceMockRecorder[C, R, U any, E repoContracts.Entity] struct {
 	mock *MockService[C, R, U, E]
 }
 
 // NewMockService creates a new mock instance.
-func NewMockService[C any, R any, U any, E repoContracts.Entity](ctrl *gomock.Controller) *MockService[C, R, U, E] {
+func NewMockService[C, R, U any, E repoContracts.Entity](ctrl *gomock.Controller) *MockService[C, R, U, E] {
 	mock := &MockService[C, R, U, E]{ctrl: ctrl}
 	mock.recorder = &MockServiceMockRecorder[C, R, U, E]{mock}
 	return mock

@@ -22,7 +22,7 @@ type ListParams struct {
 	Order   string
 }
 
-type ServiceMapper[C any, R any, U any, E repoContracts.Entity] interface {
+type ServiceMapper[C, R, U any, E repoContracts.Entity] interface {
 	ToPostModel(dto C, model *E)
 	ToPatchModel(dto U, model *E)
 	ToDTO(model *E, dto *R)
@@ -30,7 +30,7 @@ type ServiceMapper[C any, R any, U any, E repoContracts.Entity] interface {
 	ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error)
 }
 
-type Service[C any, R any, U any, E repoContracts.Entity] interface {
+type Service[C, R, U any, E repoContracts.Entity] interface {
 	Create(ctx context.Context, dto C) (R, error)
 	List(ctx context.Context, params ListParams) ([]R, int64, error)
 	GetByID(ctx context.Context, id string) (R, error)
@@ -38,14 +38,14 @@ type Service[C any, R any, U any, E repoContracts.Entity] interface {
 	Delete(ctx context.Context, id string) error
 }
 
-type NestedServiceMapper[C any, R any, U any, E repoContracts.Entity] interface {
+type NestedServiceMapper[C, R, U any, E repoContracts.Entity] interface {
 	ServiceMapper[C, R, U, E]
 	ApplyParentQueryScopes(parentID string, queryScopes map[string]any) (map[string]any, error)
 	ApplyParentScopes(parentID string, model *E) error
 }
 
-type NestedService[C any, R any, U any, E repoContracts.Entity] interface {
+type NestedService[C, R, U any, E repoContracts.Entity] interface {
 	Service[C, R, U, E]
-	CreateNested(ctx context.Context, parentID string, dto *C) (R, error)
+	CreateNested(ctx context.Context, parentID string, dto C) (R, error)
 	ListNested(ctx context.Context, parentID string, params ListParams) ([]R, int64, error)
 }

@@ -7,12 +7,12 @@ import (
 	"github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
-type serviceImpl[C any, R any, U any, E repoContracts.Entity] struct {
+type serviceImpl[C, R, U any, E repoContracts.Entity] struct {
 	repo   repoContracts.Repository[E]
 	mapper contracts.ServiceMapper[C, R, U, E]
 }
 
-func NewServiceImpl[C any, R any, U any, E repoContracts.Entity](r repoContracts.Repository[E], m contracts.ServiceMapper[C, R, U, E]) contracts.Service[C, R, U, E] {
+func NewServiceImpl[C, R, U any, E repoContracts.Entity](r repoContracts.Repository[E], m contracts.ServiceMapper[C, R, U, E]) contracts.Service[C, R, U, E] {
 	return &serviceImpl[C, R, U, E]{repo: r, mapper: m}
 }
 

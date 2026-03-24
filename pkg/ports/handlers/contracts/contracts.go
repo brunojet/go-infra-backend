@@ -6,7 +6,7 @@ import (
 )
 
 // GenericHandler is a generic contract for handlers operating on a resource.
-type GenericHandler[E rpocontracts.Entity, D any] interface {
+type GenericHandler[C, R, U any, E rpocontracts.Entity] interface {
 	RegisterCollection(rg *gin.RouterGroup, method string, handler gin.HandlerFunc)
 	RegisterInstance(rg *gin.RouterGroup, method string, handler gin.HandlerFunc)
 	Create(c *gin.Context)
@@ -18,8 +18,8 @@ type GenericHandler[E rpocontracts.Entity, D any] interface {
 
 // NestedGenericHandler is a contract for handlers that are nested under another resource.
 // Only collection-level registration is supported for nested handlers.
-type NestedGenericHandler[E rpocontracts.Entity, D any] interface {
-	GenericHandler[E, D]
+type NestedGenericHandler[C, R, U any, E rpocontracts.Entity] interface {
+	GenericHandler[C, R, U, E]
 	CreateNested(c *gin.Context)
 	ListNested(c *gin.Context)
 }
