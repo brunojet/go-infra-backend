@@ -31,7 +31,7 @@ type SimpleDTO struct {
 }
 
 // helper to create via GinHandler
-func createEntityForHandlerTest(t *testing.T, h hndcontracts.GenericHandler[SimpleEntity, SimpleDTO], ms *MockService[SimpleDTO, SimpleEntity]) string {
+func createEntityForHandlerTest(t *testing.T, h hndcontracts.GenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity], ms *MockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity]) string {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	body := `{"name":"bob"}`
@@ -55,9 +55,9 @@ func TestCreate_Handler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
+	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
 	hp := &HandlerParameters{IDValidationRule: Int64GtZero}
-	h := NewGenericHandler[SimpleEntity](hp, ms)
+	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
 
 	id := createEntityForHandlerTest(t, h, ms)
 	require.Equal(t, "created-id", id)
@@ -68,7 +68,7 @@ func TestCreate_Handler(t *testing.T) {
 	body := `{"name":"bob"}`
 	c.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
 	c.Request.Header.Set("Content-Type", "application/json")
-	ms.EXPECT().Create(gomock.Any(), gomock.AssignableToTypeOf(&SimpleDTO{})).Return(errors.New("boom"))
+	ms.EXPECT().Create(gomock.Any(), gomock.AssignableToTypeOf(SimpleDTO{})).Return(SimpleDTO{}, errors.New("boom"))
 	h.Create(c)
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
 }
@@ -77,9 +77,9 @@ func TestGetByID_Handler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
+	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
 	hp := &HandlerParameters{IDValidationRule: Int64GtZero}
-	h := NewGenericHandler[SimpleEntity](hp, ms)
+	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
 
 	// success
 	rec := httptest.NewRecorder()
@@ -112,8 +112,8 @@ func TestList_Handler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleEntity](nil, ms)
+	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
+	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](nil, ms)
 
 	// success
 	rec := httptest.NewRecorder()
@@ -136,9 +136,9 @@ func TestUpdate_Handler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
+	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
 	hp := &HandlerParameters{IDValidationRule: Int64GtZero}
-	h := NewGenericHandler[SimpleEntity](hp, ms)
+	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
 
 	// success
 	rec := httptest.NewRecorder()
@@ -147,7 +147,7 @@ func TestUpdate_Handler(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodPut, "/", bytes.NewBufferString(upd))
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Params = gin.Params{{Key: "id", Value: "the-id"}}
-	ms.EXPECT().Update(gomock.Any(), "the-id", gomock.AssignableToTypeOf(&SimpleDTO{})).Return(nil).Do(func(_ context.Context, _ string, dto any) {})
+	ms.EXPECT().Update(gomock.Any(), "the-id", gomock.AssignableToTypeOf(SimpleDTO{})).Return(SimpleDTO{}, nil)
 	h.Update(c)
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -157,7 +157,7 @@ func TestUpdate_Handler(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodPut, "/", bytes.NewBufferString(upd))
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Params = gin.Params{{Key: "id", Value: "no"}}
-	ms.EXPECT().Update(gomock.Any(), "no", gomock.AssignableToTypeOf(&SimpleDTO{})).Return(repoerrs.ErrNotFound)
+	ms.EXPECT().Update(gomock.Any(), "no", gomock.AssignableToTypeOf(SimpleDTO{})).Return(SimpleDTO{}, repoerrs.ErrNotFound)
 	h.Update(c)
 	require.Equal(t, http.StatusNotFound, rec.Code)
 
@@ -175,9 +175,9 @@ func TestDelete_Handler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
+	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
 	hp := &HandlerParameters{IDValidationRule: Int64GtZero}
-	h := NewGenericHandler[SimpleEntity](hp, ms)
+	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
 
 	// success
 	rec := httptest.NewRecorder()
@@ -210,8 +210,8 @@ func TestRegister_Handler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleEntity](&HandlerParameters{HandlerPath: "/ping"}, ms)
+	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
+	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](&HandlerParameters{HandlerPath: "/ping"}, ms)
 
 	// create real gin engine and group
 	engine := gin.New()
@@ -236,8 +236,8 @@ func TestCreate_Handler_InvalidJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleEntity](nil, ms)
+	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
+	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](nil, ms)
 
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
@@ -252,8 +252,8 @@ func TestUpdate_Handler_InvalidJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	ms := NewMockService[SimpleDTO, SimpleEntity](ctrl)
-	h := NewGenericHandler[SimpleEntity](nil, ms)
+	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
+	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](nil, ms)
 
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)

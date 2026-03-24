@@ -7,6 +7,7 @@ import (
 
 // GenericHandler is a generic contract for handlers operating on a resource.
 type GenericHandler[C, R, U any, E rpocontracts.Entity] interface {
+	GetHandlerPath() string
 	RegisterCollection(rg *gin.RouterGroup, method string, handler gin.HandlerFunc)
 	RegisterInstance(rg *gin.RouterGroup, method string, handler gin.HandlerFunc)
 	Create(c *gin.Context)

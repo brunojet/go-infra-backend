@@ -20,6 +20,10 @@ func NewGenericHandler[C, R, U any, E rpocontracts.Entity](hp *HandlerParameters
 	return &ginHandler[C, R, U, E]{hp: hp, service: s}
 }
 
+func (h *ginHandler[C, R, U, E]) GetHandlerPath() string {
+	return GetHandlerPath(h.hp)
+}
+
 // RegisterCollection registers collection-level routes (e.g., /items)
 func (h *ginHandler[C, R, U, E]) RegisterCollection(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
 	handlerPath := GetHandlerPath(h.hp)

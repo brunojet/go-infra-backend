@@ -16,7 +16,6 @@ import (
 type nestedGinHandler[C, R, U any, E rpocontracts.Entity] struct {
 	hndcontracts.GenericHandler[C, R, U, E]
 	php *HandlerParameters
-	hp  *HandlerParameters
 	svc svccontracts.NestedService[C, R, U, E]
 }
 
@@ -30,17 +29,19 @@ func NewGenericNestedHandler[C, R, U any, E rpocontracts.Entity](php *HandlerPar
 	return &nestedGinHandler[C, R, U, E]{
 		GenericHandler: baseHandler, // Use the base service for non-nested operations
 		php:            php,
-		hp:             hp,
 		svc:            s,
 	}
 }
 
+func (h *nestedGinHandler[C, R, U, E]) GetHandlerPath() string {
+	nestedPath := GetHandlerPath(h.php)
+	path := h.GenericHandler.GetHandlerPath()
+	return fmt.Sprintf("%s/:id/%s", nestedPath, path)
+}
+
 // RegisterCollection registers collection-level routes for nested resources (e.g., /parent/:parentId/items)
 func (h *nestedGinHandler[C, R, U, E]) RegisterCollection(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
-	nestedPath := GetHandlerPath(h.php)
-	path := GetHandlerPath(h.hp)
-	fullPath := fmt.Sprintf("%s/:id/%s", nestedPath, path)
-	rg.Handle(strings.ToUpper(method), fullPath, handler)
+	rg.Handle(strings.ToUpper(method), h.GetHandlerPath(), handler)
 }
 
 func (h *nestedGinHandler[C, R, U, E]) CreateNested(c *gin.Context) {
@@ -52,12 +53,12 @@ func (h *nestedGinHandler[C, R, U, E]) CreateNested(c *gin.Context) {
 	if !BindJSONToDTO(c, &dto) {
 		return
 	}
-	reponse, err := h.svc.CreateNested(c.Request.Context(), parentID, dto)
+	created, err := h.svc.CreateNested(c.Request.Context(), parentID, dto)
 	if err != nil {
 		SetResponseFromError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, reponse)
+	c.JSON(http.StatusCreated, created)
 }
 
 func (h *nestedGinHandler[C, R, U, E]) ListNested(c *gin.Context) {

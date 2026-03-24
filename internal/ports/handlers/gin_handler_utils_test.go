@@ -40,9 +40,9 @@ func TestBindJSONToDTOPtr_SuccessAndFailure(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
-	dto, err := BindJSONToDTOPtr[sampleDTO](c)
-	a.NoError(err)
-	a.NotNil(dto)
+	var dto sampleDTO
+	ok := BindJSONToDTO(c, &dto)
+	a.EqualValues(ok, true)
 
 	// failure
 	rb := io.NopCloser(bytes.NewBufferString(`{`))
@@ -51,9 +51,9 @@ func TestBindJSONToDTOPtr_SuccessAndFailure(t *testing.T) {
 	w2 := httptest.NewRecorder()
 	c2, _ := gin.CreateTestContext(w2)
 	c2.Request = badreq
-	dto2, err2 := BindJSONToDTOPtr[sampleDTO](c2)
-	a.Error(err2)
-	a.Nil(dto2)
+	var dto2 sampleDTO
+	ok2 := BindJSONToDTO(c2, &dto2)
+	a.EqualValues(ok2, false)
 	a.Equal(http.StatusBadRequest, w2.Code)
 }
 
