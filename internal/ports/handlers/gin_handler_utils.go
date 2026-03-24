@@ -24,7 +24,8 @@ var (
 )
 
 func MapErrorToStatus(err error) int {
-	if errors.Is(err, ErrInvalidJSONBody) {
+	if errors.Is(err, ErrInvalidJSONBody) ||
+		errors.Is(err, ErrInvalidIDFormat) {
 		return http.StatusBadRequest
 	}
 	if errors.Is(err, repoerrs.ErrNotFound) {
