@@ -25,10 +25,10 @@ type ApplicationImage struct {
 	ApplicationImageId int64          `gorm:"primaryKey;autoIncrement"`
 	ApplicationId      int64          `gorm:"not null;uniqueIndex:idx_application_image_application,priority:1"`
 	FileName           sql.NullString `gorm:"not null;size:255"`
-	FileContentType    sql.NullString `gorm:"not null;size:255"`
+	FileHash           []byte         `gorm:"type:binary(32);not null;uniqueIndex:idx_application_image_application,priority:3"`
+	ContentType        sql.NullString `gorm:"not null;size:255"`
 	// Store raw hash bytes (32 bytes). Use binary(32) for DB storage and
 	// let GORM handle []byte mapping. Avoid sql.NullByte which doesn't exist.
-	FileHash  []byte         `gorm:"type:binary(32);not null;uniqueIndex:idx_application_image_application,priority:3"`
 	ImageType sql.NullInt16  `gorm:"not null;uniqueIndex:idx_application_image_application,priority:2"`
 	CreatedAt sql.NullTime   `gorm:"autoCreateTime;index:idx_application_image_del_created,priority:2"`
 	UpdatedAt sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_image_del_updated,priority:2"`

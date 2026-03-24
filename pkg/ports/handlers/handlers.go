@@ -9,31 +9,24 @@ import (
 )
 
 type (
-	GenericHandler[E rpocontracts.Entity, D any]       = hndcontracts.GenericHandler[E, D]
-	NestedGenericHandler[E rpocontracts.Entity, D any] = hndcontracts.NestedGenericHandler[E, D]
-	HandlerParameters                                  = internalhandlers.HandlerParameters
+	GenericHandler[C, R, U any, E rpocontracts.Entity]       = hndcontracts.GenericHandler[C, R, U, E]
+	NestedGenericHandler[C, R, U any, E rpocontracts.Entity] = hndcontracts.NestedGenericHandler[C, R, U, E]
+	HandlerParameters                                        = internalhandlers.HandlerParameters
 )
 
 var (
-	ErrInvalidJSONBody   = internalhandlers.ErrInvalidJSONBody
-	MapErrorToStatus     = internalhandlers.MapErrorToStatus
-	SetResponseFromError = internalhandlers.SetResponseFromError
-	Int64GtZero          = internalhandlers.Int64GtZero
-	Int32GtZero          = internalhandlers.Int32GtZero
-	Int16GteZero         = internalhandlers.Int16GteZero
-	Base64UrlSafe        = internalhandlers.Base64UrlSafe
+	Int64GtZero   = internalhandlers.Int64GtZero
+	Int32GtZero   = internalhandlers.Int32GtZero
+	Int16GteZero  = internalhandlers.Int16GteZero
+	Base64UrlSafe = internalhandlers.Base64UrlSafe
 )
 
-func NewGenericHandler[E rpocontracts.Entity, D any](hp *HandlerParameters, s svccontracts.Service[D, E]) GenericHandler[E, D] {
-	return internalhandlers.NewGenericHandler[E](hp, s)
+func NewGenericHandler[C, R, U any, E rpocontracts.Entity](hp HandlerParameters, s svccontracts.Service[C, R, U, E]) GenericHandler[C, R, U, E] {
+	return internalhandlers.NewGenericHandler[C, R, U, E](hp, s)
 }
 
-func NewGenericNestedHandler[E rpocontracts.Entity, D any](hp *HandlerParameters, php *HandlerParameters, s svccontracts.NestedService[D, E]) NestedGenericHandler[E, D] {
-	return internalhandlers.NewGenericNestedHandler[E](hp, php, s)
-}
-
-func BindJSONToDTOPtr[D any](c *gin.Context) (*D, error) {
-	return internalhandlers.BindJSONToDTOPtr[D](c)
+func NewGenericNestedHandler[C, R, U any, E rpocontracts.Entity](hp HandlerParameters, php HandlerParameters, s svccontracts.NestedService[C, R, U, E]) NestedGenericHandler[C, R, U, E] {
+	return internalhandlers.NewGenericNestedHandler[C, R, U, E](hp, php, s)
 }
 
 // Register is inherited from the aliased GinHandler type, but keeping gin import here

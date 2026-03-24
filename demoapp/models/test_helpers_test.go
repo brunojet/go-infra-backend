@@ -162,11 +162,11 @@ func createApplicationImage(t *testing.T, gdb *gorm.DB, applicationID int64, ima
 
 func newApplicationImage(applicationID int64, imageType int16, hashByte byte) ApplicationImage {
 	return ApplicationImage{
-		ApplicationId:   applicationID,
-		FileName:        sql.NullString{String: "icon.png", Valid: true},
-		FileContentType: sql.NullString{String: "image/png", Valid: true},
-		FileHash:        hash32(hashByte),
-		ImageType:       sql.NullInt16{Int16: imageType, Valid: true},
+		ApplicationId: applicationID,
+		FileName:      sql.NullString{String: "icon.png", Valid: true},
+		ContentType:   sql.NullString{String: "image/png", Valid: true},
+		FileHash:      hash32(hashByte),
+		ImageType:     sql.NullInt16{Int16: imageType, Valid: true},
 	}
 }
 
@@ -213,11 +213,11 @@ func createApplicationProfileWithNestedImage(t *testing.T, gdb *gorm.DB, applica
 			ApplicationId: applicationID,
 			Name:          sql.NullString{String: name, Valid: true},
 			ApplicationImage: &ApplicationImage{
-				ApplicationId:   applicationID,
-				FileName:        sql.NullString{String: "icon.png", Valid: true},
-				FileContentType: sql.NullString{String: "image/png", Valid: true},
-				FileHash:        hash32(imageHashByte),
-				ImageType:       sql.NullInt16{Int16: 1, Valid: true},
+				ApplicationId: applicationID,
+				FileName:      sql.NullString{String: "icon.png", Valid: true},
+				ContentType:   sql.NullString{String: "image/png", Valid: true},
+				FileHash:      hash32(imageHashByte),
+				ImageType:     sql.NullInt16{Int16: 1, Valid: true},
 			},
 		}
 		if err := tx.Session(&gorm.Session{FullSaveAssociations: true}).Create(&tmp).Error; err != nil {

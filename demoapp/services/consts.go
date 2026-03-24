@@ -21,3 +21,21 @@ const (
 	errTextNestedVersionApplicationIDScopeRequired = "application_id parent scope must be valid"
 	errTextNestedVersionIDScopeRequired            = "application_version_id scope must be valid"
 )
+
+var (
+	stageMapFromModel = map[int16]string{
+		models.ApplicationStagePending:    "pending",
+		models.ApplicationStageReview:     "review",
+		models.ApplicationStagePilot:      "pilot",
+		models.ApplicationStageProduction: "production",
+		models.ApplicationStageArchived:   "archived",
+	}
+
+	stageMapToModel = map[string]int16{
+		"pending":    models.ApplicationStagePending,
+		"review":     models.ApplicationStageReview,
+		"pilot":      models.ApplicationStagePilot,
+		"production": models.ApplicationStageProduction,
+		"archived":   models.ApplicationStageArchived,
+	}
+)

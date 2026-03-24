@@ -2,6 +2,9 @@ package services
 
 import (
 	"context"
+	"fmt"
+
+	"encoding/hex"
 
 	"github.com/brunojet/go-infra-backend/demoapp/dtos"
 	"github.com/brunojet/go-infra-backend/demoapp/models"
@@ -32,21 +35,73 @@ func (m applicationProfileNestedMapper) ApplyParentQueryScopes(parentID string, 
 }
 
 func (m applicationProfileNestedMapper) ApplyParentScopes(parentID string, model *models.ApplicationProfile) error {
-	applicationProfileID, err := services.ParseScopeIntFromString[int64](parentID, 1)
+	applicationID, err := services.ParseScopeIntFromString[int64](parentID, 1)
 	if err != nil {
 		return err
 	}
-	model.ApplicationId = applicationProfileID
+	model.ApplicationId = applicationID
+	model.ApplicationImage.ApplicationId = applicationID
+	for i := range model.ApplicationProfileScreenshots {
+		model.ApplicationProfileScreenshots[i].ApplicationProfileId = model.ApplicationProfileId
+		model.ApplicationProfileScreenshots[i].ApplicationImage.ApplicationId = applicationID
+		model.ApplicationProfileScreenshots[i].Position = int16(i + 1)
+	}
 	return nil
 }
 
-// Converte de DTO para Model
-func (applicationProfileNestedMapper) ToModel(dto *dtos.ApplicationProfileDTO, model *models.ApplicationProfile) {
+func (m applicationProfileNestedMapper) toImage(dto dtos.ApplicationImagePostDTO, model *models.ApplicationImage) {
+	if dto.FileHash != "" {
+		hashBytes, err := hex.DecodeString(dto.FileHash)
+		if err == nil {
+			model.FileHash = hashBytes
+		} else {
+			model.FileHash = nil // ou trate o erro conforme necessário
+		}
+	}
+	model.FileName = utils.ToNullString(dto.FileName)
+	model.ContentType = utils.ToNullString(dto.ContentType)
+
+	return model.ImageUrl.String
+}
+
+// Converte de DTO para Model (POST)
+func (m applicationProfileNestedMapper) ToPostModel(dto *dtos.ApplicationProfilePostDTO, model *models.ApplicationProfile) {
+	model.Name = utils.ToNullString(dto.Name)
+	model.Description = utils.ToNullString(dto.Description)
+	m.toImage(dto.ApplicationImage, model.ApplicationImage)
+}
+
+// Converte de DTO para Model (PATCH)
+func (applicationProfileNestedMapper) ToPatchModel(dto *dtos.ApplicationProfileDTO, model *models.ApplicationProfile) {
+	// Aqui você pode implementar lógica específica para PATCH se necessário
+	// Por padrão, copia os mesmos campos
 	model.ApplicationId = dto.ApplicationId
 	model.Stage = utils.ToNullInt16(dto.Stage)
 	model.Name = utils.ToNullString(dto.Name)
 	model.Description = utils.ToNullString(dto.Description)
 	model.ApplicationImageId = dto.ApplicationImageId
+	// Converter hash de hex string para []byte
+	if dto.Hash != "" {
+		hashBytes, err := hex.DecodeString(dto.Hash)
+		if err == nil {
+			model.Hash = hashBytes
+		}
+	}
+	// Converter stages de []string para []int16
+	if len(dto.Stages) > 0 {
+		var stages []int16
+		for _, s := range dto.Stages {
+			// Supondo que o stage string seja um número, senão adapte para mapear nomes para valores
+			var v int16
+			_, err := fmt.Sscanf(s, "%d", &v)
+			if err != nil {
+				// tente mapear por nome se necessário
+				continue
+			}
+			stages = append(stages, v)
+		}
+		model.Stages = stages
+	}
 }
 
 // Converte de Model para DTO
@@ -108,7 +163,7 @@ func (s *applicationProfileNestedService) createOneShot(ctx context.Context, inO
 
 func (s *applicationProfileNestedService) CreateNested(ctx context.Context, parentID string, dto *dtos.ApplicationProfileDTO) error {
 	var model models.ApplicationProfile
-	s.mapper.ToModel(dto, &model)
+	s.mapper.ToPostModel(dto, &model)
 	if err := s.mapper.ApplyParentScopes(parentID, &model); err != nil {
 		return err
 	}
@@ -125,7 +180,7 @@ func (s *applicationProfileNestedService) Update(ctx context.Context, id string,
 		return err
 	}
 	var model models.ApplicationProfile
-	s.mapper.ToModel(inOut, &model)
+	s.mapper.ToPatchModel(inOut, &model)
 	if err := s.pRepo.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.validateProfileStageTransition(txCtx, scopes, &model); err != nil {
 			return err

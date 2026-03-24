@@ -7,26 +7,23 @@ import (
 )
 
 // ---- Contracts ----
-
 type AnyInt = contracts.AnyInt
 
-type ServiceMapper[D any, E repo.Entity] = contracts.ServiceMapper[D, E]
+type ServiceMapper[C, R, U any, E repo.Entity] = contracts.ServiceMapper[C, R, U, E]
 
-type Service[D any, E repo.Entity] = contracts.Service[D, E]
+type Service[C, R, U any, E repo.Entity] = contracts.Service[C, R, U, E]
 
-type NestedServiceMapper[D any, E repo.Entity] = contracts.NestedServiceMapper[D, E]
+type NestedServiceMapper[C, R, U any, E repo.Entity] = contracts.NestedServiceMapper[C, R, U, E]
 
-type NestedService[D any, E repo.Entity] = contracts.NestedService[D, E]
-
-// ---- Constructor (delegating to internal) ----
+type NestedService[C, R, U any, E repo.Entity] = contracts.NestedService[C, R, U, E]
 
 // NewServiceImpl delegates to the internal implementation.
-func NewServiceImpl[D any, E repo.Entity](r repo.Repository[E], m ServiceMapper[D, E]) Service[D, E] {
+func NewServiceImpl[C, R, U any, E repo.Entity](r repo.Repository[E], m ServiceMapper[C, R, U, E]) Service[C, R, U, E] {
 	return internalservices.NewServiceImpl(r, m)
 }
 
 // NewNestedServiceImpl delegates to the internal implementation.
-func NewNestedServiceImpl[D any, E repo.Entity](r repo.Repository[E], m NestedServiceMapper[D, E]) NestedService[D, E] {
+func NewNestedServiceImpl[C, R, U any, E repo.Entity](r repo.Repository[E], m NestedServiceMapper[C, R, U, E]) NestedService[C, R, U, E] {
 	return internalservices.NewNestedServiceImpl(r, m)
 }
 

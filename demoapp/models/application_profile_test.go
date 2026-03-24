@@ -96,11 +96,11 @@ func TestApplicationProfileScreenshot_BeforeCreate_ResolvesNestedImage(t *testin
 		ApplicationProfileId: profile.ApplicationProfileId,
 		Position:             1,
 		ApplicationImage: &ApplicationImage{
-			ApplicationId:   app.ApplicationId,
-			FileName:        sql.NullString{String: "screen.png", Valid: true},
-			FileContentType: sql.NullString{String: "image/png", Valid: true},
-			FileHash:        hash32(20),
-			ImageType:       sql.NullInt16{Int16: 2, Valid: true},
+			ApplicationId: app.ApplicationId,
+			FileName:      sql.NullString{String: "screen.png", Valid: true},
+			ContentType:   sql.NullString{String: "image/png", Valid: true},
+			FileHash:      hash32(20),
+			ImageType:     sql.NullInt16{Int16: 2, Valid: true},
 		},
 	}
 	require.NoError(t, gdb.Create(&screenshot).Error)
