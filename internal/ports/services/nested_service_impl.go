@@ -7,33 +7,36 @@ import (
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
-type nestedServiceImpl[D any, E repoContracts.Entity] struct {
-	svcContracts.Service[D, E]
+type nestedServiceImpl[C any, R any, U any, E repoContracts.Entity] struct {
+	svcContracts.Service[C, R, U, E]
 	nestRpo repoContracts.Repository[E]
-	nestMap svcContracts.NestedServiceMapper[D, E]
+	nestMap svcContracts.NestedServiceMapper[C, R, U, E]
 }
 
-func NewNestedServiceImpl[D any, E repoContracts.Entity](
+func NewNestedServiceImpl[C any, R any, U any, E repoContracts.Entity](
 	r repoContracts.Repository[E],
-	m svcContracts.NestedServiceMapper[D, E],
-) svcContracts.NestedService[D, E] {
-	return &nestedServiceImpl[D, E]{Service: NewServiceImpl(r, m), nestRpo: r, nestMap: m}
+	m svcContracts.NestedServiceMapper[C, R, U, E],
+) svcContracts.NestedService[C, R, U, E] {
+	return &nestedServiceImpl[C, R, U, E]{Service: NewServiceImpl[C, R, U, E](r, m), nestRpo: r, nestMap: m}
 }
 
-func (s *nestedServiceImpl[D, E]) CreateNested(ctx context.Context, parentID string, dto *D) error {
+func (s *nestedServiceImpl[C, R, U, E]) CreateNested(ctx context.Context, parentID string, dto *C) (R, error) {
 	var model E
-	s.nestMap.ToModel(dto, &model)
+	s.nestMap.ToPostModel(*dto, &model)
 	if err := s.nestMap.ApplyParentScopes(parentID, &model); err != nil {
-		return err
+		var zero R
+		return zero, err
 	}
 	if err := s.nestRpo.Create(ctx, &model); err != nil {
-		return err
+		var zero R
+		return zero, err
 	}
-	s.nestMap.ToDTO(&model, dto)
-	return nil
+	var out R
+	s.nestMap.ToDTO(&model, &out)
+	return out, nil
 }
 
-func (s *nestedServiceImpl[D, E]) ListNested(ctx context.Context, parentID string, params svcContracts.ListParams) ([]D, int64, error) {
+func (s *nestedServiceImpl[C, R, U, E]) ListNested(ctx context.Context, parentID string, params svcContracts.ListParams) ([]R, int64, error) {
 	mergedScopes, err := s.nestMap.ApplyParentQueryScopes(parentID, params.QueryParams.Scopes)
 	if err != nil {
 		return nil, 0, err
@@ -43,7 +46,7 @@ func (s *nestedServiceImpl[D, E]) ListNested(ctx context.Context, parentID strin
 	if err != nil {
 		return nil, 0, err
 	}
-	dtos := make([]D, len(models))
+	dtos := make([]R, len(models))
 	for i := range models {
 		s.nestMap.ToDTO(&models[i], &dtos[i])
 	}

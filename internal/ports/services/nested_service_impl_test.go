@@ -35,6 +35,13 @@ type nestedTestMapper struct {
 	getModelKeyErr            error
 }
 
+func (m nestedTestMapper) ToPostModel(dto nestedUnitDTO, model *nestedUnitModel) {
+	m.ToModel(&dto, model)
+}
+func (m nestedTestMapper) ToPatchModel(dto nestedUnitDTO, model *nestedUnitModel) {
+	m.ToModel(&dto, model)
+}
+
 func (m nestedTestMapper) ToModel(dto *nestedUnitDTO, model *nestedUnitModel) {
 	model.Name = utils.ToNullString(dto.Name)
 }
@@ -107,11 +114,11 @@ func TestNestedService_CreateNested(t *testing.T) {
 		return nil
 	})
 
-	err := svc.CreateNested(ctx, "42", &dto)
+	out, err := svc.CreateNested(ctx, "42", &dto)
 	assert.NoError(t, err)
-	assert.Equal(t, "7", dto.ID)
-	assert.Equal(t, int64(42), dto.ParentID)
-	assert.Equal(t, "child", dto.Name)
+	assert.Equal(t, "7", out.ID)
+	assert.Equal(t, int64(42), out.ParentID)
+	assert.Equal(t, "child", out.Name)
 }
 
 func TestNestedService_CreateNested_Errors(t *testing.T) {
@@ -123,13 +130,13 @@ func TestNestedService_CreateNested_Errors(t *testing.T) {
 
 	repo1 := NewMockRepository[nestedUnitModel](ctrl)
 	svc1 := NewNestedServiceImpl(repoContracts.Repository[nestedUnitModel](repo1), nestedTestMapper{applyParentScopesErr: errors.New("parent error")})
-	err := svc1.CreateNested(ctx, "42", &dto)
+	_, err := svc1.CreateNested(ctx, "42", &dto)
 	assert.Error(t, err)
 
 	repo2 := NewMockRepository[nestedUnitModel](ctrl)
 	svc2 := NewNestedServiceImpl(repoContracts.Repository[nestedUnitModel](repo2), nestedTestMapper{})
 	repo2.EXPECT().Create(gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
-	err = svc2.CreateNested(ctx, "42", &dto)
+	_, err = svc2.CreateNested(ctx, "42", &dto)
 	assert.Error(t, err)
 }
 
@@ -146,7 +153,7 @@ func TestNestedService_ListNested(t *testing.T) {
 	repo.EXPECT().List(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, listParams repoContracts.ListParams) ([]nestedUnitModel, int64, error) {
 		assert.Equal(t, 1, listParams.Page)
 		assert.Equal(t, 10, listParams.Size)
-		assert.Equal(t, "id", listParams.OrderBy)
+		assert.Equal(t, "created_at", listParams.OrderBy)
 		assert.Equal(t, "asc", listParams.Order)
 		assert.Equal(t, "active", listParams.QueryParams.Scopes["status"])
 		assert.Equal(t, "99", listParams.QueryParams.Scopes["parent_id"])
@@ -202,10 +209,10 @@ func TestNestedService_DelegatesBaseMethods(t *testing.T) {
 		inOut.ParentID = 42
 		return nil
 	})
-	err = svc.Update(ctx, "5", &upd)
+	updOut, err := svc.Update(ctx, "5", upd)
 	assert.NoError(t, err)
-	assert.Equal(t, "5", upd.ID)
-	assert.Equal(t, int64(42), upd.ParentID)
+	assert.Equal(t, "5", updOut.ID)
+	assert.Equal(t, int64(42), updOut.ParentID)
 
 	repo.EXPECT().Delete(gomock.Any(), map[string]any{"id": int64(5)}).Return(nil)
 	err = svc.Delete(ctx, "5")
