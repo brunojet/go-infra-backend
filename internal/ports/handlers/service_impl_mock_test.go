@@ -11,35 +11,35 @@ import (
 )
 
 // ensure the generated mock (for concrete test types) implements the service contract
-var _ svcContracts.Service[any, repoContracts.Entity] = (*MockService[any, repoContracts.Entity])(nil)
+var _ svcContracts.Service[any, any, any, repoContracts.Entity] = (*MockService[any, any, any, repoContracts.Entity])(nil)
 
-var _ svcContracts.ServiceMapper[any, repoContracts.Entity] = (*MockServiceMapper[any, repoContracts.Entity])(nil)
+var _ svcContracts.ServiceMapper[any, any, any, repoContracts.Entity] = (*MockServiceMapper[any, any, any, repoContracts.Entity])(nil)
 
 // MockServiceMapper is a mock of ServiceMapper interface.
-type MockServiceMapper[D any, E repoContracts.Entity] struct {
+type MockServiceMapper[C any, R any, U any, E repoContracts.Entity] struct {
 	ctrl     *gomock.Controller
-	recorder *MockServiceMapperMockRecorder[D, E]
+	recorder *MockServiceMapperMockRecorder[C, R, U, E]
 }
 
 // MockServiceMapperMockRecorder is the mock recorder for MockServiceMapper.
-type MockServiceMapperMockRecorder[D any, E repoContracts.Entity] struct {
-	mock *MockServiceMapper[D, E]
+type MockServiceMapperMockRecorder[C any, R any, U any, E repoContracts.Entity] struct {
+	mock *MockServiceMapper[C, R, U, E]
 }
 
 // NewMockServiceMapper creates a new mock instance.
-func NewMockServiceMapper[D any, E repoContracts.Entity](ctrl *gomock.Controller) *MockServiceMapper[D, E] {
-	mock := &MockServiceMapper[D, E]{ctrl: ctrl}
-	mock.recorder = &MockServiceMapperMockRecorder[D, E]{mock}
+func NewMockServiceMapper[C any, R any, U any, E repoContracts.Entity](ctrl *gomock.Controller) *MockServiceMapper[C, R, U, E] {
+	mock := &MockServiceMapper[C, R, U, E]{ctrl: ctrl}
+	mock.recorder = &MockServiceMapperMockRecorder[C, R, U, E]{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockServiceMapper[D, E]) EXPECT() *MockServiceMapperMockRecorder[D, E] {
+func (m *MockServiceMapper[C, R, U, E]) EXPECT() *MockServiceMapperMockRecorder[C, R, U, E] {
 	return m.recorder
 }
 
 // GetModelKey mocks base method.
-func (m *MockServiceMapper[D, E]) GetModelKey(id string) (map[string]any, error) {
+func (m *MockServiceMapper[C, R, U, E]) GetModelKey(id string) (map[string]any, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetModelKey", id)
 	ret0, _ := ret[0].(map[string]any)
@@ -48,7 +48,7 @@ func (m *MockServiceMapper[D, E]) GetModelKey(id string) (map[string]any, error)
 }
 
 // ApplyQueryScopes mocks base method.
-func (m *MockServiceMapper[D, E]) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {
+func (m *MockServiceMapper[C, R, U, E]) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ApplyQueryScopes", queryScopes)
 	ret0, _ := ret[0].(map[string]any)
@@ -57,80 +57,96 @@ func (m *MockServiceMapper[D, E]) ApplyQueryScopes(queryScopes map[string]any) (
 }
 
 // ApplyQueryScopes indicates an expected call of ApplyQueryScopes.
-func (mr *MockServiceMapperMockRecorder[D, E]) ApplyQueryScopes(queryScopes interface{}) *gomock.Call {
+func (mr *MockServiceMapperMockRecorder[C, R, U, E]) ApplyQueryScopes(queryScopes interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyQueryScopes", reflect.TypeOf((*MockServiceMapper[D, E])(nil).ApplyQueryScopes), queryScopes)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyQueryScopes", reflect.TypeOf((*MockServiceMapper[C, R, U, E])(nil).ApplyQueryScopes), queryScopes)
 }
 
 // GetModelKey indicates an expected call of GetModelKey.
-func (mr *MockServiceMapperMockRecorder[D, E]) GetModelKey(id interface{}) *gomock.Call {
+func (mr *MockServiceMapperMockRecorder[C, R, U, E]) GetModelKey(id interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModelKey", reflect.TypeOf((*MockServiceMapper[D, E])(nil).GetModelKey), id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModelKey", reflect.TypeOf((*MockServiceMapper[C, R, U, E])(nil).GetModelKey), id)
 }
 
 // ToDTO mocks base method.
-func (m *MockServiceMapper[D, E]) ToDTO(model *E, dto *D) {
+func (m *MockServiceMapper[C, R, U, E]) ToDTO(model *E, dto *C) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "ToDTO", model, dto)
 }
 
 // ToDTO indicates an expected call of ToDTO.
-func (mr *MockServiceMapperMockRecorder[D, E]) ToDTO(model, dto interface{}) *gomock.Call {
+func (mr *MockServiceMapperMockRecorder[C, R, U, E]) ToDTO(model, dto interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ToDTO", reflect.TypeOf((*MockServiceMapper[D, E])(nil).ToDTO), model, dto)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ToDTO", reflect.TypeOf((*MockServiceMapper[C, R, U, E])(nil).ToDTO), model, dto)
 }
 
-// ToModel mocks base method.
-func (m *MockServiceMapper[D, E]) ToModel(dto *D, model *E) {
+// ToPostModel mocks base method.
+func (m *MockServiceMapper[C, R, U, E]) ToPostModel(dto C, model *E) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ToModel", dto, model)
+	m.ctrl.Call(m, "ToPostModel", dto, model)
 }
 
-// ToModel indicates an expected call of ToModel.
-func (mr *MockServiceMapperMockRecorder[D, E]) ToModel(dto, model interface{}) *gomock.Call {
+// ToPostModel indicates an expected call of ToPostModel.
+func (mr *MockServiceMapperMockRecorder[C, R, U, E]) ToPostModel(dto, model interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ToModel", reflect.TypeOf((*MockServiceMapper[D, E])(nil).ToModel), dto, model)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ToPostModel", reflect.TypeOf((*MockServiceMapper[C, R, U, E])(nil).ToPostModel), dto, model)
+}
+
+// ToPatchModel mocks base method.
+func (m *MockServiceMapper[C, R, U, E]) ToPatchModel(dto U, model *E) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ToPatchModel", dto, model)
+}
+
+// ToPatchModel indicates an expected call of ToPatchModel.
+func (mr *MockServiceMapperMockRecorder[C, R, U, E]) ToPatchModel(dto, model interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ToPatchModel", reflect.TypeOf((*MockServiceMapper[C, R, U, E])(nil).ToPatchModel), dto, model)
 }
 
 // MockService is a mock of Service interface.
-type MockService[D any, E repoContracts.Entity] struct {
+type MockService[C any, R any, U any, E repoContracts.Entity] struct {
 	ctrl     *gomock.Controller
-	recorder *MockServiceMockRecorder[D, E]
+	recorder *MockServiceMockRecorder[C, R, U, E]
 }
 
 // MockServiceMockRecorder is the mock recorder for MockService.
-type MockServiceMockRecorder[D any, E repoContracts.Entity] struct {
-	mock *MockService[D, E]
+type MockServiceMockRecorder[C any, R any, U any, E repoContracts.Entity] struct {
+	mock *MockService[C, R, U, E]
 }
 
 // NewMockService creates a new mock instance.
-func NewMockService[D any, E repoContracts.Entity](ctrl *gomock.Controller) *MockService[D, E] {
-	mock := &MockService[D, E]{ctrl: ctrl}
-	mock.recorder = &MockServiceMockRecorder[D, E]{mock}
+func NewMockService[C any, R any, U any, E repoContracts.Entity](ctrl *gomock.Controller) *MockService[C, R, U, E] {
+	mock := &MockService[C, R, U, E]{ctrl: ctrl}
+	mock.recorder = &MockServiceMockRecorder[C, R, U, E]{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockService[D, E]) EXPECT() *MockServiceMockRecorder[D, E] {
+func (m *MockService[C, R, U, E]) EXPECT() *MockServiceMockRecorder[C, R, U, E] {
 	return m.recorder
 }
 
 // Create mocks base method.
-func (m *MockService[D, E]) Create(ctx context.Context, dto *D) error {
+func (m *MockService[C, R, U, E]) Create(ctx context.Context, dto C) (R, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", ctx, dto)
-	ret0, _ := ret[0].(error)
-	return ret0
+	var ret0 R
+	if ret[0] != nil {
+		ret0 = ret[0].(R)
+	}
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockServiceMockRecorder[D, E]) Create(ctx, dto interface{}) *gomock.Call {
+func (mr *MockServiceMockRecorder[C, R, U, E]) Create(ctx, dto interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockService[D, E])(nil).Create), ctx, dto)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockService[C, R, U, E])(nil).Create), ctx, dto)
 }
 
 // Delete mocks base method.
-func (m *MockService[D, E]) Delete(ctx context.Context, id string) error {
+func (m *MockService[C, R, U, E]) Delete(ctx context.Context, id string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", ctx, id)
 	ret0, _ := ret[0].(error)
@@ -138,36 +154,36 @@ func (m *MockService[D, E]) Delete(ctx context.Context, id string) error {
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockServiceMockRecorder[D, E]) Delete(ctx, id interface{}) *gomock.Call {
+func (mr *MockServiceMockRecorder[C, R, U, E]) Delete(ctx, id interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockService[D, E])(nil).Delete), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockService[C, R, U, E])(nil).Delete), ctx, id)
 }
 
 // GetByID mocks base method.
-func (m *MockService[D, E]) GetByID(ctx context.Context, id string) (D, error) {
+func (m *MockService[C, R, U, E]) GetByID(ctx context.Context, id string) (C, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetByID", ctx, id)
-	var ret0 D
+	var ret0 C
 	if ret[0] != nil {
-		ret0 = ret[0].(D)
+		ret0 = ret[0].(C)
 	}
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByID indicates an expected call of GetByID.
-func (mr *MockServiceMockRecorder[D, E]) GetByID(ctx, id interface{}) *gomock.Call {
+func (mr *MockServiceMockRecorder[C, R, U, E]) GetByID(ctx, id interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockService[D, E])(nil).GetByID), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockService[C, R, U, E])(nil).GetByID), ctx, id)
 }
 
 // List mocks base method.
-func (m *MockService[D, E]) List(ctx context.Context, params svcContracts.ListParams) ([]D, int64, error) {
+func (m *MockService[C, R, U, E]) List(ctx context.Context, params svcContracts.ListParams) ([]C, int64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", ctx, params)
-	var ret0 []D
+	var ret0 []C
 	if ret[0] != nil {
-		ret0 = ret[0].([]D)
+		ret0 = ret[0].([]C)
 	}
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -175,21 +191,25 @@ func (m *MockService[D, E]) List(ctx context.Context, params svcContracts.ListPa
 }
 
 // List indicates an expected call of List.
-func (mr *MockServiceMockRecorder[D, E]) List(ctx, params interface{}) *gomock.Call {
+func (mr *MockServiceMockRecorder[C, R, U, E]) List(ctx, params interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockService[D, E])(nil).List), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockService[C, R, U, E])(nil).List), ctx, params)
 }
 
 // Update mocks base method.
-func (m *MockService[D, E]) Update(ctx context.Context, id string, dto *D) error {
+func (m *MockService[C, R, U, E]) Update(ctx context.Context, id string, dto C) (R, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", ctx, id, dto)
-	ret0, _ := ret[0].(error)
-	return ret0
+	var ret0 R
+	if ret[0] != nil {
+		ret0 = ret[0].(R)
+	}
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockServiceMockRecorder[D, E]) Update(ctx, id, dto interface{}) *gomock.Call {
+func (mr *MockServiceMockRecorder[C, R, U, E]) Update(ctx, id, dto interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockService[D, E])(nil).Update), ctx, id, dto)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockService[C, R, U, E])(nil).Update), ctx, id, dto)
 }
