@@ -74,6 +74,10 @@ func (a *ApplicationProfileScreenshot) BeforeCreate(tx *gorm.DB) (err error) {
 	return nil
 }
 
+func (a *ApplicationProfileScreenshot) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return tx
+}
+
 type ApplicationProfile struct {
 	ApplicationProfileId int64          `gorm:"primaryKey;autoIncrement"`
 	ApplicationId        int64          `gorm:"not null;index:idx_application_profile_stage_app,priority:1"`
@@ -158,4 +162,8 @@ func (a *ApplicationProfile) BeforeUpdate(tx *gorm.DB) (err error) {
 	}
 
 	return nil
+}
+
+func (a ApplicationProfile) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return tx
 }

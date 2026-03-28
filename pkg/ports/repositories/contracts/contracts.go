@@ -8,6 +8,7 @@ import (
 
 type Entity interface {
 	TableName() string
+	WhereOnConflict(tx *gorm.DB) *gorm.DB
 }
 
 type QueryParams struct {
@@ -17,9 +18,14 @@ type QueryParams struct {
 type ListParams struct {
 	QueryParams
 	Page    int
-	Size    int
 	OrderBy string
 	Order   string
+}
+
+// ConflictScope representa um filtro de coluna/valor para resolução de conflito.
+type ConflictScope struct {
+	ColumnName  string
+	ColumnValue any
 }
 
 // LockValidationSpec defines a reusable contract for transaction+locking
@@ -38,8 +44,8 @@ type LockValidationSpec[E Entity] struct {
 
 type Repository[E Entity] interface {
 	Create(ctx context.Context, inOut *E) error
-	GetByID(ctx context.Context, id map[string]any) (E, error)
-	List(ctx context.Context, params ListParams) ([]E, int64, error)
+	GetByID(ctx context.Context, id map[string]any, out *E) error
+	List(ctx context.Context, params ListParams, out *[]E) (int64, error)
 	Update(ctx context.Context, id map[string]any, inOut *E) error
 	Delete(ctx context.Context, id map[string]any) error
 	GormDB() *gorm.DB

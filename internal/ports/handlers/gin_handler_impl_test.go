@@ -9,11 +9,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	repoerrs "github.com/brunojet/go-infra-backend/internal/ports/repositories"
-	hndcontracts "github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
+	rpo "github.com/brunojet/go-infra-backend/internal/ports/repositories"
+	"github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
+	svccts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 type SimpleEntity struct {
@@ -24,6 +26,9 @@ type SimpleEntity struct {
 func (e SimpleEntity) TableName() string {
 	return "simple_entities"
 }
+func (e SimpleEntity) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return tx
+}
 
 type SimpleDTO struct {
 	ID   string `json:"id,omitempty"`
@@ -31,17 +36,20 @@ type SimpleDTO struct {
 }
 
 // helper to create via GinHandler
-func createEntityForHandlerTest(t *testing.T, h hndcontracts.GenericHandler[SimpleDTO, SimpleDTO, SimpleDTO], ms *MockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity]) string {
+func createEntityForHandlerTest(t *testing.T, h contracts.GenericHandler[SimpleDTO, SimpleDTO, SimpleDTO], ms *MockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity]) string {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	body := `{"name":"bob"}`
 	c.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
-	ms.EXPECT().Create(gomock.Any(), gomock.AssignableToTypeOf(SimpleDTO{})).DoAndReturn(func(ctx context.Context, dto any) (SimpleDTO, error) {
-		d := dto.(SimpleDTO)
+	ExpectServiceCreate(ms, func(_ context.Context, dto SimpleDTO, out *SimpleDTO) error {
+		d := dto
 		d.ID = "created-id"
-		return d, nil
+		if out != nil {
+			*out = d
+		}
+		return nil
 	})
 
 	h.Create(c)
@@ -68,7 +76,9 @@ func TestCreate_Handler(t *testing.T) {
 	body := `{"name":"bob"}`
 	c.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
 	c.Request.Header.Set("Content-Type", "application/json")
-	ms.EXPECT().Create(gomock.Any(), gomock.AssignableToTypeOf(SimpleDTO{})).Return(SimpleDTO{}, errors.New("boom"))
+	ExpectServiceCreate(ms, func(_ context.Context, _ SimpleDTO, _ *SimpleDTO) error {
+		return errors.New("boom")
+	})
 	h.Create(c)
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
 }
@@ -86,7 +96,10 @@ func TestGetByID_Handler(t *testing.T) {
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/1", nil)
 	c.Params = gin.Params{{Key: "id", Value: "1"}}
-	ms.EXPECT().GetByID(gomock.Any(), "1").Return(SimpleDTO{ID: "1"}, nil)
+	ExpectServiceGetByID(ms, func(_ context.Context, id string, out *SimpleDTO) error {
+		*out = SimpleDTO{ID: id}
+		return nil
+	})
 	h.GetByID(c)
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -95,7 +108,9 @@ func TestGetByID_Handler(t *testing.T) {
 	c, _ = gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/2", nil)
 	c.Params = gin.Params{{Key: "id", Value: "2"}}
-	ms.EXPECT().GetByID(gomock.Any(), "2").Return(SimpleDTO{}, repoerrs.ErrNotFound)
+	ExpectServiceGetByID(ms, func(_ context.Context, id string, _ *SimpleDTO) error {
+		return rpo.ErrNotFound
+	})
 	h.GetByID(c)
 	require.Equal(t, http.StatusNotFound, rec.Code)
 
@@ -120,15 +135,22 @@ func TestList_Handler(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
-	ms.EXPECT().List(gomock.Any(), gomock.Any()).Return([]SimpleDTO{{ID: "1"}}, int64(1), nil)
+	ExpectServiceList(ms, func(_ context.Context, _ svccts.ListParams, out *[]SimpleDTO) (int64, error) {
+		if out != nil && len(*out) > 0 {
+			(*out)[0] = SimpleDTO{ID: "1"}
+		}
+		return 1, nil
+	})
 	h.List(c)
-	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, http.StatusPartialContent, rec.Code)
 
 	// db unavailable
 	rec = httptest.NewRecorder()
 	c, _ = gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
-	ms.EXPECT().List(gomock.Any(), gomock.Any()).Return(nil, int64(0), repoerrs.ErrDBUnavailable)
+	ExpectServiceList(ms, func(_ context.Context, _ svccts.ListParams, _ *[]SimpleDTO) (int64, error) {
+		return 0, rpo.ErrDBUnavailable
+	})
 	h.List(c)
 	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
 }
@@ -148,7 +170,12 @@ func TestUpdate_Handler(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodPut, "/", bytes.NewBufferString(upd))
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Params = gin.Params{{Key: "id", Value: "1"}} // id válido para Int64GtZero
-	ms.EXPECT().Update(gomock.Any(), "1", gomock.AssignableToTypeOf(SimpleDTO{})).Return(SimpleDTO{}, nil)
+	ExpectServiceUpdate(ms, func(_ context.Context, id string, _ SimpleDTO, _ *SimpleDTO) error {
+		if id == "1" {
+			return nil
+		}
+		return errors.New("unexpected id")
+	})
 	h.Update(c)
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -158,7 +185,12 @@ func TestUpdate_Handler(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodPut, "/", bytes.NewBufferString(upd))
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Params = gin.Params{{Key: "id", Value: "2"}} // outro id válido
-	ms.EXPECT().Update(gomock.Any(), "2", gomock.AssignableToTypeOf(SimpleDTO{})).Return(SimpleDTO{}, repoerrs.ErrNotFound)
+	ExpectServiceUpdate(ms, func(_ context.Context, id string, _ SimpleDTO, _ *SimpleDTO) error {
+		if id == "2" {
+			return rpo.ErrNotFound
+		}
+		return nil
+	})
 	h.Update(c)
 	require.Equal(t, http.StatusNotFound, rec.Code)
 
@@ -185,7 +217,12 @@ func TestDelete_Handler(t *testing.T) {
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodDelete, "/", nil)
 	c.Params = gin.Params{{Key: "id", Value: "1"}}
-	ms.EXPECT().Delete(gomock.Any(), "1").Return(nil)
+	ExpectServiceDelete(ms, func(_ context.Context, id string) error {
+		if id == "1" {
+			return nil
+		}
+		return errors.New("unexpected id")
+	})
 	h.Delete(c)
 	require.Equal(t, http.StatusNoContent, rec.Code)
 
@@ -194,7 +231,9 @@ func TestDelete_Handler(t *testing.T) {
 	c, _ = gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodDelete, "/", nil)
 	c.Params = gin.Params{{Key: "id", Value: "1"}}
-	ms.EXPECT().Delete(gomock.Any(), "1").Return(errors.New("boom"))
+	ExpectServiceDelete(ms, func(_ context.Context, id string) error {
+		return errors.New("boom")
+	})
 	h.Delete(c)
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
 

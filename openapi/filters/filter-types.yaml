@@ -50,7 +50,7 @@ paths:
       responses:
         '200':
           description: OK
-    put:
+    patch:
       summary: Atualizar tipo de filtro
       description: Atualiza o tipo de filtro informado.
       operationId: updateFilterTypeById

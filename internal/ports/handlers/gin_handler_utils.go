@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	repoerrs "github.com/brunojet/go-infra-backend/internal/ports/repositories"
-	svccontracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	"github.com/brunojet/go-infra-backend/internal/ports/repositories"
+	"github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,10 +28,10 @@ func MapErrorToStatus(err error) int {
 		errors.Is(err, ErrInvalidIDFormat) {
 		return http.StatusBadRequest
 	}
-	if errors.Is(err, repoerrs.ErrNotFound) {
+	if errors.Is(err, repositories.ErrNotFound) {
 		return http.StatusNotFound
 	}
-	if errors.Is(err, repoerrs.ErrDBUnavailable) {
+	if errors.Is(err, repositories.ErrDBUnavailable) {
 		return http.StatusServiceUnavailable
 	}
 
@@ -62,8 +62,6 @@ func SetResponseFromError(c *gin.Context, err error) {
 	c.AbortWithStatusJSON(status, gin.H{"error": err.Error()})
 }
 
-// BindJSONToDTOPtr lê o corpo JSON do request e vincula em um DTO genérico `D`.
-// Retorna ponteiro para `D` ou erro já tratado na resposta HTTP.
 func BindJSONToDTO(c *gin.Context, dto any) bool {
 	if err := c.ShouldBindJSON(dto); err != nil {
 		SetResponseFromError(c, ErrInvalidJSONBody)
@@ -75,7 +73,24 @@ func BindJSONToDTO(c *gin.Context, dto any) bool {
 func ParsePaginationParams(values url.Values) (int, int) {
 	page, _ := strconv.Atoi(values.Get(QueryParamPage))
 	size, _ := strconv.Atoi(values.Get(QueryParamSize))
+	if page < DefaultPage {
+		page = DefaultPage
+	}
+	if size < DefaultPageSize {
+		size = DefaultPageSize
+	} else if size > MaxPageSize {
+		size = MaxPageSize
+	}
 	return page, size
+}
+
+func ParseOrderParams(values url.Values) (string, string) {
+	orderBy := values.Get(QueryParamOrderBy)
+	order := strings.ToLower(values.Get(QueryParamOrder))
+	if order != OrderAsc && order != OrderDesc {
+		order = OrderAsc
+	}
+	return orderBy, order
 }
 
 func ExtractQueryScopes(values url.Values) map[string]any {
@@ -92,15 +107,15 @@ func ExtractQueryScopes(values url.Values) map[string]any {
 	return scopes
 }
 
-func BuildListParamsFromRequest(c *gin.Context) svccontracts.ListParams {
+func BuildListParamsFromRequest(c *gin.Context) contracts.ListParams {
 	query := c.Request.URL.Query()
 	page, size := ParsePaginationParams(query)
-	orderBy := query.Get(QueryParamOrderBy)
-	return svccontracts.ListParams{
-		QueryParams: svccontracts.QueryParams{Scopes: ExtractQueryScopes(query)},
+	orderBy, order := ParseOrderParams(query)
+	return contracts.ListParams{
+		QueryParams: contracts.QueryParams{Scopes: ExtractQueryScopes(query)},
 		Page:        page,
 		Size:        size,
 		OrderBy:     orderBy,
-		Order:       query.Get(QueryParamOrder),
+		Order:       order,
 	}
 }

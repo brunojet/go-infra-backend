@@ -48,6 +48,10 @@ type Event struct {
 
 func (Event) TableName() string { return "es_event" }
 
+func (Event) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return tx
+}
+
 // Snapshot holds periodic snapshots for fast aggregate reconstruction.
 type Snapshot struct {
 	SnapshotId    int64           `gorm:"primaryKey;autoIncrement"`
@@ -59,6 +63,10 @@ type Snapshot struct {
 }
 
 func (Snapshot) TableName() string { return "es_snapshot" }
+
+func (Snapshot) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return tx
+}
 
 // AppendEvent appends an event for the given aggregate. It computes the next
 // sequence number in a transaction to ensure per-aggregate ordering.

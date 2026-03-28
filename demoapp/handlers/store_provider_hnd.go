@@ -15,7 +15,7 @@ func NewFilterTypeHandler(rg *gin.RouterGroup, s services.FilterTypeService) {
 	handler.RegisterCollection(rg, "POST", handler.Create)
 	handler.RegisterCollection(rg, "GET", handler.List)
 	handler.RegisterInstance(rg, "GET", handler.GetByID)
-	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "PATCH", handler.Update)
 	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }
 
@@ -32,7 +32,7 @@ func NewFiltersHandler(rg *gin.RouterGroup, s services.FilterNestedService) {
 	handler.RegisterCollection(rg, "POST", handler.CreateNested)
 	handler.RegisterCollection(rg, "GET", handler.ListNested)
 	handler.RegisterInstance(rg, "GET", handler.GetByID)
-	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "PATCH", handler.Update)
 	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }
 
@@ -45,7 +45,7 @@ func NewTerminalModelHandler(rg *gin.RouterGroup, s services.TerminalModelServic
 	handler.RegisterCollection(rg, "POST", handler.Create)
 	handler.RegisterCollection(rg, "GET", handler.List)
 	handler.RegisterInstance(rg, "GET", handler.GetByID)
-	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "PATCH", handler.Update)
 	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }
 
@@ -62,7 +62,7 @@ func NewTerminalModelConfigurationHandler(rg *gin.RouterGroup, s services.Termin
 	handler.RegisterCollection(rg, "POST", handler.CreateNested)
 	handler.RegisterCollection(rg, "GET", handler.ListNested)
 	handler.RegisterInstance(rg, "GET", handler.GetByID)
-	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "PATCH", handler.Update)
 	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }
 
@@ -75,7 +75,7 @@ func NewApplicationHandler(rg *gin.RouterGroup, s services.ApplicationService) {
 	handler.RegisterCollection(rg, "POST", handler.Create)
 	handler.RegisterCollection(rg, "GET", handler.List)
 	handler.RegisterInstance(rg, "GET", handler.GetByID)
-	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "PATCH", handler.Update)
 	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }
 
@@ -92,7 +92,7 @@ func NewApplicationConfigurationHandler(rg *gin.RouterGroup, s services.Applicat
 	handler.RegisterCollection(rg, "POST", handler.CreateNested)
 	handler.RegisterCollection(rg, "GET", handler.ListNested)
 	handler.RegisterInstance(rg, "GET", handler.GetByID)
-	handler.RegisterInstance(rg, "PUT", handler.Update)
+	handler.RegisterInstance(rg, "PATCH", handler.Update)
 	handler.RegisterInstance(rg, "DELETE", handler.Delete)
 }
 
@@ -109,8 +109,7 @@ func NewApplicationProfileHandler(rg *gin.RouterGroup, s services.ApplicationPro
 	handler.RegisterCollection(rg, "POST", handler.CreateNested)
 	handler.RegisterCollection(rg, "GET", handler.ListNested)
 	handler.RegisterInstance(rg, "GET", handler.GetByID)
-	handler.RegisterInstance(rg, "PUT", handler.Update)
-	handler.RegisterInstance(rg, "DELETE", handler.Delete)
+	handler.RegisterInstance(rg, "PATCH", handler.Update)
 }
 
 func NewApplicationVersionHandler(rg *gin.RouterGroup, s services.ApplicationVersionNestedService) {
@@ -126,6 +125,5 @@ func NewApplicationVersionHandler(rg *gin.RouterGroup, s services.ApplicationVer
 	handler.RegisterCollection(rg, "POST", handler.CreateNested)
 	handler.RegisterCollection(rg, "GET", handler.ListNested)
 	handler.RegisterInstance(rg, "GET", handler.GetByID)
-	handler.RegisterInstance(rg, "PUT", handler.Update)
-	handler.RegisterInstance(rg, "DELETE", handler.Delete)
+	handler.RegisterInstance(rg, "PATCH", handler.Update)
 }

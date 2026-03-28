@@ -33,13 +33,6 @@ var (
 		models.ApplicationImageStatusFailed:     dtos.ApplicationImageStatusFailed,
 	}
 
-	fileStatusToModel = map[dtos.FileStatus]int16{
-		dtos.ApplicationImageStatusPending:    models.ApplicationImageStatusPending,
-		dtos.ApplicationImageStatusProcessing: models.ApplicationImageStatusProcessing,
-		dtos.ApplicationImageStatusReady:      models.ApplicationImageStatusReady,
-		dtos.ApplicationImageStatusFailed:     models.ApplicationImageStatusFailed,
-	}
-
 	stageMapFromModel = map[int16]dtos.ApplicationStage{
 		models.ApplicationStagePending:    dtos.ApplicationStagePending,
 		models.ApplicationStageReview:     dtos.ApplicationStageReview,

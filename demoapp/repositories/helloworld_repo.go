@@ -7,6 +7,7 @@ import (
 	"github.com/brunojet/go-infra-backend/internal/ports/repositories"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	"gorm.io/gorm"
 )
 
 type HelloWorld struct {
@@ -16,6 +17,10 @@ type HelloWorld struct {
 
 func (h HelloWorld) TableName() string {
 	return "hello_world"
+}
+
+func (HelloWorld) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return tx
 }
 
 type HelloWorldRepo struct {

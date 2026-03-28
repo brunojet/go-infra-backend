@@ -114,34 +114,32 @@ func (mr *MockRepositoryMockRecorder[E]) Delete(ctx, id interface{}) *gomock.Cal
 }
 
 // GetByID mocks base method.
-func (m *MockRepository[E]) GetByID(ctx context.Context, id map[string]any) (E, error) {
+func (m *MockRepository[E]) GetByID(ctx context.Context, id map[string]any, out *E) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", ctx, id)
-	ret0, _ := ret[0].(E)
+	ret := m.ctrl.Call(m, "GetByID", ctx, id, out)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockRepositoryMockRecorder[E]) GetByID(ctx, id, out interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockRepository[E])(nil).GetByID), ctx, id, out)
+}
+
+// List mocks base method.
+func (m *MockRepository[E]) List(ctx context.Context, listParams contracts.ListParams, out *[]E) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, listParams, out)
+	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetByID indicates an expected call of GetByID.
-func (mr *MockRepositoryMockRecorder[E]) GetByID(ctx, id interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockRepository[E])(nil).GetByID), ctx, id)
-}
-
-// List mocks base method.
-func (m *MockRepository[E]) List(ctx context.Context, listParams contracts.ListParams) ([]E, int64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, listParams)
-	ret0, _ := ret[0].([]E)
-	ret1, _ := ret[1].(int64)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
 // List indicates an expected call of List.
-func (mr *MockRepositoryMockRecorder[E]) List(ctx, listParams interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder[E]) List(ctx, listParams interface{}, out interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRepository[E])(nil).List), ctx, listParams)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRepository[E])(nil).List), ctx, listParams, out)
 }
 
 // Update mocks base method.

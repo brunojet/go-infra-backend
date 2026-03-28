@@ -31,10 +31,10 @@ type ServiceMapper[C, R, U any, E repoContracts.Entity] interface {
 }
 
 type Service[C, R, U any, E repoContracts.Entity] interface {
-	Create(ctx context.Context, dto C) (R, error)
-	List(ctx context.Context, params ListParams) ([]R, int64, error)
-	GetByID(ctx context.Context, id string) (R, error)
-	Update(ctx context.Context, id string, dto U) (R, error)
+	Create(ctx context.Context, dto C, response *R) error
+	List(ctx context.Context, params ListParams, response *[]R) (int64, error)
+	GetByID(ctx context.Context, id string, response *R) error
+	Update(ctx context.Context, id string, dto U, response *R) error
 	Delete(ctx context.Context, id string) error
 }
 
@@ -46,6 +46,6 @@ type NestedServiceMapper[C, R, U any, E repoContracts.Entity] interface {
 
 type NestedService[C, R, U any, E repoContracts.Entity] interface {
 	Service[C, R, U, E]
-	CreateNested(ctx context.Context, parentID string, dto C) (R, error)
-	ListNested(ctx context.Context, parentID string, params ListParams) ([]R, int64, error)
+	CreateNested(ctx context.Context, parentID string, dto C, response *R) error
+	ListNested(ctx context.Context, parentID string, params ListParams, response *[]R) (int64, error)
 }

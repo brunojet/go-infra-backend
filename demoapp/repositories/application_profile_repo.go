@@ -14,7 +14,6 @@ import (
 
 const (
 	whereProfileIDNeq    = models.ColAppProfileID + " <> ?"
-	whereProfileIDEq     = models.ColAppProfileID + " = ?"
 	whereProfileAppIDEq  = models.ColAppProfileApplicationID + " = ?"
 	whereProfileStageEq  = models.ColAppProfileStage + " = ?"
 	whereProfileDelIsNil = models.ColAppProfileDeletedAt + " IS NULL"

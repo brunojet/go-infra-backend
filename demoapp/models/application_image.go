@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"errors"
 
+	repositories "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 const (
@@ -50,20 +50,19 @@ const (
 func (ApplicationImage) TableName() string { return tableApplicationImage }
 
 func (a ApplicationImage) BeforeCreate(tx *gorm.DB) (err error) {
-	if a.ApplicationId == 0 {
-		return errors.New(errApplicationIDRequired)
-	}
-	if !a.ImageType.Valid {
-		return errors.New(errImageTypeRequired)
-	}
-	if len(a.FileHash) != 32 {
-		return errors.New(errFileHashLength)
-	}
-	tx.Statement.AddClause(clause.OnConflict{
-		Columns:   []clause.Column{{Name: colAppImageApplicationID}, {Name: colAppImageFileHash}, {Name: colAppImageImageType}},
-		DoNothing: true,
-	})
-	return nil
+	return repositories.AddOnConflictDoNothing(tx,
+		colAppImageApplicationID,
+		colAppImageFileHash,
+		colAppImageImageType,
+	)
+}
+
+func (a ApplicationImage) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return repositories.WhereOnConflict(tx,
+		repositories.ConflictScope{ColumnName: colAppImageApplicationID, ColumnValue: a.ApplicationId},
+		repositories.ConflictScope{ColumnName: colAppImageFileHash, ColumnValue: a.FileHash},
+		repositories.ConflictScope{ColumnName: colAppImageImageType, ColumnValue: a.ImageType.Int16},
+	)
 }
 
 func (a *ApplicationImage) GetOrCreate(tx *gorm.DB) error {

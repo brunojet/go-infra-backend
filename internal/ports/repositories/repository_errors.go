@@ -14,16 +14,18 @@ var (
 	ErrInvalidTx     = errors.New("invalid transaction")
 	ErrNotFound      = gorm.ErrRecordNotFound
 	// Validation / user-level repository errors
-	ErrInvalidConflictColumns    = errors.New("invalid conflict columns")
-	ErrInvalidConflictColumnName = errors.New("invalid conflict column: field name cannot be empty")
-	ErrInvalidScope              = errors.New("invalid scope: field has invalid value")
-	ErrEmptyScopes               = errors.New("invalid scope: scopes must be non-empty and contain valid field names and values")
-	ErrOrderByMissing            = errors.New("orderBy must be provided")
-	ErrInvalidPage               = errors.New("page must be greater than zero")
-	ErrInvalidPageSize           = errors.New("pageSize must be greater than zero")
-	ErrRequiresTransaction       = errors.New("operation must run inside a transaction")
-	ErrBusinessRuleViolation     = porterrors.ErrBusinessRuleViolation
-	ErrLockValidationWhere       = errors.New("where clause must be provided for lock validation")
+	ErrInvalidConflictColumns     = errors.New("invalid conflict columns")
+	ErrInvalidConflictColumnName  = errors.New("invalid conflict column: field name cannot be empty")
+	ErrInvalidScope               = errors.New("invalid scope: field has invalid value")
+	ErrEmptyScopes                = errors.New("invalid scope: scopes must be non-empty and contain valid field names and values")
+	ErrOrderByMissing             = errors.New("orderBy must be provided")
+	ErrInvalidPage                = errors.New("page must be greater than zero")
+	ErrInvalidPageSize            = errors.New("pageSize must be greater than zero")
+	ErrRequiresTransaction        = errors.New("operation must run inside a transaction")
+	ErrBusinessRuleViolation      = porterrors.ErrBusinessRuleViolation
+	ErrLockValidationWhere        = errors.New("where clause must be provided for lock validation")
+	ErrConflictValidationRequired = errors.New("conflict validation is required for this operation")
+	ErrConflictValidationFailed   = errors.New("conflict validation failed: another transaction has modified the same entity")
 )
 
 type BusinessRuleError = porterrors.BusinessRuleError

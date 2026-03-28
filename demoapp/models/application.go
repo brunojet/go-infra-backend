@@ -41,11 +41,6 @@ type Application struct {
 	ApplicationImages         []ApplicationImage         `gorm:"foreignKey:ApplicationId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
 }
 
-// Error implements [error].
-func (a Application) Error() string {
-	panic("unimplemented")
-}
-
 func (Application) TableName() string { return tableApplication }
 
 // validateAppOwnerCreate checks whether there is an existing Application with the
@@ -112,6 +107,10 @@ func (a *Application) BeforeUpdate(tx *gorm.DB) error {
 	return nil
 }
 
+func (a Application) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return repositories.WhereOnConflict(tx, repositories.ConflictScope{ColumnName: colName, ColumnValue: a.Name})
+}
+
 type ApplicationConfiguration struct {
 	ApplicationId                int64          `gorm:"column:application_id;primaryKey;priority:1;index:idx_app_cfg_terminal_app,priority:2"`
 	TerminalModelConfigurationId int64          `gorm:"column:terminal_model_configuration_id;primaryKey;priority:2;index:idx_app_cfg_terminal_app,priority:1;uniqueIndex:ux_app_cfg_terminal_app,priority:1"`
@@ -159,4 +158,11 @@ func (a *ApplicationConfiguration) BeforeUpdate(tx *gorm.DB) error {
 		return err
 	}
 	return nil
+}
+
+func (a ApplicationConfiguration) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return repositories.WhereOnConflict(tx,
+		repositories.ConflictScope{ColumnName: colApplicationID, ColumnValue: a.ApplicationId},
+		repositories.ConflictScope{ColumnName: colTerminalModelConfigurationID, ColumnValue: a.TerminalModelConfigurationId},
+	)
 }

@@ -21,3 +21,16 @@ type HandlerParameters struct {
 	HandlerPath      string
 	IDValidationRule *regexp.Regexp
 }
+
+type PaginationResponse struct {
+	Page       int    `json:"page"`
+	Size       int    `json:"size"`
+	TotalItems int64  `json:"totalItems"`
+	OrderBy    string `json:"orderBy,omitempty"`
+	Order      string `json:"order,omitempty"`
+}
+
+type ListResponses[R any] struct {
+	Data       []R                `json:"data"`
+	Pagination PaginationResponse `json:"pagination"`
+}

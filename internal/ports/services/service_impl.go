@@ -3,79 +3,94 @@ package services
 import (
 	"context"
 
-	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/internal/ports/repositories"
+	"github.com/brunojet/go-infra-backend/internal/utils"
+	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
-type serviceImpl[C, R, U any, E repoContracts.Entity] struct {
-	repo   repoContracts.Repository[E]
+type serviceImpl[C, R, U any, E rpocts.Entity] struct {
+	rpo    rpocts.Repository[E]
 	mapper contracts.ServiceMapper[C, R, U, E]
 }
 
-func NewServiceImpl[C, R, U any, E repoContracts.Entity](r repoContracts.Repository[E], m contracts.ServiceMapper[C, R, U, E]) contracts.Service[C, R, U, E] {
-	return &serviceImpl[C, R, U, E]{repo: r, mapper: m}
+func NewServiceImpl[C, R, U any, E rpocts.Entity](r rpocts.Repository[E], m contracts.ServiceMapper[C, R, U, E]) contracts.Service[C, R, U, E] {
+	return &serviceImpl[C, R, U, E]{rpo: r, mapper: m}
 }
 
-func (s *serviceImpl[C, R, U, E]) Create(ctx context.Context, dto C) (R, error) {
+func (s *serviceImpl[C, R, U, E]) Create(ctx context.Context, request C, response *R) error {
 	var model E
-	s.mapper.ToPostModel(dto, &model)
-	if err := s.repo.Create(ctx, &model); err != nil {
-		var zero R
-		return zero, err
+	if err := s.mapper.ToPostModel(request, &model); err != nil {
+		return err
 	}
-	var out R
-	s.mapper.ToDTO(&model, &out)
-	return out, nil
+	conflictValidationNeeded := false
+	err := s.rpo.WithTx(ctx, func(txCtx context.Context) error {
+		if err := s.rpo.Create(txCtx, &model); err != nil {
+			if err != repositories.ErrConflictValidationRequired {
+				return err
+			}
+			conflictValidationNeeded = true
+		}
+		if err := s.mapper.ToDTO(&model, response); err != nil {
+			return err
+		}
+		return nil
+	})
+	if conflictValidationNeeded && !utils.IsSubSetInterface(request, response) {
+		err = repositories.ErrConflictValidationFailed
+	}
+	return err
 }
 
-func (s *serviceImpl[C, R, U, E]) GetByID(ctx context.Context, id string) (R, error) {
+func (s *serviceImpl[C, R, U, E]) GetByID(ctx context.Context, id string, response *R) error {
 	key, err := s.mapper.GetModelKey(id)
 	if err != nil {
-		var zero R
-		return zero, err
+		return err
 	}
-	model, err := s.repo.GetByID(ctx, key)
-	if err != nil {
-		var zero R
-		return zero, err
+	var resposeModel E
+	if err := s.rpo.GetByID(ctx, key, &resposeModel); err != nil {
+		return err
 	}
-	var dto R
-	s.mapper.ToDTO(&model, &dto)
-	return dto, nil
+	s.mapper.ToDTO(&resposeModel, response)
+	return nil
 }
 
-func (s *serviceImpl[C, R, U, E]) List(ctx context.Context, params contracts.ListParams) ([]R, int64, error) {
+func (s *serviceImpl[C, R, U, E]) List(ctx context.Context, params contracts.ListParams, responses *[]R) (int64, error) {
 	mappedScopes, err := s.mapper.ApplyQueryScopes(params.QueryParams.Scopes)
 	if err != nil {
-		return nil, 0, err
+		return 0, err
 	}
 	repoParams := toRepoListParams(params, mappedScopes)
-	models, total, err := s.repo.List(ctx, repoParams)
+	modelReponses := make([]E, 0, cap(*responses))
+	total, err := s.rpo.List(ctx, repoParams, &modelReponses)
 	if err != nil {
-		return nil, 0, err
+		return 0, err
 	}
-	out := make([]R, len(models))
-	for i := range models {
-		s.mapper.ToDTO(&models[i], &out[i])
+	*responses = (*responses)[:len(modelReponses)] // ensure responses slice has the same length as models
+	for i := range modelReponses {
+		s.mapper.ToDTO(&modelReponses[i], &(*responses)[i])
 	}
-	return out, total, nil
+	return total, nil
 }
 
-func (s *serviceImpl[C, R, U, E]) Update(ctx context.Context, id string, dto U) (R, error) {
+func (s *serviceImpl[C, R, U, E]) Update(ctx context.Context, id string, dto U, response *R) error {
 	var model E
-	s.mapper.ToPatchModel(dto, &model)
+	if err := s.mapper.ToPatchModel(dto, &model); err != nil {
+		return err
+	}
 	key, err := s.mapper.GetModelKey(id)
 	if err != nil {
-		var zero R
-		return zero, err
+		return err
 	}
-	if err := s.repo.Update(ctx, key, &model); err != nil {
-		var zero R
-		return zero, err
-	}
-	var out R
-	s.mapper.ToDTO(&model, &out)
-	return out, nil
+	return s.rpo.WithTx(ctx, func(txCtx context.Context) error {
+		if err := s.rpo.Update(txCtx, key, &model); err != nil {
+			return err
+		}
+		if err := s.mapper.ToDTO(&model, response); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func (s *serviceImpl[C, R, U, E]) Delete(ctx context.Context, id string) error {
@@ -83,5 +98,5 @@ func (s *serviceImpl[C, R, U, E]) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	return s.repo.Delete(ctx, key)
+	return s.rpo.Delete(ctx, key)
 }

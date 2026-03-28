@@ -33,7 +33,8 @@ type TestEntity struct {
 func ps(s string) *string { return &s }
 func pi(i int) *int       { return &i }
 
-func (t TestEntity) TableName() string { return "test_entities" }
+func (t TestEntity) TableName() string                    { return "test_entities" }
+func (t TestEntity) WhereOnConflict(tx *gorm.DB) *gorm.DB { return tx }
 
 func mustGormDB(t *testing.T, db dbcontracts.DatabaseAdapter) *gorm.DB {
 	t.Helper()
@@ -66,13 +67,14 @@ func TestGormrepositories_InvalidIDAndNotFound(t *testing.T) {
 
 	// repository now expects callers to provide a primary-key map; validate BuildPKeyMap behaviour
 	// repository expects callers to provide a primary-key map; invalid id should be handled upstream
-	_, err := repo.GetByID(ctx, map[string]any{})
+	var model TestEntity
+	err := repo.GetByID(ctx, map[string]any{}, &model)
 	// generic repos may map empty id to ErrInvalidID or return a DB error; assert error
 	assert.Error(t, err)
 
 	// missing id should return ErrNotFound when using a valid pk map
 	pk := map[string]any{"id": "missing-id"}
-	_, err = repo.GetByID(ctx, pk)
+	err = repo.GetByID(ctx, pk, &model)
 	assert.ErrorIs(t, err, ErrNotFound)
 }
 
@@ -94,9 +96,9 @@ func TestGormrepositories_CreateAndGet(t *testing.T) {
 	assert.Equal(t, "bob", *e.Name)
 	assert.Equal(t, 22, *e.Age)
 
-	gotPtr, err := repo.GetByID(ctx, map[string]any{"id": "id-create"})
+	var got TestEntity
+	err = repo.GetByID(ctx, map[string]any{"id": "id-create"}, &got)
 	assert.NoError(t, err)
-	got := gotPtr
 	assert.Equal(t, "id-create", got.ID)
 	assert.NotNil(t, got.Name)
 	assert.NotNil(t, got.Age)
@@ -120,7 +122,8 @@ func TestGormrepositories_List(t *testing.T) {
 	assert.NoError(t, repo.Create(ctx, &TestEntity{ID: "l-1", Name: ps("n1"), Age: pi(1)}))
 	assert.NoError(t, repo.Create(ctx, &TestEntity{ID: "l-2", Name: ps("n2"), Age: pi(2)}))
 
-	items, _, err := repo.List(ctx, repoContracts.ListParams{Page: 1, Size: 10, OrderBy: "NAME", Order: "asc"})
+	items := make([]TestEntity, 0, 10)
+	_, err := repo.List(ctx, repoContracts.ListParams{Page: 1, OrderBy: "NAME", Order: "asc"}, &items)
 	assert.NoError(t, err)
 	assert.GreaterOrEqual(t, len(items), 2)
 }
@@ -154,7 +157,8 @@ func TestGormrepositories_Delete(t *testing.T) {
 
 	assert.NoError(t, repo.Create(ctx, &TestEntity{ID: "d-1", Name: ps("to-del"), Age: pi(5)}))
 	assert.NoError(t, repo.Delete(ctx, map[string]any{"id": "d-1"}))
-	_, err := repo.GetByID(ctx, map[string]any{"id": "d-1"})
+	var model TestEntity
+	err := repo.GetByID(ctx, map[string]any{"id": "d-1"}, &model)
 	assert.ErrorIs(t, err, ErrNotFound)
 
 	// ensure soft-delete: Unscoped query should find the record and DeletedAt should be set
@@ -186,7 +190,8 @@ func TestGormrepositories_Update_NilInputAndDeletedAfterUpdate(t *testing.T) {
 	// remove it directly via DB
 	assert.NoError(t, repo.Delete(ctx, map[string]any{"id": "u-delete"}))
 
-	_, err = repo.GetByID(ctx, map[string]any{"id": "u-delete"})
+	var model TestEntity
+	err = repo.GetByID(ctx, map[string]any{"id": "u-delete"}, &model)
 	assert.Error(t, err)
 	// attempt update — Updates will run but First should return ErrNotFound
 	in := &TestEntity{ID: "u-delete", Name: ps("new"), Age: pi(2)}
@@ -205,12 +210,14 @@ func TestGetListUpdate_DBErrors(t *testing.T) {
 	cleanup()
 
 	// GetByID should return an error (not ErrNotFound)
-	_, err := repo.GetByID(ctx, map[string]any{"id": "any"})
+	var model TestEntity
+	err := repo.GetByID(ctx, map[string]any{"id": "any"}, &model)
 	assert.Error(t, err)
 	assert.False(t, errors.Is(err, ErrNotFound))
 
 	// List should return error
-	_, _, err = repo.List(ctx, repoContracts.ListParams{Page: 1, Size: 10, OrderBy: "", Order: ""})
+	items := make([]TestEntity, 0, 10)
+	_, err = repo.List(ctx, repoContracts.ListParams{Page: 1, OrderBy: "", Order: ""}, &items)
 	assert.Error(t, err)
 
 	// Update should return error when DB closed
@@ -234,10 +241,12 @@ func TestRepositories_ClosedDB_MapsToErrDBUnavailable(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, err = repo.GetByID(ctx, map[string]any{"id": "any"})
+	var model TestEntity
+	err = repo.GetByID(ctx, map[string]any{"id": "any"}, &model)
 	assert.ErrorIs(t, err, ErrDBUnavailable)
 
-	_, _, err = repo.List(ctx, repoContracts.ListParams{Page: 1, Size: 1, OrderBy: "", Order: ""})
+	items := make([]TestEntity, 0, 1)
+	_, err = repo.List(ctx, repoContracts.ListParams{Page: 1, OrderBy: "", Order: ""}, &items)
 	// Accept either ErrDBUnavailable (DB closed) or ordering validation error depending on implementation
 	assert.Error(t, err)
 	assert.True(
@@ -261,7 +270,8 @@ type RepoTestModel struct {
 	Name string
 }
 
-func (r RepoTestModel) TableName() string { return "repo_test_models" }
+func (r RepoTestModel) TableName() string                    { return "repo_test_models" }
+func (r RepoTestModel) WhereOnConflict(tx *gorm.DB) *gorm.DB { return tx }
 
 func TestSetPagination_ErrorsAndSuccess(t *testing.T) {
 	db, close := openMemoryDB(t) // ensure DB can be opened before proceeding with List tests
@@ -327,7 +337,8 @@ func TestList_ErrorsAndSuccess(t *testing.T) {
 	ctx := context.Background()
 
 	// empty table -> Count rowsAffected == 0 -> MapTxError returns ErrNotFound
-	_, _, err := repo.List(ctx, contracts.ListParams{Page: 1, Size: 10, OrderBy: "id", Order: "asc"})
+	items := make([]RepoTestModel, 0, 10)
+	_, err := repo.List(ctx, contracts.ListParams{Page: 1, OrderBy: "id", Order: "asc"}, &items)
 	assert.Error(t, err)
 
 	// create records
@@ -338,15 +349,19 @@ func TestList_ErrorsAndSuccess(t *testing.T) {
 	}
 
 	// missing orderBy -> should error
-	_, _, err = repo.List(ctx, contracts.ListParams{Page: 1, Size: 2, OrderBy: "", Order: "asc"})
+	items = make([]RepoTestModel, 0, 2)
+	_, err = repo.List(ctx, contracts.ListParams{Page: 1, OrderBy: "", Order: "asc"}, &items)
 	assert.Error(t, err)
 
 	// invalid pagination -> should error
-	_, _, err = repo.List(ctx, contracts.ListParams{Page: 0, Size: 2, OrderBy: "id", Order: "asc"})
+	items = make([]RepoTestModel, 0, 2)
+	_, err = repo.List(ctx, contracts.ListParams{Page: 0, OrderBy: "id", Order: "asc"}, &items)
 	assert.Error(t, err)
 
 	// success: page 2 size 2 -> expect 2 items
-	items, total, err := repo.List(ctx, contracts.ListParams{Page: 2, Size: 2, OrderBy: "id", Order: "asc"})
+	items = make([]RepoTestModel, 0, 2)
+	var total int64
+	total, err = repo.List(ctx, contracts.ListParams{Page: 2, OrderBy: "id", Order: "asc"}, &items)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(5), total)
 	assert.Len(t, items, 2)
@@ -373,8 +388,8 @@ func TestGormRepository_WithTx_UsesTransactionalContextForCRUD(t *testing.T) {
 		return errors.New("force rollback")
 	})
 	assert.EqualError(t, err, "force rollback")
-
-	_, err = repo.GetByID(ctx, map[string]any{"id": "tx-rollback"})
+	var model TestEntity
+	err = repo.GetByID(ctx, map[string]any{"id": "tx-rollback"}, &model)
 	assert.ErrorIs(t, err, ErrNotFound)
 }
 
@@ -385,13 +400,13 @@ func TestList_Update_Delete_ExtraErrorBranches(t *testing.T) {
 	repo := NewGormRepository[TestEntity](db)
 	ctx := context.Background()
 
-	_, _, err := repo.List(ctx, contracts.ListParams{
+	items := make([]TestEntity, 0, 10)
+	_, err := repo.List(ctx, contracts.ListParams{
 		QueryParams: contracts.QueryParams{Scopes: map[string]any{"": "x"}},
 		Page:        1,
-		Size:        10,
 		OrderBy:     "id",
 		Order:       "asc",
-	})
+	}, &items)
 	assert.ErrorIs(t, err, ErrInvalidScope)
 
 	err = repo.Update(ctx, map[string]any{}, &TestEntity{Name: ps("n")})

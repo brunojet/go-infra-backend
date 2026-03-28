@@ -33,6 +33,11 @@ func (t TerminalModel) BeforeCreate(tx *gorm.DB) error {
 	return repositories.AddOnConflictDoNothing(tx, colTerminalModelName)
 }
 
+func (t TerminalModel) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return repositories.WhereOnConflict(tx,
+		repositories.ConflictScope{ColumnName: colTerminalModelName, ColumnValue: t.Name.String})
+}
+
 type TerminalModelConfiguration struct {
 	TerminalModelConfigurationId int64          `gorm:"primaryKey;autoIncrement"`
 	TerminalModelId              int64          `gorm:"not null;uniqueIndex:uk_terminal_model_configuration_terminal_integration,priority:1;index:idx_terminal_model_configuration_terminal,priority:1"`
@@ -48,4 +53,10 @@ func (TerminalModelConfiguration) TableName() string { return tableTerminalModel
 
 func (t TerminalModelConfiguration) BeforeCreate(tx *gorm.DB) error {
 	return repositories.AddOnConflictDoNothing(tx, colTerminalModelID, colIntegrationType)
+}
+
+func (t TerminalModelConfiguration) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return repositories.WhereOnConflict(tx,
+		repositories.ConflictScope{ColumnName: colTerminalModelID, ColumnValue: t.TerminalModelId},
+		repositories.ConflictScope{ColumnName: colIntegrationType, ColumnValue: t.IntegrationType.Int16})
 }

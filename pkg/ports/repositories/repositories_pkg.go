@@ -16,17 +16,19 @@ type (
 	Entity                       = contracts.Entity
 	LockValidationSpec[E Entity] = contracts.LockValidationSpec[E]
 	Repository[E Entity]         = contracts.Repository[E]
+	ConflictScope                = contracts.ConflictScope
 	BusinessRuleError            = errs.BusinessRuleError
 )
 
 // ---- Errors ----
 var (
-	ErrDBUnavailable         = internalrepos.ErrDBUnavailable
-	ErrInvalidTx             = internalrepos.ErrInvalidTx
-	ErrNotFound              = internalrepos.ErrNotFound
-	ErrRequiresTransaction   = internalrepos.ErrRequiresTransaction
-	ErrBusinessRuleViolation = internalrepos.ErrBusinessRuleViolation
-	ErrLockValidationWhere   = internalrepos.ErrLockValidationWhere
+	ErrDBUnavailable              = internalrepos.ErrDBUnavailable
+	ErrInvalidTx                  = internalrepos.ErrInvalidTx
+	ErrNotFound                   = internalrepos.ErrNotFound
+	ErrRequiresTransaction        = internalrepos.ErrRequiresTransaction
+	ErrBusinessRuleViolation      = internalrepos.ErrBusinessRuleViolation
+	ErrLockValidationWhere        = internalrepos.ErrLockValidationWhere
+	ErrConflictValidationRequired = internalrepos.ErrConflictValidationRequired
 )
 
 // ---- Helpers (delegating to internal) ----
@@ -52,6 +54,10 @@ func AddOnConflictDoNothing(tx *gorm.DB, columnNames ...string) error {
 
 func AddOnConflictUpdateAll(tx *gorm.DB, columnNames ...string) error {
 	return internalrepos.AddOnConflictUpdateAll(tx, columnNames...)
+}
+
+func WhereOnConflict(tx *gorm.DB, scopes ...contracts.ConflictScope) *gorm.DB {
+	return internalrepos.WhereOnConflict(tx, scopes...)
 }
 
 func NewBusinessRuleError(cause error) error {

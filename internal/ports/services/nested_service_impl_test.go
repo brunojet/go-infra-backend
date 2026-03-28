@@ -12,6 +12,7 @@ import (
 	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	gorm "gorm.io/gorm"
 )
 
 type nestedUnitModel struct {
@@ -21,6 +22,10 @@ type nestedUnitModel struct {
 }
 
 func (nestedUnitModel) TableName() string { return "nested_unit_models" }
+
+func (m nestedUnitModel) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return tx
+}
 
 type nestedUnitDTO struct {
 	ID       string
@@ -109,14 +114,14 @@ func TestNestedService_CreateNested(t *testing.T) {
 	ctx := context.Background()
 
 	dto := nestedUnitDTO{Name: "child"}
-	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *nestedUnitModel) error {
+	ExpectCreateWithTx(repo, func(inOut *nestedUnitModel) {
 		assert.Equal(t, int64(42), inOut.ParentID)
 		assert.Equal(t, "child", inOut.Name.String)
 		inOut.ID = 7
-		return nil
 	})
 
-	out, err := svc.CreateNested(ctx, "42", dto)
+	var out nestedUnitDTO
+	err := svc.CreateNested(ctx, "42", dto, &out)
 	assert.NoError(t, err)
 	assert.Equal(t, "7", out.ID)
 	assert.Equal(t, int64(42), out.ParentID)
@@ -132,13 +137,14 @@ func TestNestedService_CreateNested_Errors(t *testing.T) {
 
 	repo1 := NewMockRepository[nestedUnitModel](ctrl)
 	svc1 := NewNestedServiceImpl(repoContracts.Repository[nestedUnitModel](repo1), nestedTestMapper{applyParentScopesErr: errors.New("parent error")})
-	_, err := svc1.CreateNested(ctx, "42", dto)
+	var out nestedUnitDTO
+	err := svc1.CreateNested(ctx, "42", dto, &out)
 	assert.Error(t, err)
 
 	repo2 := NewMockRepository[nestedUnitModel](ctrl)
 	svc2 := NewNestedServiceImpl(repoContracts.Repository[nestedUnitModel](repo2), nestedTestMapper{})
-	repo2.EXPECT().Create(gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
-	_, err = svc2.CreateNested(ctx, "42", dto)
+	ExpectCreateWithTx(repo2, nil).Return(errors.New("repo error"))
+	err = svc2.CreateNested(ctx, "42", dto, &out)
 	assert.Error(t, err)
 }
 
@@ -152,24 +158,18 @@ func TestNestedService_ListNested(t *testing.T) {
 
 	params := svcContracts.ListParams{QueryParams: svcContracts.QueryParams{Scopes: map[string]any{"status": "active"}}}
 
-	repo.EXPECT().List(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, listParams repoContracts.ListParams) ([]nestedUnitModel, int64, error) {
-		assert.Equal(t, 1, listParams.Page)
-		assert.Equal(t, 10, listParams.Size)
-		assert.Equal(t, "created_at", listParams.OrderBy)
-		assert.Equal(t, "asc", listParams.Order)
-		assert.Equal(t, "active", listParams.QueryParams.Scopes["status"])
-		assert.Equal(t, "99", listParams.QueryParams.Scopes["parent_id"])
-
-		return []nestedUnitModel{{ID: 1, ParentID: 99, Name: utils.ToNullString("one")}}, 1, nil
+	ExpectListWithTx(repo, func(out *[]nestedUnitModel) error {
+		*out = []nestedUnitModel{{ID: 1, ParentID: 99, Name: utils.ToNullString("one")}}
+		return nil
 	})
-
-	list, total, err := svc.ListNested(ctx, "99", params)
+	outList := make([]nestedUnitDTO, 1)
+	total, err := svc.ListNested(ctx, "99", params, &outList)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), total)
-	assert.Len(t, list, 1)
-	assert.Equal(t, "1", list[0].ID)
-	assert.Equal(t, int64(99), list[0].ParentID)
-	assert.Equal(t, "one", list[0].Name)
+	assert.Len(t, outList, 1)
+	assert.Equal(t, "1", outList[0].ID)
+	assert.Equal(t, int64(99), outList[0].ParentID)
+	assert.Equal(t, "one", outList[0].Name)
 }
 
 func TestNestedService_ListNested_Errors(t *testing.T) {
@@ -181,13 +181,15 @@ func TestNestedService_ListNested_Errors(t *testing.T) {
 
 	repo1 := NewMockRepository[nestedUnitModel](ctrl)
 	svc1 := NewNestedServiceImpl(repoContracts.Repository[nestedUnitModel](repo1), nestedTestMapper{applyParentQueryScopesErr: errors.New("parent query error")})
-	_, _, err := svc1.ListNested(ctx, "99", params)
+	outList1 := make([]nestedUnitDTO, 1)
+	_, err := svc1.ListNested(ctx, "99", params, &outList1)
 	assert.Error(t, err)
 
 	repo2 := NewMockRepository[nestedUnitModel](ctrl)
 	svc2 := NewNestedServiceImpl(repoContracts.Repository[nestedUnitModel](repo2), nestedTestMapper{})
-	repo2.EXPECT().List(gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("repo error"))
-	_, _, err = svc2.ListNested(ctx, "99", params)
+	ExpectListWithTx(repo2, nil).Return(int64(0), errors.New("repo error"))
+	outList2 := make([]nestedUnitDTO, 1)
+	_, err = svc2.ListNested(ctx, "99", params, &outList2)
 	assert.Error(t, err)
 }
 
@@ -199,24 +201,27 @@ func TestNestedService_DelegatesBaseMethods(t *testing.T) {
 	svc := NewNestedServiceImpl(repoContracts.Repository[nestedUnitModel](repo), nestedTestMapper{})
 	ctx := context.Background()
 
-	repo.EXPECT().GetByID(gomock.Any(), map[string]any{"id": int64(5)}).Return(nestedUnitModel{ID: 5, ParentID: 42, Name: utils.ToNullString("get")}, nil)
-	got, err := svc.GetByID(ctx, "5")
+	ExpectGetByIDWithTx(repo, func(out *nestedUnitModel) {
+		*out = nestedUnitModel{ID: 5, ParentID: 42, Name: utils.ToNullString("get")}
+	})
+	var got nestedUnitDTO
+	err := svc.GetByID(ctx, "5", &got)
 	assert.NoError(t, err)
 	assert.Equal(t, "5", got.ID)
 	assert.Equal(t, int64(42), got.ParentID)
 
 	upd := nestedUnitDTO{Name: "upd"}
-	repo.EXPECT().Update(gomock.Any(), map[string]any{"id": int64(5)}, gomock.Any()).DoAndReturn(func(_ context.Context, _ map[string]any, inOut *nestedUnitModel) error {
+	ExpectUpdateWithTx(repo, func(inOut *nestedUnitModel) {
 		inOut.ID = 5
 		inOut.ParentID = 42
-		return nil
 	})
-	updOut, err := svc.Update(ctx, "5", upd)
+	var updOut nestedUnitDTO
+	err = svc.Update(ctx, "5", upd, &updOut)
 	assert.NoError(t, err)
 	assert.Equal(t, "5", updOut.ID)
 	assert.Equal(t, int64(42), updOut.ParentID)
 
-	repo.EXPECT().Delete(gomock.Any(), map[string]any{"id": int64(5)}).Return(nil)
+	ExpectDeleteWithTx(repo, nil)
 	err = svc.Delete(ctx, "5")
 	assert.NoError(t, err)
 }

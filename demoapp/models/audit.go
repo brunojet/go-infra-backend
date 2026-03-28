@@ -3,6 +3,8 @@ package models
 import (
 	"database/sql"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // AuditOperation represents a generic CRUD operation recorded in the audit log.
@@ -77,6 +79,10 @@ type AuditEvent struct {
 
 func (AuditEvent) TableName() string { return "audit_event" }
 
+func (AuditEvent) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return tx
+}
+
 // AuditFieldChange stores per-field changes associated with an AuditEvent.
 //
 // For INSERT, OldValue is NULL; for DELETE, NewValue is NULL.
@@ -97,3 +103,7 @@ type AuditFieldChange struct {
 }
 
 func (AuditFieldChange) TableName() string { return "audit_field_change" }
+
+func (AuditFieldChange) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return tx
+}

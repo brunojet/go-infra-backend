@@ -39,12 +39,12 @@ func (h *ginHandler[C, R, U]) Create(c *gin.Context) {
 	if !BindJSONToDTO(c, &dto) {
 		return
 	}
-	created, err := h.service.Create(c.Request.Context(), dto)
-	if err != nil {
+	var response R
+	if err := h.service.Create(c.Request.Context(), dto, &response); err != nil {
 		SetResponseFromError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, created)
+	c.JSON(http.StatusCreated, response)
 }
 
 func (h *ginHandler[C, R, U]) GetByID(c *gin.Context) {
@@ -52,23 +52,33 @@ func (h *ginHandler[C, R, U]) GetByID(c *gin.Context) {
 	if !ok {
 		return
 	}
-	dto, err := h.service.GetByID(c.Request.Context(), id)
-	if err != nil {
+	var response R
+	if err := h.service.GetByID(c.Request.Context(), id, &response); err != nil {
 		SetResponseFromError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto)
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *ginHandler[C, R, U]) List(c *gin.Context) {
 	params := BuildListParamsFromRequest(c)
-	list, _, err := h.service.List(c.Request.Context(), params)
+	responses := make([]R, 0, params.Size)
+	totalItems, err := h.service.List(c.Request.Context(), params, &responses)
 	if err != nil {
 		SetResponseFromError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, list)
-
+	listResponse := ListResponses[R]{
+		Data: responses,
+		Pagination: PaginationResponse{
+			Page:       params.Page,
+			Size:       len(responses),
+			TotalItems: totalItems,
+			OrderBy:    params.OrderBy,
+			Order:      params.Order,
+		},
+	}
+	c.JSON(http.StatusPartialContent, listResponse)
 }
 
 func (h *ginHandler[C, R, U]) Update(c *gin.Context) {
@@ -80,12 +90,12 @@ func (h *ginHandler[C, R, U]) Update(c *gin.Context) {
 	if !BindJSONToDTO(c, &dto) {
 		return
 	}
-	updated, err := h.service.Update(c.Request.Context(), id, dto)
-	if err != nil {
+	var response R
+	if err := h.service.Update(c.Request.Context(), id, dto, &response); err != nil {
 		SetResponseFromError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, updated)
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *ginHandler[C, R, U]) Delete(c *gin.Context) {

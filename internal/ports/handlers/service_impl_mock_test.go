@@ -133,22 +133,18 @@ func (m *MockService[C, R, U, E]) EXPECT() *MockServiceMockRecorder[C, R, U, E] 
 	return m.recorder
 }
 
-// Create mocks base method.
-func (m *MockService[C, R, U, E]) Create(ctx context.Context, dto C) (R, error) {
+// Create mocks base method (corrigido para interface atual).
+func (m *MockService[C, R, U, E]) Create(ctx context.Context, dto C, response *R) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, dto)
-	var ret0 R
-	if ret[0] != nil {
-		ret0 = ret[0].(R)
-	}
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "Create", ctx, dto, response)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockServiceMockRecorder[C, R, U, E]) Create(ctx, dto interface{}) *gomock.Call {
+func (mr *MockServiceMockRecorder[C, R, U, E]) Create(ctx, dto, response interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockService[C, R, U, E])(nil).Create), ctx, dto)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockService[C, R, U, E])(nil).Create), ctx, dto, response)
 }
 
 // Delete mocks base method.
@@ -165,57 +161,45 @@ func (mr *MockServiceMockRecorder[C, R, U, E]) Delete(ctx, id interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockService[C, R, U, E])(nil).Delete), ctx, id)
 }
 
-// GetByID mocks base method.
-func (m *MockService[C, R, U, E]) GetByID(ctx context.Context, id string) (C, error) {
+// GetByID mocks base method (corrigido para interface atual).
+func (m *MockService[C, R, U, E]) GetByID(ctx context.Context, id string, response *R) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", ctx, id)
-	var ret0 C
-	if ret[0] != nil {
-		ret0 = ret[0].(C)
-	}
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "GetByID", ctx, id, response)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // GetByID indicates an expected call of GetByID.
-func (mr *MockServiceMockRecorder[C, R, U, E]) GetByID(ctx, id interface{}) *gomock.Call {
+func (mr *MockServiceMockRecorder[C, R, U, E]) GetByID(ctx, id, response interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockService[C, R, U, E])(nil).GetByID), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockService[C, R, U, E])(nil).GetByID), ctx, id, response)
 }
 
-// List mocks base method.
-func (m *MockService[C, R, U, E]) List(ctx context.Context, params svcContracts.ListParams) ([]C, int64, error) {
+// List mocks base method (corrigido para interface atual).
+func (m *MockService[C, R, U, E]) List(ctx context.Context, params svcContracts.ListParams, response *[]C) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, params)
-	var ret0 []C
-	if ret[0] != nil {
-		ret0 = ret[0].([]C)
-	}
-	ret1, _ := ret[1].(int64)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// List indicates an expected call of List.
-func (mr *MockServiceMockRecorder[C, R, U, E]) List(ctx, params interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockService[C, R, U, E])(nil).List), ctx, params)
-}
-
-// Update mocks base method.
-func (m *MockService[C, R, U, E]) Update(ctx context.Context, id string, dto C) (R, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", ctx, id, dto)
-	var ret0 R
-	if ret[0] != nil {
-		ret0 = ret[0].(R)
-	}
+	ret := m.ctrl.Call(m, "List", ctx, params, response)
+	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Update indicates an expected call of Update.
-func (mr *MockServiceMockRecorder[C, R, U, E]) Update(ctx, id, dto interface{}) *gomock.Call {
+// List indicates an expected call of List.
+func (mr *MockServiceMockRecorder[C, R, U, E]) List(ctx, params, response interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockService[C, R, U, E])(nil).Update), ctx, id, dto)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockService[C, R, U, E])(nil).List), ctx, params, response)
+}
+
+// Update mocks base method (corrigido para interface atual).
+func (m *MockService[C, R, U, E]) Update(ctx context.Context, id string, dto U, response *R) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, id, dto, response)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockServiceMockRecorder[C, R, U, E]) Update(ctx, id, dto, response interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockService[C, R, U, E])(nil).Update), ctx, id, dto, response)
 }

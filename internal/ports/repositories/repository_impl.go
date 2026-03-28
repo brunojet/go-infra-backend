@@ -37,42 +37,43 @@ func (g *gormRepositoryImpl[E]) dbFromContext(ctx context.Context) *gorm.DB {
 func (g *gormRepositoryImpl[E]) Create(ctx context.Context, inOut *E) error {
 	db := g.dbFromContext(ctx)
 	tx := db.Model(new(E)).Create(inOut)
-	return MapTxError(tx)
-}
-
-func (g *gormRepositoryImpl[E]) GetByID(ctx context.Context, id map[string]any) (E, error) {
-	db := g.dbFromContext(ctx)
-	var entity E
-	if err := getByScope(db, id, &entity); err != nil {
-		var zero E
-		return zero, err
+	err := MapTxError(tx)
+	if err == ErrNotFound {
+		err = getExistingWhenConflict(tx, inOut)
 	}
-	return entity, nil
+	return err
 }
 
-func (g *gormRepositoryImpl[E]) List(ctx context.Context, listParams contracts.ListParams) ([]E, int64, error) {
+func (g *gormRepositoryImpl[E]) GetByID(ctx context.Context, id map[string]any, out *E) error {
+	db := g.dbFromContext(ctx)
+	if err := getByScope(db, id, out); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (g *gormRepositoryImpl[E]) List(ctx context.Context, listParams contracts.ListParams, out *[]E) (int64, error) {
 	db := g.dbFromContext(ctx)
 	var total int64
 	q, err := buildTxWithScopes[E](db, listParams.QueryParams.Scopes)
 	if err != nil {
-		return nil, 0, err
+		return 0, err
 	}
 	tx := q.Count(&total)
 	if err := MapTxError(tx); err != nil {
-		return nil, 0, err
+		return 0, err
 	}
 	if err := setOrderBy(q, listParams.OrderBy, listParams.Order); err != nil {
-		return nil, 0, err
+		return 0, err
 	}
-	if err := setPagination(q, listParams.Page, listParams.Size); err != nil {
-		return nil, 0, err
+	if err := setPagination(q, listParams.Page, cap(*out)); err != nil {
+		return 0, err
 	}
-	items := make([]E, 0, getListSize(int(total), listParams.Page, listParams.Size))
-	tx = q.Find(&items)
+	tx = q.Find(out)
 	if err := MapTxError(tx); err != nil {
-		return nil, 0, err
+		return 0, err
 	}
-	return items, total, nil
+	return total, nil
 }
 
 func (g *gormRepositoryImpl[E]) Update(ctx context.Context, scopes map[string]any, inOut *E) error {

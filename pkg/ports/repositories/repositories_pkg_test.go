@@ -18,6 +18,9 @@ type pkgTestEntity struct {
 }
 
 func (pkgTestEntity) TableName() string { return "pkg_test_entities" }
+func (e pkgTestEntity) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return tx
+}
 
 func TestValidateTxWithUpdateLock_ExposedForPkgConsumers(t *testing.T) {
 	adapter, err := database.NewSQLite("memory")

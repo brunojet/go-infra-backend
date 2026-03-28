@@ -53,7 +53,8 @@ func (h *nestedGinHandler[C, R, U]) CreateNested(c *gin.Context) {
 	if !BindJSONToDTO(c, &dto) {
 		return
 	}
-	created, err := h.svc.CreateNested(c.Request.Context(), parentID, dto)
+	var created R
+	err := h.svc.CreateNested(c.Request.Context(), parentID, dto, &created)
 	if err != nil {
 		SetResponseFromError(c, err)
 		return
@@ -67,10 +68,21 @@ func (h *nestedGinHandler[C, R, U]) ListNested(c *gin.Context) {
 		return
 	}
 	params := BuildListParamsFromRequest(c)
-	list, _, err := h.svc.ListNested(c.Request.Context(), parentID, params)
+	responses := make([]R, 0, params.Size)
+	totalItems, err := h.svc.ListNested(c.Request.Context(), parentID, params, &responses)
 	if err != nil {
 		SetResponseFromError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, list)
+	listResponse := ListResponses[R]{
+		Data: responses,
+		Pagination: PaginationResponse{
+			Page:       params.Page,
+			Size:       len(responses),
+			TotalItems: totalItems,
+			OrderBy:    params.OrderBy,
+			Order:      params.Order,
+		},
+	}
+	c.JSON(http.StatusPartialContent, listResponse)
 }

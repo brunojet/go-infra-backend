@@ -10,7 +10,7 @@ import (
 
 type applicationImageMapper struct{}
 
-func (m applicationImageMapper) toImage(dto dtos.ApplicationImagePost, model *models.ApplicationImage) error {
+func (m applicationImageMapper) toImageModel(dto dtos.ApplicationImagePost, model *models.ApplicationImage) error {
 	if model == nil {
 		return errMapperNilModel
 	}

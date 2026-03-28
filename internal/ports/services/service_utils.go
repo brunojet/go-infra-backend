@@ -4,15 +4,15 @@ import (
 	"strings"
 
 	"github.com/brunojet/go-infra-backend/internal/utils"
-	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
-	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
 type AnyInt interface {
 	~int64 | ~int32 | ~int16
 }
 
-func normalizeListParams(params svcContracts.ListParams) svcContracts.ListParams {
+func normalizeListParams(params contracts.ListParams) contracts.ListParams {
 	if params.Page <= 0 {
 		params.Page = DefaultListPage
 	}
@@ -30,7 +30,7 @@ func normalizeListParams(params svcContracts.ListParams) svcContracts.ListParams
 	return params
 }
 
-func toRepoListParams(params svcContracts.ListParams, scopes map[string]any) repoContracts.ListParams {
+func toRepoListParams(params contracts.ListParams, scopes map[string]any) rpocts.ListParams {
 	params = normalizeListParams(params)
 
 	effectiveScopes := params.QueryParams.Scopes
@@ -38,10 +38,9 @@ func toRepoListParams(params svcContracts.ListParams, scopes map[string]any) rep
 		effectiveScopes = scopes
 	}
 
-	return repoContracts.ListParams{
-		QueryParams: repoContracts.QueryParams{Scopes: effectiveScopes},
+	return rpocts.ListParams{
+		QueryParams: rpocts.QueryParams{Scopes: effectiveScopes},
 		Page:        params.Page,
-		Size:        params.Size,
 		OrderBy:     params.OrderBy,
 		Order:       params.Order,
 	}

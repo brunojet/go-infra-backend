@@ -31,6 +31,11 @@ func (f FilterType) BeforeCreate(tx *gorm.DB) error {
 	return repositories.AddOnConflictDoNothing(tx, colFilterName)
 }
 
+func (f FilterType) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return repositories.WhereOnConflict(tx,
+		repositories.ConflictScope{ColumnName: colFilterName, ColumnValue: f.Name.String})
+}
+
 type Filter struct {
 	FilterId     int64          `gorm:"primaryKey;autoIncrement"`
 	FilterTypeId int64          `gorm:"not null;index:idx_filter_type;uniqueIndex:ux_filter_name_type,priority:2"`
@@ -47,4 +52,10 @@ func (Filter) TableName() string { return tableFilter }
 
 func (f Filter) BeforeCreate(tx *gorm.DB) error {
 	return repositories.AddOnConflictDoNothing(tx, colFilterName, colFilterTypeID)
+}
+
+func (f Filter) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return repositories.WhereOnConflict(tx,
+		repositories.ConflictScope{ColumnName: colFilterName, ColumnValue: f.Name.String},
+		repositories.ConflictScope{ColumnName: colFilterTypeID, ColumnValue: f.FilterTypeId})
 }

@@ -17,14 +17,14 @@ type applicationProfileNestedMapper struct {
 	im applicationImageMapper
 }
 
-func (m applicationProfileNestedMapper) toScreenshots(dtos []dtos.ApplicationProfileScreenshotPostDTO, modelsPtr *[]models.ApplicationProfileScreenshot) error {
+func (m applicationProfileNestedMapper) toScreenshotsModel(dtos []dtos.ApplicationProfileScreenshotPostDTO, modelsPtr *[]models.ApplicationProfileScreenshot) error {
 	if modelsPtr == nil {
 		return errMapperNilModel
 	}
 	screenshots := make([]models.ApplicationProfileScreenshot, len(dtos))
 	for i, dto := range dtos {
 		modelImage := models.ApplicationImage{}
-		if err := m.im.toImage(dto.ApplicationImagePost, &modelImage); err != nil {
+		if err := m.im.toImageModel(dto.ApplicationImagePost, &modelImage); err != nil {
 			return err
 		}
 		screenshots[i].ApplicationImage = &modelImage
@@ -110,10 +110,10 @@ func (m applicationProfileNestedMapper) ToPostModel(dto dtos.ApplicationProfileP
 	model.Name = utils.ToNullString(dto.Name)
 	model.Description = utils.ToNullString(dto.Description)
 	model.ApplicationImage = &models.ApplicationImage{}
-	if err := m.im.toImage(dto.ApplicationImage, model.ApplicationImage); err != nil {
+	if err := m.im.toImageModel(dto.ApplicationImage, model.ApplicationImage); err != nil {
 		return err
 	}
-	if err := m.toScreenshots(dto.ApplicationProfileScreenshots, &model.ApplicationProfileScreenshots); err != nil {
+	if err := m.toScreenshotsModel(dto.ApplicationProfileScreenshots, &model.ApplicationProfileScreenshots); err != nil {
 		return err
 	}
 	return nil
@@ -167,12 +167,11 @@ type ApplicationProfileNestedService interface {
 
 type applicationProfileNestedService struct {
 	services.NestedService[dtos.ApplicationProfilePost, dtos.ApplicationProfileGet, dtos.ApplicationProfilePatch, models.ApplicationProfile]
-	pRepo   repositories.ApplicationProfileRepository
-	acRepo  repositories.ApplicationConfigurationRepository
-	vRepo   repositories.ApplicationVersionRepository
-	cRepo   repositories.ApplicationCatalogRepository
-	mapper  applicationProfileNestedMapper
-	zeroDto dtos.ApplicationProfileGet
+	pRepo  repositories.ApplicationProfileRepository
+	acRepo repositories.ApplicationConfigurationRepository
+	vRepo  repositories.ApplicationVersionRepository
+	cRepo  repositories.ApplicationCatalogRepository
+	mapper applicationProfileNestedMapper
 }
 
 func NewApplicationProfileNestedService(p repositories.ApplicationProfileRepository, a repositories.ApplicationConfigurationRepository, v repositories.ApplicationVersionRepository, c repositories.ApplicationCatalogRepository) ApplicationProfileNestedService {
@@ -186,50 +185,56 @@ func NewApplicationProfileNestedService(p repositories.ApplicationProfileReposit
 	}
 }
 
-func (s *applicationProfileNestedService) createOneShot(ctx context.Context, inOut *models.ApplicationProfile) error {
+func (s *applicationProfileNestedService) createAndArchive(txCtx context.Context, inOut *models.ApplicationProfile) error {
+	if err := s.pRepo.Create(txCtx, inOut); err != nil {
+		return err
+	}
+	return s.pRepo.ArchiveStageDuplicates(txCtx, inOut)
+}
+
+func (s *applicationProfileNestedService) CreateNested(ctx context.Context, parentID string, request dtos.ApplicationProfilePost, response *dtos.ApplicationProfileGet) error {
+	var model models.ApplicationProfile
+	if err := s.mapper.ToPostModel(request, &model); err != nil {
+		return err
+	}
+	if err := s.mapper.ApplyParentScopes(parentID, &model); err != nil {
+		return err
+	}
 	return s.pRepo.WithTx(ctx, func(txCtx context.Context) error {
-		if err := s.pRepo.Create(txCtx, inOut); err != nil {
+		if err := s.createAndArchive(txCtx, &model); err != nil {
 			return err
 		}
-		return s.pRepo.ArchiveStageDuplicates(txCtx, inOut)
+		if err := s.mapper.ToDTO(&model, response); err != nil {
+			return err
+		}
+		return nil
 	})
 }
 
-func (s *applicationProfileNestedService) CreateNested(ctx context.Context, parentID string, dto dtos.ApplicationProfilePost) (dtos.ApplicationProfileGet, error) {
-	var model models.ApplicationProfile
-	s.mapper.ToPostModel(dto, &model)
-	if err := s.mapper.ApplyParentScopes(parentID, &model); err != nil {
-		return s.zeroDto, err
-	}
-	if err := s.createOneShot(ctx, &model); err != nil {
-		return s.zeroDto, err
-	}
-	var response dtos.ApplicationProfileGet
-	s.mapper.ToDTO(&model, &response)
-	return s.zeroDto, nil
-}
-
-func (s *applicationProfileNestedService) Update(ctx context.Context, id string, dto dtos.ApplicationProfilePatch) (dtos.ApplicationProfileGet, error) {
+func (s *applicationProfileNestedService) Update(ctx context.Context, id string, request dtos.ApplicationProfilePatch, response *dtos.ApplicationProfileGet) error {
 	scopes, err := s.mapper.GetModelKey(id)
 	if err != nil {
-		return s.zeroDto, err
+		return err
 	}
 	var model models.ApplicationProfile
-	s.mapper.ToPatchModel(dto, &model)
-	if err := s.pRepo.WithTx(ctx, func(txCtx context.Context) error {
+	if err := s.mapper.ToPatchModel(request, &model); err != nil {
+		return err
+	}
+	return s.pRepo.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.validateProfileStageTransition(txCtx, scopes, &model); err != nil {
 			return err
 		}
-		if err := s.updateProfile(txCtx, scopes, &model); err != nil {
+		if err := s.updateAndArchive(txCtx, scopes, &model); err != nil {
 			return err
 		}
-		return s.syncCatalogFromProfile(txCtx, model)
-	}); err != nil {
-		return s.zeroDto, err
-	}
-	var response dtos.ApplicationProfileGet
-	s.mapper.ToDTO(&model, &response)
-	return response, nil
+		if err := s.syncCatalogFromProfile(txCtx, model); err != nil {
+			return err
+		}
+		if err := s.mapper.ToDTO(&model, response); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func (s *applicationProfileNestedService) validateProfileStageTransition(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
@@ -240,24 +245,27 @@ func (s *applicationProfileNestedService) validateProfileStageTransition(ctx con
 	return inOut.ValidateProfileStageTransition(currentStage)
 }
 
-func (s *applicationProfileNestedService) updateProfile(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
+func (s *applicationProfileNestedService) updateAndArchive(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
 	if err := s.pRepo.Update(ctx, scopes, inOut); err != nil {
 		return err
 	}
 	return s.pRepo.ArchiveStageDuplicates(ctx, inOut)
 }
 
-func (s *applicationProfileNestedService) listApplicationConfigurationsPage(ctx context.Context, applicationID int64, page int) ([]models.ApplicationConfiguration, int64, error) {
+func (s *applicationProfileNestedService) listApplicationConfigurationsPage(ctx context.Context, applicationID int64, page int, configs *[]models.ApplicationConfiguration) (int64, error) {
 	params := contracts.ListParams{
 		QueryParams: contracts.QueryParams{
 			Scopes: map[string]any{models.ColAppProfileApplicationID: applicationID},
 		},
 		Page:    page,
-		Size:    profileSyncPageSize,
 		OrderBy: profileSyncOrderBy,
 		Order:   profileSyncOrder,
 	}
-	return s.acRepo.List(ctx, params)
+	totalItems, err := s.acRepo.List(ctx, params, configs)
+	if err != nil {
+		return 0, err
+	}
+	return totalItems, nil
 }
 
 func (s *applicationProfileNestedService) createCatalogFromProfile(ctx context.Context, config models.ApplicationConfiguration, profileId, versionId int64, stage int16) error {
@@ -289,8 +297,9 @@ func (s *applicationProfileNestedService) createCatalogsFromProfile(ctx context.
 
 func (s *applicationProfileNestedService) syncCatalogsFromProfile(ctx context.Context, profile models.ApplicationProfile, stage int16) error {
 	page := profileSyncInitialPage
+	configs := make([]models.ApplicationConfiguration, 0, profileSyncPageSize)
 	for {
-		configs, total, err := s.listApplicationConfigurationsPage(ctx, profile.ApplicationId, page)
+		total, err := s.listApplicationConfigurationsPage(ctx, profile.ApplicationId, page, &configs)
 		if err != nil {
 			return err
 		}
@@ -303,6 +312,7 @@ func (s *applicationProfileNestedService) syncCatalogsFromProfile(ctx context.Co
 		if int64(page*profileSyncPageSize) >= total {
 			return nil
 		}
+		configs = configs[:0] // reset slice while keeping allocated memory
 		page++
 	}
 }

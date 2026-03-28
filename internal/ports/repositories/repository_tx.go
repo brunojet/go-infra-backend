@@ -105,6 +105,13 @@ func getByScope[E contracts.Entity](db *gorm.DB, scopes map[string]any, out *E) 
 	return MapTxError(tx)
 }
 
+func getExistingWhenConflict[E contracts.Entity](tx *gorm.DB, out *E) error {
+	if conflictTx := (*out).WhereOnConflict(tx).First(out); conflictTx.Error != nil || conflictTx.RowsAffected == 0 {
+		return gorm.ErrCheckConstraintViolated
+	}
+	return ErrConflictValidationRequired
+}
+
 func setOrderBy(q *gorm.DB, orderBy, order string) error {
 	if len(orderBy) == 0 {
 		return ErrOrderByMissing
@@ -188,4 +195,12 @@ func AddOnConflictDoNothing(tx *gorm.DB, columnNames ...string) error {
 
 func AddOnConflictUpdateAll(tx *gorm.DB, columnNames ...string) error {
 	return addOnConflict(tx, conflictActionUpdate, columnNames...)
+}
+
+// WhereOnConflict aplica filtros de conflito ao tx com base nos escopos fornecidos.
+func WhereOnConflict(tx *gorm.DB, scopes ...contracts.ConflictScope) *gorm.DB {
+	for _, scope := range scopes {
+		tx = tx.Where(scope.ColumnName+" = ?", scope.ColumnValue)
+	}
+	return tx
 }

@@ -116,3 +116,7 @@ func (a *ApplicationVersion) BeforeUpdate(tx *gorm.DB) error {
 
 	return nil
 }
+
+func (a ApplicationVersion) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return tx
+}

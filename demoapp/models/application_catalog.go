@@ -59,6 +59,10 @@ func (a *ApplicationCatalog) BeforeCreate(tx *gorm.DB) (err error) {
 	)
 }
 
+func (a ApplicationCatalog) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return tx
+}
+
 func (a *ApplicationCatalog) validateRequiredFieldsCreate() error {
 	switch a.Stage {
 	case catalogStageReview, catalogStagePilot, catalogStageProduction:

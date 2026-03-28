@@ -12,7 +12,7 @@ import (
 	"github.com/brunojet/go-infra-backend/debugassert"
 
 	"github.com/brunojet/go-infra-backend/internal/utils"
-	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -33,6 +33,10 @@ type TestModel struct {
 
 func (m TestModel) TableName() string {
 	return "test_models"
+}
+
+func (m TestModel) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return tx
 }
 
 type auditDto struct {
@@ -127,7 +131,8 @@ func (m TestMapper) ToDTO(model *TestModel, dto *TestDTO) error {
 }
 
 func testCreateDTO(t *testing.T, svc contracts.Service[TestDTO, TestDTO, TestDTO, TestModel], ctx context.Context, in TestDTO) TestDTO {
-	out, err := svc.Create(ctx, in)
+	var out TestDTO
+	err := svc.Create(ctx, in, &out)
 	assert.NoError(t, err)
 	v, err := strconv.ParseInt(out.ID, 10, 64)
 	assert.NoError(t, err)
@@ -143,19 +148,41 @@ func testCreateDTO(t *testing.T, svc contracts.Service[TestDTO, TestDTO, TestDTO
 	return out
 }
 
-func TestGenericService_Create(t *testing.T) {
+// Helper para criar controller, repo, service e context
+type testServiceDeps struct {
+	ctrl *gomock.Controller
+	repo *MockRepository[TestModel]
+	svc  contracts.Service[TestDTO, TestDTO, TestDTO, TestModel]
+	ctx  context.Context
+}
+
+func newTestServiceDeps(t *testing.T) testServiceDeps {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	repo := NewMockRepository[TestModel](ctrl)
 	svc := NewServiceImpl(repo, TestMapper{})
 	ctx := context.Background()
 
-	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *TestModel) error {
+	return testServiceDeps{ctrl, repo, svc, ctx}
+}
+
+func TestGenericService_Create(t *testing.T) {
+	deps := newTestServiceDeps(t)
+	defer deps.ctrl.Finish()
+	repo := deps.repo
+	svc := deps.svc
+	ctx := deps.ctx
+
+	repo.EXPECT().WithTx(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, fn func(context.Context) error) error {
+			return fn(ctx)
+		},
+	)
+
+	ExpectCreateWithTx(repo, func(inOut *TestModel) {
 		inOut.ID = 1
 		now := time.Now().UTC()
 		inOut.CreatedAt = now
 		inOut.UpdatedAt = now
-		return nil
 	})
 
 	in := TestDTO{Name: "one"}
@@ -163,38 +190,39 @@ func TestGenericService_Create(t *testing.T) {
 }
 
 func TestGenericService_GetByID(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl(repoContracts.Repository[TestModel](repo), TestMapper{})
-	ctx := context.Background()
+	deps := newTestServiceDeps(t)
+	defer deps.ctrl.Finish()
+	repo := deps.repo
+	svc := deps.svc
+	ctx := deps.ctx
 
 	var createdModel TestModel
-	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *TestModel) error {
+	ExpectCreateWithTx(repo, func(inOut *TestModel) {
 		inOut.ID = 2
 		now := time.Now().UTC()
 		inOut.CreatedAt = now
 		inOut.UpdatedAt = now
 		createdModel = *inOut
-		return nil
 	})
 
 	in := TestDTO{Name: "two"}
 	out := testCreateDTO(t, svc, ctx, in)
 
-	repo.EXPECT().GetByID(gomock.Any(), gomock.Any()).Return(createdModel, nil)
-
-	got, err := svc.GetByID(ctx, out.ID)
+	ExpectGetByIDWithTx(repo, func(out *TestModel) {
+		*out = createdModel
+	})
+	var got TestDTO
+	err := svc.GetByID(ctx, out.ID, &got)
 	assert.NoError(t, err)
 	assert.Equal(t, out, got)
 }
 
 func TestGenericService_List(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl(repoContracts.Repository[TestModel](repo), TestMapper{})
-	ctx := context.Background()
+	deps := newTestServiceDeps(t)
+	defer deps.ctrl.Finish()
+	repo := deps.repo
+	svc := deps.svc
+	ctx := deps.ctx
 
 	var inTestData = []TestDTO{
 		{Name: "List Created 1"},
@@ -213,48 +241,50 @@ func TestGenericService_List(t *testing.T) {
 		outTestData[dto.ID] = dto
 	}
 
-	repo.EXPECT().List(gomock.Any(), gomock.Any()).Return(models, int64(len(models)), nil)
-
-	list, total, err := svc.List(ctx, contracts.ListParams{Page: 1, Size: len(inTestData), OrderBy: "id", Order: "asc"})
+	ExpectListWithTx(repo, func(out *[]TestModel) error {
+		*out = models
+		return nil
+	})
+	outList := make([]TestDTO, len(inTestData))
+	total, err := svc.List(ctx, contracts.ListParams{Page: 1, Size: len(inTestData), OrderBy: "id", Order: "asc"}, &outList)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(len(inTestData)), total)
-	assert.Len(t, list, len(inTestData))
-	for _, dto := range list {
+	assert.Len(t, outList, len(inTestData))
+	for _, dto := range outList {
 		assert.Equal(t, outTestData[dto.ID], dto)
 	}
 }
 
 func TestGenericService_Update(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl(repoContracts.Repository[TestModel](repo), TestMapper{})
-	ctx := context.Background()
+	deps := newTestServiceDeps(t)
+	defer deps.ctrl.Finish()
+	repo := deps.repo
+	svc := deps.svc
+	ctx := deps.ctx
 
 	var created TestModel
-	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *TestModel) error {
+	ExpectCreateWithTx(repo, func(inOut *TestModel) {
 		inOut.ID = 10
 		now := time.Now().UTC()
 		inOut.CreatedAt = now
 		inOut.UpdatedAt = now
 		created = *inOut
-		return nil
 	})
 
 	in := TestDTO{Name: "Update_Created"}
 	out := testCreateDTO(t, svc, ctx, in)
 
-	repo.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, id map[string]any, inOut *TestModel) error {
+	ExpectUpdateWithTx(repo, func(inOut *TestModel) {
 		// simulate update: keep ID and CreatedAt, change Name and UpdatedAt
 		inOut.ID = created.ID
 		inOut.CreatedAt = created.CreatedAt
 		now := created.CreatedAt.Add(2 * time.Second)
 		inOut.UpdatedAt = now
-		return nil
 	})
 
 	upd := TestDTO{Name: "Update_Updated"}
-	updOut, err := svc.Update(ctx, out.ID, upd)
+	var updOut TestDTO
+	err := svc.Update(ctx, out.ID, upd, &updOut)
 	assert.NoError(t, err)
 	assert.Equal(t, out.ID, updOut.ID)
 	assert.Greater(t, *updOut.UpdatedAt, *updOut.CreatedAt)
@@ -262,24 +292,23 @@ func TestGenericService_Update(t *testing.T) {
 }
 
 func TestGenericService_Delete(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl(repoContracts.Repository[TestModel](repo), TestMapper{})
-	ctx := context.Background()
+	deps := newTestServiceDeps(t)
+	defer deps.ctrl.Finish()
+	repo := deps.repo
+	svc := deps.svc
+	ctx := deps.ctx
 
-	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, inOut *TestModel) error {
+	ExpectCreateWithTx(repo, func(inOut *TestModel) {
 		inOut.ID = 20
 		now := time.Now().UTC()
 		inOut.CreatedAt = now
 		inOut.UpdatedAt = now
-		return nil
 	})
 
 	in := TestDTO{Name: "Delete_ToBeDeleted"}
 	out := testCreateDTO(t, svc, ctx, in)
 
-	repo.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(nil)
+	ExpectDeleteWithTx(repo, nil)
 
 	err := svc.Delete(ctx, out.ID)
 	assert.NoError(t, err)
@@ -294,7 +323,7 @@ func (e *errRepo) Create(ctx context.Context, inOut *TestModel) error {
 func (e *errRepo) GetByID(ctx context.Context, id map[string]any) (TestModel, error) {
 	return TestModel{}, errors.New("repo error")
 }
-func (e *errRepo) List(ctx context.Context, listParams repoContracts.ListParams) ([]TestModel, int64, error) {
+func (e *errRepo) List(ctx context.Context, listParams rpocts.ListParams) ([]TestModel, int64, error) {
 	return nil, 0, errors.New("repo error")
 }
 func (e *errRepo) Update(ctx context.Context, id map[string]any, inOut *TestModel) error {
@@ -309,35 +338,40 @@ func (e *errRepo) WithTx(ctx context.Context, fn func(ctx context.Context) error
 }
 
 func TestGenericService_Errors(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl(repo, TestMapper{})
-	ctx := context.Background()
+	deps := newTestServiceDeps(t)
+	defer deps.ctrl.Finish()
+	repo := deps.repo
+	svc := deps.svc
+	ctx := deps.ctx
 
-	// Create repo error
+	// Sempre mocka WithTx para padronizar
+	// Usa o helper para garantir o padrão
 	got := TestDTO{Name: "x"}
-	repo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
-	_, err := svc.Create(ctx, got)
+	ExpectCreateWithTx(repo, nil).Return(errors.New("repo error"))
+	ExpectListWithTx(repo, nil).Return(int64(0), errors.New("repo error"))
+	var createOut TestDTO
+	err := svc.Create(ctx, got, &createOut)
 	assert.Error(t, err)
 
 	// GetByID mapper error (non-numeric id)
-	_, err = svc.GetByID(ctx, "nope")
+	var getByIDOut TestDTO
+	err = svc.GetByID(ctx, "nope", &getByIDOut)
 	assert.Error(t, err)
 
 	// List repo error
-	repo.EXPECT().List(gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("repo error"))
-	_, _, err = svc.List(ctx, contracts.ListParams{Page: 1, Size: 10, OrderBy: "id", Order: "asc"})
+	listOut := make([]TestDTO, 10)
+	_, err = svc.List(ctx, contracts.ListParams{Page: 1, Size: 10, OrderBy: "id", Order: "asc"}, &listOut)
 	assert.Error(t, err)
 
 	// Update: mapper GetModelKey error when id non-numeric
 	var u TestDTO
-	_, err = svc.Update(ctx, "nope", u)
+	var updOut TestDTO
+	err = svc.Update(ctx, "nope", u, &updOut)
 	assert.Error(t, err)
 
 	// Update: repo error when id numeric
-	repo.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
-	_, err = svc.Update(ctx, "1", u)
+	repo.EXPECT().Update(gomock.Any(), gomock.Any(), &TestModel{}).Return(errors.New("repo error"))
+	err = svc.Update(ctx, "1", u, &updOut)
 	assert.Error(t, err)
 
 	// Delete: mapper error for non-numeric id
@@ -349,50 +383,65 @@ func TestGenericService_Errors(t *testing.T) {
 }
 
 func TestGenericService_List_MapperApplyQueryScopesError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl(repo, testMapperQueryScopesError{})
-	ctx := context.Background()
+	deps := newTestServiceDeps(t)
+	defer deps.ctrl.Finish()
 
-	_, _, err := svc.List(ctx, contracts.ListParams{Page: 1, Size: 10, OrderBy: "id", Order: "asc"})
+	repo := deps.repo
+	// Sempre mocka WithTx para padronizar
+	repo.EXPECT().WithTx(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, fn func(context.Context) error) error {
+			return fn(ctx)
+		},
+	).AnyTimes()
+	svc := NewServiceImpl(repo, testMapperQueryScopesError{})
+	ctx := deps.ctx
+
+	responses := make([]TestDTO, 10)
+	_, err := svc.List(ctx, contracts.ListParams{Page: 1, Size: 10, OrderBy: "id", Order: "asc"}, &responses)
 	assert.Error(t, err)
 }
 
 func TestGenericService_GetByID_RepoError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl(repo, TestMapper{})
-	ctx := context.Background()
+	deps := newTestServiceDeps(t)
+	defer deps.ctrl.Finish()
+	repo := deps.repo
+	svc := deps.svc
+	ctx := deps.ctx
 
-	repo.EXPECT().GetByID(gomock.Any(), gomock.Any()).Return(TestModel{}, errors.New("repo error"))
+	call := ExpectGetByIDWithTx(repo, nil)
+	call.Return(errors.New("repo error"))
 
-	_, err := svc.GetByID(ctx, "1")
+	response := TestDTO{}
+	err := svc.GetByID(ctx, "1", &response)
 	assert.Error(t, err)
 }
 
 func TestGenericService_Update_RepoError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl(repo, TestMapper{})
-	ctx := context.Background()
+	deps := newTestServiceDeps(t)
+	defer deps.ctrl.Finish()
+	repo := deps.repo
+	svc := deps.svc
+	ctx := deps.ctx
 
-	repo.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
+	// Usa o helper para garantir o padrão de mock de transação
+	call := ExpectUpdateWithTx(repo, nil)
+	call.Return(errors.New("repo error"))
 
-	_, err := svc.Update(ctx, "1", TestDTO{Name: "u"})
+	request := TestDTO{Name: "update repo error"}
+	response := TestDTO{}
+	err := svc.Update(ctx, "1", request, &response)
 	assert.Error(t, err)
 }
 
 func TestGenericService_Delete_RepoError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	repo := NewMockRepository[TestModel](ctrl)
-	svc := NewServiceImpl(repo, TestMapper{})
-	ctx := context.Background()
+	deps := newTestServiceDeps(t)
+	defer deps.ctrl.Finish()
+	repo := deps.repo
+	svc := deps.svc
+	ctx := deps.ctx
 
-	repo.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(errors.New("repo error"))
+	call := ExpectDeleteWithTx(repo, nil)
+	call.Return(errors.New("repo error"))
 
 	err := svc.Delete(ctx, "1")
 	assert.Error(t, err)
