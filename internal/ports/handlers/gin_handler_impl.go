@@ -6,37 +6,35 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	hndcontracts "github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
-	rpocontracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
-	svccontracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	hndcts "github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
+	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	svccts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
-type ginHandler[C, R, U any, E rpocontracts.Entity] struct {
+type ginHandler[C, R, U any] struct {
 	hp      HandlerParameters
-	service svccontracts.Service[C, R, U, E]
+	service svccts.Service[C, R, U, rpocts.Entity]
 }
 
-func NewGenericHandler[C, R, U any, E rpocontracts.Entity](hp HandlerParameters, s svccontracts.Service[C, R, U, E]) hndcontracts.GenericHandler[C, R, U, E] {
-	return &ginHandler[C, R, U, E]{hp: hp, service: s}
+func NewGenericHandler[C, R, U any](hp HandlerParameters, s svccts.Service[C, R, U, rpocts.Entity]) hndcts.GenericHandler[C, R, U] {
+	return &ginHandler[C, R, U]{hp: hp, service: s}
 }
 
-func (h *ginHandler[C, R, U, E]) GetHandlerPath() string {
+func (h *ginHandler[C, R, U]) GetHandlerPath() string {
 	return GetHandlerPath(h.hp)
 }
 
-// RegisterCollection registers collection-level routes (e.g., /items)
-func (h *ginHandler[C, R, U, E]) RegisterCollection(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
+func (h *ginHandler[C, R, U]) RegisterCollection(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
 	handlerPath := GetHandlerPath(h.hp)
 	rg.Handle(strings.ToUpper(method), handlerPath, handler)
 }
 
-// RegisterInstance registers instance-level routes (e.g., /items/:id)
-func (h *ginHandler[C, R, U, E]) RegisterInstance(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
+func (h *ginHandler[C, R, U]) RegisterInstance(rg *gin.RouterGroup, method string, handler gin.HandlerFunc) {
 	fullPath := GetHandlerPath(h.hp) + "/:id"
 	rg.Handle(strings.ToUpper(method), fullPath, handler)
 }
 
-func (h *ginHandler[C, R, U, E]) Create(c *gin.Context) {
+func (h *ginHandler[C, R, U]) Create(c *gin.Context) {
 	var dto C
 	if !BindJSONToDTO(c, &dto) {
 		return
@@ -49,7 +47,7 @@ func (h *ginHandler[C, R, U, E]) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, created)
 }
 
-func (h *ginHandler[C, R, U, E]) GetByID(c *gin.Context) {
+func (h *ginHandler[C, R, U]) GetByID(c *gin.Context) {
 	id, ok := GetValidatedIDFromParam(c, "id", h.hp.IDValidationRule)
 	if !ok {
 		return
@@ -62,7 +60,7 @@ func (h *ginHandler[C, R, U, E]) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, dto)
 }
 
-func (h *ginHandler[C, R, U, E]) List(c *gin.Context) {
+func (h *ginHandler[C, R, U]) List(c *gin.Context) {
 	params := BuildListParamsFromRequest(c)
 	list, _, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
@@ -73,7 +71,7 @@ func (h *ginHandler[C, R, U, E]) List(c *gin.Context) {
 
 }
 
-func (h *ginHandler[C, R, U, E]) Update(c *gin.Context) {
+func (h *ginHandler[C, R, U]) Update(c *gin.Context) {
 	id, ok := GetValidatedIDFromParam(c, "id", h.hp.IDValidationRule)
 	if !ok {
 		return
@@ -90,7 +88,7 @@ func (h *ginHandler[C, R, U, E]) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, updated)
 }
 
-func (h *ginHandler[C, R, U, E]) Delete(c *gin.Context) {
+func (h *ginHandler[C, R, U]) Delete(c *gin.Context) {
 	id, ok := GetValidatedIDFromParam(c, "id", h.hp.IDValidationRule)
 	if !ok {
 		return

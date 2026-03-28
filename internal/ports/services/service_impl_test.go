@@ -65,11 +65,12 @@ type TestDTO struct {
 type TestMapper struct{}
 
 // Implementa o método exigido pela interface ServiceMapper
-func (m TestMapper) ToPostModel(dto TestDTO, model *TestModel) {
-	TestMapper{}.ToModel(&dto, model)
+func (m TestMapper) ToPostModel(dto TestDTO, model *TestModel) error {
+	return TestMapper{}.ToModel(&dto, model)
 }
-func (m TestMapper) ToPatchModel(dto TestDTO, model *TestModel) {
-	TestMapper{}.ToModel(&dto, model)
+
+func (m TestMapper) ToPatchModel(dto TestDTO, model *TestModel) error {
+	return TestMapper{}.ToModel(&dto, model)
 }
 
 func (m TestMapper) GetModelKey(id string) (map[string]any, error) {
@@ -90,37 +91,39 @@ func (m testMapperQueryScopesError) GetModelKey(id string) (map[string]any, erro
 	return TestMapper{}.GetModelKey(id)
 }
 
-func (m testMapperQueryScopesError) ToPostModel(dto TestDTO, model *TestModel) {
-	TestMapper{}.ToModel(&dto, model)
+func (m testMapperQueryScopesError) ToPostModel(dto TestDTO, model *TestModel) error {
+	return TestMapper{}.ToModel(&dto, model)
 }
-func (m testMapperQueryScopesError) ToModel(dto *TestDTO, model *TestModel) {
-	TestMapper{}.ToModel(dto, model)
-}
-
-func (m testMapperQueryScopesError) ToDTO(model *TestModel, dto *TestDTO) {
-	TestMapper{}.ToDTO(model, dto)
+func (m testMapperQueryScopesError) ToModel(dto *TestDTO, model *TestModel) error {
+	return TestMapper{}.ToModel(dto, model)
 }
 
-func (m testMapperQueryScopesError) ToPatchModel(dto TestDTO, model *TestModel) {
-	TestMapper{}.ToModel(&dto, model)
+func (m testMapperQueryScopesError) ToDTO(model *TestModel, dto *TestDTO) error {
+	return TestMapper{}.ToDTO(model, dto)
+}
+
+func (m testMapperQueryScopesError) ToPatchModel(dto TestDTO, model *TestModel) error {
+	return TestMapper{}.ToModel(&dto, model)
 }
 
 func (m testMapperQueryScopesError) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {
 	return nil, errors.New("query scope mapping error")
 }
 
-func (m TestMapper) ToModel(dto *TestDTO, model *TestModel) {
+func (m TestMapper) ToModel(dto *TestDTO, model *TestModel) error {
 	debugassert.Assert(dto != nil, "ToModel: dto is nil")
 	debugassert.Assert(model != nil, "ToModel: model is nil")
 	model.Name = utils.ToNullString(dto.Name)
+	return nil
 }
 
-func (m TestMapper) ToDTO(model *TestModel, dto *TestDTO) {
+func (m TestMapper) ToDTO(model *TestModel, dto *TestDTO) error {
 	debugassert.Assert(model != nil, "ToDTO: model is nil")
 	debugassert.Assert(dto != nil, "ToDTO: dto is nil")
 	dto.ID = utils.Int64ToString(model.ID)
 	dto.Name = utils.FromNullString(model.Name)
 	dto.auditDto.ToDTOPtr(&model.AuditedEntity)
+	return nil
 }
 
 func testCreateDTO(t *testing.T, svc contracts.Service[TestDTO, TestDTO, TestDTO, TestModel], ctx context.Context, in TestDTO) TestDTO {

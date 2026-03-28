@@ -1,37 +1,37 @@
 package dtos
 
-type FilterTypePostDTO struct {
+type FilterTypePost struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description,omitempty"`
 }
 
-type FilterTypePatchDTO struct {
+type FilterTypePatch struct {
 	Name        string `json:"name,omitempty"`
 	Description string `json:"description,omitempty"`
 }
 
-type FilterTypeGetDTO struct {
-	FilterTypeId      int64  `json:"filterTypeId,string"`
-	Name              string `json:"name"`
-	Description       string `json:"description,omitempty"`
-	BaseTimestampsDTO `json:",inline"`
+type FilterTypeGet struct {
+	FilterTypeId   int64  `json:"filterTypeId,string"`
+	Name           string `json:"name"`
+	Description    string `json:"description,omitempty"`
+	BaseTimestamps `json:",inline"`
 }
 
-type FilterPostDTO struct {
+type FilterPost struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description,omitempty"`
 }
 
-type FilterPatchDTO struct {
+type FilterPatch struct {
 	Name        string `json:"name,omitempty"`
 	Description string `json:"description,omitempty"`
 }
 
-type FilterGetDTO struct {
-	FilterId          int64             `json:"filterId,string"`
-	FilterTypeId      int64             `json:"filterTypeId,string"`
-	Name              string            `json:"name"`
-	Description       string            `json:"description,omitempty"`
-	FilterType        *FilterTypeGetDTO `json:"filterType,omitempty"`
-	BaseTimestampsDTO `json:",inline"`
+type FilterGet struct {
+	FilterId       int64          `json:"filterId,string"`
+	FilterTypeId   int64          `json:"filterTypeId,string"`
+	Name           string         `json:"name"`
+	Description    string         `json:"description,omitempty"`
+	FilterType     *FilterTypeGet `json:"filterType,omitempty"`
+	BaseTimestamps `json:",inline"`
 }

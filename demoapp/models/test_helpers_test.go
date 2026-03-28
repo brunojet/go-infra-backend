@@ -250,10 +250,6 @@ func createFilterTypeWithDescription(t *testing.T, gdb *gorm.DB, name, descripti
 	return ft
 }
 
-func createFilter(t *testing.T, gdb *gorm.DB, filterTypeID int64, name string) Filter {
-	return createFilterWithDescription(t, gdb, filterTypeID, name, "")
-}
-
 func createFilterWithDescription(t *testing.T, gdb *gorm.DB, filterTypeID int64, name, description string) Filter {
 	t.Helper()
 

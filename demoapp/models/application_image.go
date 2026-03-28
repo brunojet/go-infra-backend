@@ -27,18 +27,25 @@ type ApplicationImage struct {
 	FileName           sql.NullString `gorm:"not null;size:255"`
 	FileHash           []byte         `gorm:"type:binary(32);not null;uniqueIndex:idx_application_image_application,priority:3"`
 	ContentType        sql.NullString `gorm:"not null;size:255"`
-	// Store raw hash bytes (32 bytes). Use binary(32) for DB storage and
-	// let GORM handle []byte mapping. Avoid sql.NullByte which doesn't exist.
-	ImageType sql.NullInt16  `gorm:"not null;uniqueIndex:idx_application_image_application,priority:2"`
-	CreatedAt sql.NullTime   `gorm:"autoCreateTime;index:idx_application_image_del_created,priority:2"`
-	UpdatedAt sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_image_del_updated,priority:2"`
-	DeletedAt gorm.DeletedAt `gorm:"index:idx_application_image_del_created,priority:1;index:idx_application_image_del_updated,priority:1"`
+	ImageType          sql.NullInt16  `gorm:"not null;uniqueIndex:idx_application_image_application,priority:2"`
+	Status             int16          `gorm:"not null;default:0;index:idx_application_image_status"` // 0: Pending, 1: Processing, 2: Ready, 3: Failed
+	CreatedAt          sql.NullTime   `gorm:"autoCreateTime;index:idx_application_image_del_created,priority:2"`
+	UpdatedAt          sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_image_del_updated,priority:2"`
+	DeletedAt          gorm.DeletedAt `gorm:"index:idx_application_image_del_created,priority:1;index:idx_application_image_del_updated,priority:1"`
 
 	// Child-side constraint will live on ApplicationImage.Application
 	Application                   *Application
 	ApplicationProfiles           []ApplicationProfile           `gorm:"foreignKey:ApplicationImageId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT;"`
 	ApplicationProfileScreenshots []ApplicationProfileScreenshot `gorm:"foreignKey:ApplicationImageId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
 }
+
+// Status constants for ApplicationImage
+const (
+	ApplicationImageStatusPending    int16 = 0
+	ApplicationImageStatusProcessing int16 = 1
+	ApplicationImageStatusReady      int16 = 2
+	ApplicationImageStatusFailed     int16 = 3
+)
 
 func (ApplicationImage) TableName() string { return tableApplicationImage }
 

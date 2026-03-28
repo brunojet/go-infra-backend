@@ -23,9 +23,9 @@ type ListParams struct {
 }
 
 type ServiceMapper[C, R, U any, E repoContracts.Entity] interface {
-	ToPostModel(dto C, model *E)
-	ToPatchModel(dto U, model *E)
-	ToDTO(model *E, dto *R)
+	ToPostModel(dto C, model *E) error
+	ToPatchModel(dto U, model *E) error
+	ToDTO(model *E, dto *R) error
 	GetModelKey(id string) (map[string]any, error)
 	ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error)
 }

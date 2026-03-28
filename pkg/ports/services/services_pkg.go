@@ -1,37 +1,37 @@
 package services
 
 import (
-	internalservices "github.com/brunojet/go-infra-backend/internal/ports/services"
-	repo "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
+	"github.com/brunojet/go-infra-backend/internal/ports/services"
+	"github.com/brunojet/go-infra-backend/pkg/ports/repositories"
 	"github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
 // ---- Contracts ----
 type AnyInt = contracts.AnyInt
 
-type ServiceMapper[C, R, U any, E repo.Entity] = contracts.ServiceMapper[C, R, U, E]
+type ServiceMapper[C, R, U any, E repositories.Entity] = contracts.ServiceMapper[C, R, U, E]
 
-type Service[C, R, U any, E repo.Entity] = contracts.Service[C, R, U, E]
+type Service[C, R, U any, E repositories.Entity] = contracts.Service[C, R, U, E]
 
-type NestedServiceMapper[C, R, U any, E repo.Entity] = contracts.NestedServiceMapper[C, R, U, E]
+type NestedServiceMapper[C, R, U any, E repositories.Entity] = contracts.NestedServiceMapper[C, R, U, E]
 
-type NestedService[C, R, U any, E repo.Entity] = contracts.NestedService[C, R, U, E]
+type NestedService[C, R, U any, E repositories.Entity] = contracts.NestedService[C, R, U, E]
 
 // NewServiceImpl delegates to the internal implementation.
-func NewServiceImpl[C, R, U any, E repo.Entity](r repo.Repository[E], m ServiceMapper[C, R, U, E]) Service[C, R, U, E] {
-	return internalservices.NewServiceImpl(r, m)
+func NewServiceImpl[C, R, U any, E repositories.Entity](r repositories.Repository[E], m ServiceMapper[C, R, U, E]) Service[C, R, U, E] {
+	return services.NewServiceImpl(r, m)
 }
 
 // NewNestedServiceImpl delegates to the internal implementation.
-func NewNestedServiceImpl[C, R, U any, E repo.Entity](r repo.Repository[E], m NestedServiceMapper[C, R, U, E]) NestedService[C, R, U, E] {
-	return internalservices.NewNestedServiceImpl(r, m)
+func NewNestedServiceImpl[C, R, U any, E repositories.Entity](r repositories.Repository[E], m NestedServiceMapper[C, R, U, E]) NestedService[C, R, U, E] {
+	return services.NewNestedServiceImpl(r, m)
 }
 
 // ---- Utils (delegating to internal) ----
 func ParseScopeIntFromString[T AnyInt](value string, minValue T) (T, error) {
-	return internalservices.ParseScopeIntFromString(value, minValue)
+	return services.ParseScopeIntFromString(value, minValue)
 }
 
 func ParseScopeInt[T AnyInt](scopes map[string]any, key string, minValue T) (T, error) {
-	return internalservices.ParseScopeInt(scopes, key, minValue)
+	return services.ParseScopeInt(scopes, key, minValue)
 }

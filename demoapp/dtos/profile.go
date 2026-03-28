@@ -1,42 +1,42 @@
 package dtos
 
-type ApplicationProfilePostDTO struct {
+type ApplicationProfilePost struct {
 	Name                          string                                `json:"name" binding:"required"`
 	Description                   string                                `json:"description,omitempty"`
 	FilterIds                     []int64                               `json:"filterIds" binding:"required"`
-	ApplicationImage              ApplicationImagePostDTO               `json:"applicationImage" binding:"required"`
+	ApplicationImage              ApplicationImagePost                  `json:"applicationImage" binding:"required"`
 	ApplicationProfileScreenshots []ApplicationProfileScreenshotPostDTO `json:"applicationProfileScreenshots,omitempty"`
 }
 
-type ApplicationProfilePatchDTO struct {
-	Stage string `json:"stage" binding:"required,oneof=review production archived"` //pending, review, production
+type ApplicationProfilePatch struct {
+	Stage ApplicationStage `json:"stage" binding:"required,oneof=review production archived"` //pending, review, production
 }
 
-type ApplicationProfileGetDTO struct {
-	ApplicationProfileId          int64                                `json:"applicationProfileId,string"`
-	ApplicationId                 int64                                `json:"applicationId,string"`
-	Name                          string                               `json:"name"`
-	Description                   string                               `json:"description,omitempty"`
-	Stage                         string                               `json:"stage"` //pending, review, production
-	ReviewAt                      string                               `json:"reviewAt,omitempty"`
-	ProductionAt                  string                               `json:"productionAt,omitempty"`
-	Filters                       []FilterGetDTO                       `json:"filters,omitempty"`
-	Application                   *ApplicationGetDTO                   `json:"application,omitempty"`
-	ApplicationImage              ApplicationImageGetDTO               `json:"applicationImage"`
-	ApplicationCatalogs           []ApplicationCatalogGetDTO           `json:"applicationCatalogs,omitempty"`
-	ApplicationProfileScreenshots []ApplicationProfileScreenshotGetDTO `json:"applicationProfileScreenshots,omitempty"`
-	BaseTimestampsDTO             `json:",inline"`
+type ApplicationProfileGet struct {
+	ApplicationProfileId          int64                          `json:"applicationProfileId,string"`
+	ApplicationId                 int64                          `json:"applicationId,string"`
+	Name                          string                         `json:"name"`
+	Description                   string                         `json:"description,omitempty"`
+	Stage                         ApplicationStage               `json:"stage"` //pending, review, production
+	ReviewAt                      string                         `json:"reviewAt,omitempty"`
+	ProductionAt                  string                         `json:"productionAt,omitempty"`
+	Filters                       []FilterGet                    `json:"filters,omitempty"`
+	Application                   *ApplicationGet                `json:"application,omitempty"`
+	ApplicationImage              ApplicationImage               `json:"applicationImage"`
+	ApplicationCatalogs           []ApplicationCatalog           `json:"applicationCatalogs,omitempty"`
+	ApplicationProfileScreenshots []ApplicationProfileScreenshot `json:"applicationProfileScreenshots,omitempty"`
+	BaseTimestamps                `json:",inline"`
 }
 
 type ApplicationProfileScreenshotPostDTO struct {
-	Position                int16 `json:"position" binding:"required"`
-	ApplicationImagePostDTO `json:",inline" binding:"required"`
+	Position             int16 `json:"position" binding:"required"`
+	ApplicationImagePost `json:",inline" binding:"required"`
 }
 
-type ApplicationProfileScreenshotGetDTO struct {
-	ApplicationProfileId int64                  `json:"applicationProfileId,string"`
-	ApplicationImageId   int64                  `json:"applicationImageId,string"`
-	Position             int16                  `json:"position"`
-	ApplicationImage     ApplicationImageGetDTO `json:"applicationImage"`
-	BaseTimestampsDTO    `json:",inline"`
+type ApplicationProfileScreenshot struct {
+	ApplicationProfileId int64            `json:"applicationProfileId,string"`
+	ApplicationImageId   int64            `json:"applicationImageId,string"`
+	Position             int16            `json:"position"`
+	ApplicationImage     ApplicationImage `json:"applicationImage"`
+	BaseTimestamps       `json:",inline"`
 }

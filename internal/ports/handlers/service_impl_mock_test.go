@@ -69,9 +69,11 @@ func (mr *MockServiceMapperMockRecorder[C, R, U, E]) GetModelKey(id interface{})
 }
 
 // ToDTO mocks base method.
-func (m *MockServiceMapper[C, R, U, E]) ToDTO(model *E, dto *C) {
+func (m *MockServiceMapper[C, R, U, E]) ToDTO(model *E, dto *R) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ToDTO", model, dto)
+	ret := m.ctrl.Call(m, "ToDTO", model, dto)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // ToDTO indicates an expected call of ToDTO.
@@ -81,9 +83,11 @@ func (mr *MockServiceMapperMockRecorder[C, R, U, E]) ToDTO(model, dto interface{
 }
 
 // ToPostModel mocks base method.
-func (m *MockServiceMapper[C, R, U, E]) ToPostModel(dto C, model *E) {
+func (m *MockServiceMapper[C, R, U, E]) ToPostModel(dto C, model *E) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ToPostModel", dto, model)
+	ret := m.ctrl.Call(m, "ToPostModel", dto, model)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // ToPostModel indicates an expected call of ToPostModel.
@@ -93,9 +97,11 @@ func (mr *MockServiceMapperMockRecorder[C, R, U, E]) ToPostModel(dto, model inte
 }
 
 // ToPatchModel mocks base method.
-func (m *MockServiceMapper[C, R, U, E]) ToPatchModel(dto U, model *E) {
+func (m *MockServiceMapper[C, R, U, E]) ToPatchModel(dto U, model *E) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ToPatchModel", dto, model)
+	ret := m.ctrl.Call(m, "ToPatchModel", dto, model)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // ToPatchModel indicates an expected call of ToPatchModel.

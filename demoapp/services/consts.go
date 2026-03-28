@@ -1,6 +1,9 @@
 package services
 
-import "github.com/brunojet/go-infra-backend/demoapp/models"
+import (
+	"github.com/brunojet/go-infra-backend/demoapp/dtos"
+	"github.com/brunojet/go-infra-backend/demoapp/models"
+)
 
 // Package-level constants for demoapp services to avoid magic literals.
 const (
@@ -23,19 +26,33 @@ const (
 )
 
 var (
-	stageMapFromModel = map[int16]string{
-		models.ApplicationStagePending:    "pending",
-		models.ApplicationStageReview:     "review",
-		models.ApplicationStagePilot:      "pilot",
-		models.ApplicationStageProduction: "production",
-		models.ApplicationStageArchived:   "archived",
+	fileStatusFromModel = map[int16]dtos.FileStatus{
+		models.ApplicationImageStatusPending:    dtos.ApplicationImageStatusPending,
+		models.ApplicationImageStatusProcessing: dtos.ApplicationImageStatusProcessing,
+		models.ApplicationImageStatusReady:      dtos.ApplicationImageStatusReady,
+		models.ApplicationImageStatusFailed:     dtos.ApplicationImageStatusFailed,
 	}
 
-	stageMapToModel = map[string]int16{
-		"pending":    models.ApplicationStagePending,
-		"review":     models.ApplicationStageReview,
-		"pilot":      models.ApplicationStagePilot,
-		"production": models.ApplicationStageProduction,
-		"archived":   models.ApplicationStageArchived,
+	fileStatusToModel = map[dtos.FileStatus]int16{
+		dtos.ApplicationImageStatusPending:    models.ApplicationImageStatusPending,
+		dtos.ApplicationImageStatusProcessing: models.ApplicationImageStatusProcessing,
+		dtos.ApplicationImageStatusReady:      models.ApplicationImageStatusReady,
+		dtos.ApplicationImageStatusFailed:     models.ApplicationImageStatusFailed,
+	}
+
+	stageMapFromModel = map[int16]dtos.ApplicationStage{
+		models.ApplicationStagePending:    dtos.ApplicationStagePending,
+		models.ApplicationStageReview:     dtos.ApplicationStageReview,
+		models.ApplicationStagePilot:      dtos.ApplicationStagePilot,
+		models.ApplicationStageProduction: dtos.ApplicationStageProduction,
+		models.ApplicationStageArchived:   dtos.ApplicationStageArchived,
+	}
+
+	stageMapToModel = map[dtos.ApplicationStage]int16{
+		dtos.ApplicationStagePending:    models.ApplicationStagePending,
+		dtos.ApplicationStageReview:     models.ApplicationStageReview,
+		dtos.ApplicationStagePilot:      models.ApplicationStagePilot,
+		dtos.ApplicationStageProduction: models.ApplicationStageProduction,
+		dtos.ApplicationStageArchived:   models.ApplicationStageArchived,
 	}
 )

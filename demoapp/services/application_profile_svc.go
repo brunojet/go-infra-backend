@@ -2,20 +2,54 @@ package services
 
 import (
 	"context"
-	"fmt"
-
-	"encoding/hex"
+	"strconv"
 
 	"github.com/brunojet/go-infra-backend/demoapp/dtos"
 	"github.com/brunojet/go-infra-backend/demoapp/models"
-	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
-	rpoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/demoapp/repositories"
+	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/services"
-	utils "github.com/brunojet/go-infra-backend/pkg/utils"
+	"github.com/brunojet/go-infra-backend/pkg/utils"
 	"gorm.io/gorm"
 )
 
-type applicationProfileNestedMapper struct{}
+type applicationProfileNestedMapper struct {
+	im applicationImageMapper
+}
+
+func (m applicationProfileNestedMapper) toScreenshots(dtos []dtos.ApplicationProfileScreenshotPostDTO, modelsPtr *[]models.ApplicationProfileScreenshot) error {
+	if modelsPtr == nil {
+		return errMapperNilModel
+	}
+	screenshots := make([]models.ApplicationProfileScreenshot, len(dtos))
+	for i, dto := range dtos {
+		modelImage := models.ApplicationImage{}
+		if err := m.im.toImage(dto.ApplicationImagePost, &modelImage); err != nil {
+			return err
+		}
+		screenshots[i].ApplicationImage = &modelImage
+		screenshots[i].Position = dto.Position
+	}
+	*modelsPtr = screenshots
+	return nil
+}
+
+func (m applicationProfileNestedMapper) toScreenshotsDTO(models []models.ApplicationProfileScreenshot, dtosPtr *[]dtos.ApplicationProfileScreenshot) error {
+	if dtosPtr == nil {
+		return errMapperNilModel
+	}
+	screenshots := make([]dtos.ApplicationProfileScreenshot, len(models))
+	for i, model := range models {
+		if err := m.im.toImageDTO(model.ApplicationImage, &screenshots[i].ApplicationImage); err != nil {
+			return err
+		}
+		screenshots[i].ApplicationProfileId = model.ApplicationProfileId
+		screenshots[i].ApplicationImageId = model.ApplicationImageId
+		screenshots[i].Position = model.Position
+	}
+	*dtosPtr = screenshots
+	return nil
+}
 
 func (applicationProfileNestedMapper) ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error) {
 	return queryScopes, nil
@@ -42,82 +76,81 @@ func (m applicationProfileNestedMapper) ApplyParentScopes(parentID string, model
 	model.ApplicationId = applicationID
 	model.ApplicationImage.ApplicationId = applicationID
 	for i := range model.ApplicationProfileScreenshots {
-		model.ApplicationProfileScreenshots[i].ApplicationProfileId = model.ApplicationProfileId
 		model.ApplicationProfileScreenshots[i].ApplicationImage.ApplicationId = applicationID
-		model.ApplicationProfileScreenshots[i].Position = int16(i + 1)
 	}
 	return nil
 }
 
-func (m applicationProfileNestedMapper) toImage(dto dtos.ApplicationImagePostDTO, model *models.ApplicationImage) {
-	if dto.FileHash != "" {
-		hashBytes, err := hex.DecodeString(dto.FileHash)
-		if err == nil {
-			model.FileHash = hashBytes
-		} else {
-			model.FileHash = nil // ou trate o erro conforme necessário
-		}
+func toDownloadUrl(model *models.ApplicationImage, dto *dtos.ApplicationImage) error {
+	if model == nil || dto == nil {
+		return errMapperNilModel
 	}
-	model.FileName = utils.ToNullString(dto.FileName)
-	model.ContentType = utils.ToNullString(dto.ContentType)
+	var downloadDTO dtos.DownloadReady
+	downloadDTO.URL = "/applications/" + strconv.FormatInt(model.ApplicationId, 10) + "/applications-images/" + strconv.FormatInt(model.ApplicationImageId, 10) + "/download"
+	dto.DownloadReadyDTO = &downloadDTO
+	return nil
+}
 
-	return model.ImageUrl.String
+func toUploadUrl(model *models.ApplicationImage, dto *dtos.ApplicationImage) error {
+	if model == nil || dto == nil {
+		return errMapperNilModel
+	}
+	var uploadDTO dtos.UploadPending
+	uploadDTO.Method = "PUT"
+	uploadDTO.URL = "/applications/" + strconv.FormatInt(model.ApplicationId, 10) + "/applications-images/" + strconv.FormatInt(model.ApplicationImageId, 10) + "/upload"
+	dto.UploadPendingDTO = &uploadDTO
+	return nil
 }
 
 // Converte de DTO para Model (POST)
-func (m applicationProfileNestedMapper) ToPostModel(dto *dtos.ApplicationProfilePostDTO, model *models.ApplicationProfile) {
+func (m applicationProfileNestedMapper) ToPostModel(dto dtos.ApplicationProfilePost, model *models.ApplicationProfile) error {
+	if model == nil {
+		return errMapperNilModel
+	}
 	model.Name = utils.ToNullString(dto.Name)
 	model.Description = utils.ToNullString(dto.Description)
-	m.toImage(dto.ApplicationImage, model.ApplicationImage)
+	model.ApplicationImage = &models.ApplicationImage{}
+	if err := m.im.toImage(dto.ApplicationImage, model.ApplicationImage); err != nil {
+		return err
+	}
+	if err := m.toScreenshots(dto.ApplicationProfileScreenshots, &model.ApplicationProfileScreenshots); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Converte de DTO para Model (PATCH)
-func (applicationProfileNestedMapper) ToPatchModel(dto *dtos.ApplicationProfileDTO, model *models.ApplicationProfile) {
-	// Aqui você pode implementar lógica específica para PATCH se necessário
-	// Por padrão, copia os mesmos campos
-	model.ApplicationId = dto.ApplicationId
-	model.Stage = utils.ToNullInt16(dto.Stage)
-	model.Name = utils.ToNullString(dto.Name)
-	model.Description = utils.ToNullString(dto.Description)
-	model.ApplicationImageId = dto.ApplicationImageId
-	// Converter hash de hex string para []byte
-	if dto.Hash != "" {
-		hashBytes, err := hex.DecodeString(dto.Hash)
-		if err == nil {
-			model.Hash = hashBytes
-		}
+func (applicationProfileNestedMapper) ToPatchModel(dto dtos.ApplicationProfilePatch, model *models.ApplicationProfile) error {
+	if model == nil {
+		return errMapperNilModel
 	}
-	// Converter stages de []string para []int16
-	if len(dto.Stages) > 0 {
-		var stages []int16
-		for _, s := range dto.Stages {
-			// Supondo que o stage string seja um número, senão adapte para mapear nomes para valores
-			var v int16
-			_, err := fmt.Sscanf(s, "%d", &v)
-			if err != nil {
-				// tente mapear por nome se necessário
-				continue
-			}
-			stages = append(stages, v)
-		}
-		model.Stages = stages
-	}
+	model.Stage = utils.ToNullInt16(stageMapToModel[dto.Stage])
+	return nil
 }
 
 // Converte de Model para DTO
-func (applicationProfileNestedMapper) ToDTO(model *models.ApplicationProfile, dto *dtos.ApplicationProfileDTO) {
+func (m applicationProfileNestedMapper) ToDTO(model *models.ApplicationProfile, dto *dtos.ApplicationProfileGet) error {
+	if model == nil || dto == nil {
+		return errMapperNilModel
+	}
 	dto.ApplicationProfileId = model.ApplicationProfileId
 	dto.ApplicationId = model.ApplicationId
-	dto.Stage = utils.FromNullInt16(model.Stage)
+	dto.Stage = stageMapFromModel[model.Stage.Int16]
 	dto.Name = utils.FromNullString(model.Name)
 	dto.Description = utils.FromNullString(model.Description)
-	dto.ApplicationImageId = model.ApplicationImageId
+	err := m.im.toImageDTO(model.ApplicationImage, &dto.ApplicationImage)
+	if err != nil {
+		return err
+	}
+	if err := m.toScreenshotsDTO(model.ApplicationProfileScreenshots, &dto.ApplicationProfileScreenshots); err != nil {
+		return err
+	}
 	dto.ReviewAt = utils.FromNullTimeRFC3339(model.ReviewAt)
 	dto.ProductionAt = utils.FromNullTimeRFC3339(model.ProductionAt)
 	dto.CreatedAt = utils.FromNullTimeRFC3339(model.CreatedAt)
 	dto.UpdatedAt = utils.FromNullTimeRFC3339(model.UpdatedAt)
 	dto.DeletedAt = utils.FromNullTimeRFC3339(model.DeletedAt)
-	// TODO: Mapear relacionamentos aninhados se necessário
+	return nil
 }
 
 func (applicationProfileNestedMapper) GetModelKey(id string) (map[string]any, error) {
@@ -129,19 +162,20 @@ func (applicationProfileNestedMapper) GetModelKey(id string) (map[string]any, er
 }
 
 type ApplicationProfileNestedService interface {
-	services.NestedService[dtos.ApplicationProfileDTO, models.ApplicationProfile]
+	services.NestedService[dtos.ApplicationProfilePost, dtos.ApplicationProfileGet, dtos.ApplicationProfilePatch, models.ApplicationProfile]
 }
 
 type applicationProfileNestedService struct {
-	services.NestedService[dtos.ApplicationProfileDTO, models.ApplicationProfile]
-	pRepo  repo.ApplicationProfileRepository
-	acRepo repo.ApplicationConfigurationRepository
-	vRepo  repo.ApplicationVersionRepository
-	cRepo  repo.ApplicationCatalogRepository
-	mapper applicationProfileNestedMapper
+	services.NestedService[dtos.ApplicationProfilePost, dtos.ApplicationProfileGet, dtos.ApplicationProfilePatch, models.ApplicationProfile]
+	pRepo   repositories.ApplicationProfileRepository
+	acRepo  repositories.ApplicationConfigurationRepository
+	vRepo   repositories.ApplicationVersionRepository
+	cRepo   repositories.ApplicationCatalogRepository
+	mapper  applicationProfileNestedMapper
+	zeroDto dtos.ApplicationProfileGet
 }
 
-func NewApplicationProfileNestedService(p repo.ApplicationProfileRepository, a repo.ApplicationConfigurationRepository, v repo.ApplicationVersionRepository, c repo.ApplicationCatalogRepository) ApplicationProfileNestedService {
+func NewApplicationProfileNestedService(p repositories.ApplicationProfileRepository, a repositories.ApplicationConfigurationRepository, v repositories.ApplicationVersionRepository, c repositories.ApplicationCatalogRepository) ApplicationProfileNestedService {
 	return &applicationProfileNestedService{
 		NestedService: services.NewNestedServiceImpl(p, applicationProfileNestedMapper{}),
 		pRepo:         p,
@@ -161,26 +195,27 @@ func (s *applicationProfileNestedService) createOneShot(ctx context.Context, inO
 	})
 }
 
-func (s *applicationProfileNestedService) CreateNested(ctx context.Context, parentID string, dto *dtos.ApplicationProfileDTO) error {
+func (s *applicationProfileNestedService) CreateNested(ctx context.Context, parentID string, dto dtos.ApplicationProfilePost) (dtos.ApplicationProfileGet, error) {
 	var model models.ApplicationProfile
 	s.mapper.ToPostModel(dto, &model)
 	if err := s.mapper.ApplyParentScopes(parentID, &model); err != nil {
-		return err
+		return s.zeroDto, err
 	}
 	if err := s.createOneShot(ctx, &model); err != nil {
-		return err
+		return s.zeroDto, err
 	}
-	s.mapper.ToDTO(&model, dto)
-	return nil
+	var response dtos.ApplicationProfileGet
+	s.mapper.ToDTO(&model, &response)
+	return s.zeroDto, nil
 }
 
-func (s *applicationProfileNestedService) Update(ctx context.Context, id string, inOut *dtos.ApplicationProfileDTO) error {
+func (s *applicationProfileNestedService) Update(ctx context.Context, id string, dto dtos.ApplicationProfilePatch) (dtos.ApplicationProfileGet, error) {
 	scopes, err := s.mapper.GetModelKey(id)
 	if err != nil {
-		return err
+		return s.zeroDto, err
 	}
 	var model models.ApplicationProfile
-	s.mapper.ToPatchModel(inOut, &model)
+	s.mapper.ToPatchModel(dto, &model)
 	if err := s.pRepo.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.validateProfileStageTransition(txCtx, scopes, &model); err != nil {
 			return err
@@ -190,10 +225,11 @@ func (s *applicationProfileNestedService) Update(ctx context.Context, id string,
 		}
 		return s.syncCatalogFromProfile(txCtx, model)
 	}); err != nil {
-		return err
+		return s.zeroDto, err
 	}
-	s.mapper.ToDTO(&model, inOut)
-	return nil
+	var response dtos.ApplicationProfileGet
+	s.mapper.ToDTO(&model, &response)
+	return response, nil
 }
 
 func (s *applicationProfileNestedService) validateProfileStageTransition(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
@@ -212,8 +248,8 @@ func (s *applicationProfileNestedService) updateProfile(ctx context.Context, sco
 }
 
 func (s *applicationProfileNestedService) listApplicationConfigurationsPage(ctx context.Context, applicationID int64, page int) ([]models.ApplicationConfiguration, int64, error) {
-	params := rpoContracts.ListParams{
-		QueryParams: rpoContracts.QueryParams{
+	params := contracts.ListParams{
+		QueryParams: contracts.QueryParams{
 			Scopes: map[string]any{models.ColAppProfileApplicationID: applicationID},
 		},
 		Page:    page,

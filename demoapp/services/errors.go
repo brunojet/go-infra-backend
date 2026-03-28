@@ -11,4 +11,7 @@ var (
 	errNestedProfileApplicationIDRequired = porterrors.NewBusinessRuleError(errors.New(errTextNestedProfileApplicationIDScopeRequired))
 	errNestedVersionApplicationIDRequired = porterrors.NewBusinessRuleError(errors.New(errTextNestedVersionApplicationIDScopeRequired))
 	errNestedVersionIDRequired            = porterrors.NewBusinessRuleError(errors.New(errTextNestedVersionIDScopeRequired))
+
+	errMapperInvalidFileHash = errors.New("invalid file hash format")
+	errMapperNilModel        = errors.New("model pointer is nil in mapper")
 )

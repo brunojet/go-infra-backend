@@ -35,21 +35,23 @@ type nestedTestMapper struct {
 	getModelKeyErr            error
 }
 
-func (m nestedTestMapper) ToPostModel(dto nestedUnitDTO, model *nestedUnitModel) {
-	m.ToModel(&dto, model)
+func (m nestedTestMapper) ToPostModel(dto nestedUnitDTO, model *nestedUnitModel) error {
+	return m.ToModel(&dto, model)
 }
-func (m nestedTestMapper) ToPatchModel(dto nestedUnitDTO, model *nestedUnitModel) {
-	m.ToModel(&dto, model)
+func (m nestedTestMapper) ToPatchModel(dto nestedUnitDTO, model *nestedUnitModel) error {
+	return m.ToModel(&dto, model)
 }
 
-func (m nestedTestMapper) ToModel(dto *nestedUnitDTO, model *nestedUnitModel) {
+func (m nestedTestMapper) ToModel(dto *nestedUnitDTO, model *nestedUnitModel) error {
 	model.Name = utils.ToNullString(dto.Name)
+	return nil
 }
 
-func (m nestedTestMapper) ToDTO(model *nestedUnitModel, dto *nestedUnitDTO) {
+func (m nestedTestMapper) ToDTO(model *nestedUnitModel, dto *nestedUnitDTO) error {
 	dto.ID = strconv.FormatInt(model.ID, 10)
 	dto.ParentID = model.ParentID
 	dto.Name = utils.FromNullString(model.Name)
+	return nil
 }
 
 func (m nestedTestMapper) GetModelKey(id string) (map[string]any, error) {

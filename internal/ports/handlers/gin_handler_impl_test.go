@@ -31,7 +31,7 @@ type SimpleDTO struct {
 }
 
 // helper to create via GinHandler
-func createEntityForHandlerTest(t *testing.T, h hndcontracts.GenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity], ms *MockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity]) string {
+func createEntityForHandlerTest(t *testing.T, h hndcontracts.GenericHandler[SimpleDTO, SimpleDTO, SimpleDTO], ms *MockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity]) string {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	body := `{"name":"bob"}`
@@ -57,7 +57,7 @@ func TestCreate_Handler(t *testing.T) {
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
 	hp := HandlerParameters{IDValidationRule: Int64GtZero}
-	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
+	h := NewGenericHandler(hp, ms)
 
 	id := createEntityForHandlerTest(t, h, ms)
 	require.Equal(t, "created-id", id)
@@ -79,7 +79,7 @@ func TestGetByID_Handler(t *testing.T) {
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
 	hp := HandlerParameters{IDValidationRule: Int64GtZero}
-	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
+	h := NewGenericHandler(hp, ms)
 
 	// success
 	rec := httptest.NewRecorder()
@@ -114,7 +114,7 @@ func TestList_Handler(t *testing.T) {
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
 	hp := HandlerParameters{IDValidationRule: Int64GtZero}
-	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
+	h := NewGenericHandler(hp, ms)
 
 	// success
 	rec := httptest.NewRecorder()
@@ -139,7 +139,7 @@ func TestUpdate_Handler(t *testing.T) {
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
 	hp := HandlerParameters{IDValidationRule: Int64GtZero}
-	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
+	h := NewGenericHandler(hp, ms)
 
 	// success
 	rec := httptest.NewRecorder()
@@ -178,7 +178,7 @@ func TestDelete_Handler(t *testing.T) {
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
 	hp := HandlerParameters{IDValidationRule: Int64GtZero}
-	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
+	h := NewGenericHandler(hp, ms)
 
 	// success
 	rec := httptest.NewRecorder()
@@ -213,7 +213,7 @@ func TestRegister_Handler(t *testing.T) {
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
 	hp := HandlerParameters{HandlerPath: "/ping"}
-	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
+	h := NewGenericHandler(hp, ms)
 
 	// create real gin engine and group
 	engine := gin.New()
@@ -240,7 +240,7 @@ func TestCreate_Handler_InvalidJSON(t *testing.T) {
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
 	hp := HandlerParameters{IDValidationRule: Int64GtZero}
-	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
+	h := NewGenericHandler(hp, ms)
 
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
@@ -257,7 +257,7 @@ func TestUpdate_Handler_InvalidJSON(t *testing.T) {
 	defer ctrl.Finish()
 	ms := NewMockService[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](ctrl)
 	hp := HandlerParameters{IDValidationRule: Int64GtZero}
-	h := NewGenericHandler[SimpleDTO, SimpleDTO, SimpleDTO, SimpleEntity](hp, ms)
+	h := NewGenericHandler(hp, ms)
 
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
