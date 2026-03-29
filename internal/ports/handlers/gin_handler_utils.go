@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"log"
 	"net/http"
 	"net/url"
@@ -24,18 +23,18 @@ var (
 )
 
 func MapErrorToStatus(err error) int {
-	if errors.Is(err, ErrInvalidJSONBody) ||
-		errors.Is(err, ErrInvalidIDFormat) {
+	switch err {
+	case repositories.ErrConflictValidationFailed:
+		return http.StatusConflict
+	case ErrInvalidJSONBody, ErrInvalidIDFormat:
 		return http.StatusBadRequest
-	}
-	if errors.Is(err, repositories.ErrNotFound) {
+	case repositories.ErrNotFound:
 		return http.StatusNotFound
-	}
-	if errors.Is(err, repositories.ErrDBUnavailable) {
+	case repositories.ErrDBUnavailable:
 		return http.StatusServiceUnavailable
+	default:
+		return http.StatusInternalServerError
 	}
-
-	return http.StatusInternalServerError
 }
 
 func GetHandlerPath(handlerParameters HandlerParameters) string {
