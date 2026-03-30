@@ -19,15 +19,14 @@ const (
 const (
 	ColFilterTypeID = "filter_type_id"
 	ColFilterID     = "filter_id"
-
-	IntegrationTypeRFAL int16 = 1
-	IntegrationTypeTEF  int16 = 2
 )
 
 // Terminal
 const (
-	ColTerminalModelID              = "terminal_model_id"
-	ColTerminalModelConfigurationID = "terminal_model_configuration_id"
+	ColTerminalModelID                    = "terminal_model_id"
+	ColTerminalModelConfigurationID       = "terminal_model_configuration_id"
+	IntegrationTypeRFAL             int16 = 1
+	IntegrationTypeTEF              int16 = 2
 )
 
 // Application
