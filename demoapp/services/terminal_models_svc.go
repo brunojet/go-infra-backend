@@ -100,7 +100,7 @@ func (terminalModelConfigurationNestedMapper) ToPostModel(dto dtos.TerminalModel
 	if model == nil {
 		return errMapperNilModel
 	}
-	model.IntegrationType = utils.ToNullInt16(dto.IntegrationType)
+	model.IntegrationType = utils.ToNullInt16(integrationTypeMapToModel[dto.IntegrationType])
 	return nil
 }
 
@@ -108,7 +108,7 @@ func (terminalModelConfigurationNestedMapper) ToPatchModel(dto dtos.TerminalMode
 	if model == nil {
 		return errMapperNilModel
 	}
-	model.IntegrationType = utils.ToNullInt16(dto.IntegrationType)
+	model.IntegrationType = utils.ToNullInt16(integrationTypeMapToModel[dto.IntegrationType])
 	return nil
 }
 
@@ -119,7 +119,7 @@ func (m terminalModelConfigurationNestedMapper) ToDTO(model *models.TerminalMode
 	}
 	dto.TerminalModelConfigurationId = model.TerminalModelConfigurationId
 	dto.TerminalModelId = model.TerminalModelId
-	dto.IntegrationType = utils.FromNullInt16(model.IntegrationType)
+	dto.IntegrationType = integrationTypeMapFromModel[utils.FromNullInt16(model.IntegrationType)]
 	dto.CreatedAt = utils.FromNullTimeRFC3339(model.CreatedAt)
 	dto.UpdatedAt = utils.FromNullTimeRFC3339(model.UpdatedAt)
 	dto.DeletedAt = utils.FromNullTimeRFC3339(model.DeletedAt)

@@ -18,7 +18,7 @@ const (
 	whereVersionAppIDEq = models.ColAppVersionApplicationID + " = ?"
 	whereVersionTmIDEq  = models.ColAppVersionTerminalModelConfigurationID + " = ?"
 	whereVersionStageEq = models.ColAppVersionStage + " = ?"
-	whereVersionDelNil  = models.ColAppVersionDeletedAt + " IS NULL"
+	whereVersionDelNil  = models.ColDeletedAt + " IS NULL"
 )
 
 type ApplicationVersionRepository interface {
@@ -70,7 +70,7 @@ func (r *ApplicationVersionRepo) FindStageVersionID(ctx context.Context, applica
 		Where(models.ColAppVersionApplicationID+" = ?", applicationID).
 		Where(models.ColAppVersionTerminalModelConfigurationID+" = ?", configurationTerminalModelID).
 		Where(models.ColAppVersionStage+" = ?", stage).
-		Where(models.ColAppVersionDeletedAt+" IS NULL").
+		Where(models.ColDeletedAt+" IS NULL").
 		Order(clause.OrderByColumn{Column: clause.Column{Name: models.ColAppVersionID}, Desc: true}).
 		Limit(1).
 		Pluck(models.ColAppVersionID, &versionID)
@@ -120,7 +120,7 @@ func (r *ApplicationVersionRepo) ArchiveStageDuplicates(ctx context.Context, inO
 		Where(whereVersionDelNil)
 
 	return query.Updates(map[string]any{
-		models.ColAppVersionStage:     models.ApplicationStageArchived,
-		models.ColAppVersionDeletedAt: sql.NullTime{Time: tx.NowFunc(), Valid: true},
+		models.ColAppVersionStage: models.ApplicationStageArchived,
+		models.ColDeletedAt:       sql.NullTime{Time: tx.NowFunc(), Valid: true},
 	}).Error
 }

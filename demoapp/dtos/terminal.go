@@ -19,17 +19,17 @@ type TerminalModelGet struct {
 }
 
 type TerminalModelConfigurationPost struct {
-	IntegrationType int16 `json:"integrationType" binding:"required"`
+	IntegrationType IntegrationType `json:"integrationType" binding:"required,oneof=RFAL TEF"`
 }
 
 type TerminalModelConfigurationPatch struct {
-	IntegrationType int16 `json:"integrationType,omitempty"`
+	TerminalModelConfigurationPost `json:",inline"`
 }
 
 type TerminalModelConfigurationGet struct {
 	TerminalModelConfigurationId int64             `json:"terminalModelConfigurationId,string"`
 	TerminalModelId              int64             `json:"terminalModelId,string"`
-	IntegrationType              int16             `json:"integrationType"`
+	IntegrationType              IntegrationType   `json:"integrationType"`
 	TerminalModel                *TerminalModelGet `json:"terminalModel,omitempty"`
 	BaseTimestamps               `json:",inline"`
 }

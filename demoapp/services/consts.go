@@ -48,4 +48,14 @@ var (
 		dtos.ApplicationStageProduction: models.ApplicationStageProduction,
 		dtos.ApplicationStageArchived:   models.ApplicationStageArchived,
 	}
+
+	integrationTypeMapFromModel = map[int16]dtos.IntegrationType{
+		models.IntegrationTypeRFAL: dtos.IntegrationTypeRFAL,
+		models.IntegrationTypeTEF:  dtos.IntegrationTypeTEF,
+	}
+
+	integrationTypeMapToModel = map[dtos.IntegrationType]int16{
+		dtos.IntegrationTypeRFAL: models.IntegrationTypeRFAL,
+		dtos.IntegrationTypeTEF:  models.IntegrationTypeTEF,
+	}
 )

@@ -9,21 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	colCatalogApplicationID                = "application_id"
-	colCatalogTerminalModelConfigurationID = "terminal_model_configuration_id"
-	colCatalogStage                        = "stage"
-	colCatalogApplicationVersionID         = "application_version_id"
-	whereCatalogApplicationIDEq            = colCatalogApplicationID + " = ?"
-	whereCatalogTerminalModelIDEq          = colCatalogTerminalModelConfigurationID + " = ?"
-	whereCatalogStageEq                    = colCatalogStage + " = ?"
-	errTextCatalogStageInvalid             = "invalid stage"
-
-	catalogStageReview     int16 = applicationStageReview
-	catalogStagePilot      int16 = applicationStagePilot
-	catalogStageProduction int16 = applicationStageProduction
-)
-
 var (
 	errCatalogStageInvalid = porterrors.NewBusinessRuleError(errors.New(errTextCatalogStageInvalid))
 )

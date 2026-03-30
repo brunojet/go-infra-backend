@@ -9,15 +9,40 @@ info:
     name: Suporte
     email: suporte@example.com
 tags:
+  - name: filter-types
+    description: Operações relacionadas a tipos de filtro
   - name: filters
     description: Operações relacionadas a filtros
 paths:
-  /filter-types/{filterTypeId}/filters:
+  /filter-types:
+    post:
+      summary: Criar tipo de filtro
+      description: Cria um novo tipo de filtro.
+      operationId: createFilterType
+      tags: ["filter-types"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas.yaml#/components/schemas/FilterType'
+      responses:
+        '201':
+          description: Criado
     get:
-      summary: Listar filtros do tipo
-      description: Retorna a lista de filtros para o tipo informado.
-      operationId: listFiltersByType
-      tags: ["filters"]
+      summary: Listar tipos de filtro
+      description: Retorna a lista de tipos de filtro.
+      operationId: listFilterTypes
+      tags: ["filter-types"]
+      responses:
+        '206':
+          description: OK
+  /filter-types/{filterTypeId}:
+    get:
+      summary: Detalhar tipo de filtro
+      description: Retorna detalhes do tipo de filtro informado.
+      operationId: getFilterTypeById
+      tags: ["filter-types"]
       parameters:
         - in: path
           name: filterTypeId
@@ -27,6 +52,41 @@ paths:
       responses:
         '200':
           description: OK
+    patch:
+      summary: Atualizar tipo de filtro
+      description: Atualiza o tipo de filtro informado.
+      operationId: updateFilterTypeById
+      tags: ["filter-types"]
+      parameters:
+        - in: path
+          name: filterTypeId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas.yaml#/components/schemas/FilterType'
+      responses:
+        '200':
+          description: Atualizado
+    delete:
+      summary: Remover tipo de filtro
+      description: Remove o tipo de filtro informado.
+      operationId: deleteFilterTypeById
+      tags: ["filter-types"]
+      parameters:
+        - in: path
+          name: filterTypeId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Removido
+  /filter-types/{filterTypeId}/filters:
     post:
       summary: Criar filtro para o tipo
       description: Cria um novo filtro para o tipo informado.
@@ -47,6 +107,20 @@ paths:
       responses:
         '201':
           description: Criado
+    get:
+      summary: Listar filtros do tipo
+      description: Retorna a lista de filtros para o tipo informado.
+      operationId: listFiltersByType
+      tags: ["filters"]
+      parameters:
+        - in: path
+          name: filterTypeId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '206':
+          description: OK
   /filter-types/{filterTypeId}/filters/{filterId}:
     get:
       summary: Detalhar filtro
@@ -67,7 +141,7 @@ paths:
       responses:
         '200':
           description: OK
-    put:
+    patch:
       summary: Atualizar filtro
       description: Atualiza o filtro informado.
       operationId: updateFilterById

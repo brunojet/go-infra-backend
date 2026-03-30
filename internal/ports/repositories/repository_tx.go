@@ -136,11 +136,7 @@ func getListSize(total, page, size int) int {
 	offset := (page - 1) * size
 	remaining := total - offset
 	if remaining < capacity {
-		if remaining < 0 {
-			capacity = 0
-		} else {
-			capacity = remaining
-		}
+		capacity = max(remaining, 0)
 	}
 	return capacity
 }

@@ -18,3 +18,10 @@ const (
 	ApplicationStageProduction ApplicationStage = "production"
 	ApplicationStageArchived   ApplicationStage = "archived"
 )
+
+type IntegrationType string
+
+const (
+	IntegrationTypeRFAL IntegrationType = "RFAL"
+	IntegrationTypeTEF  IntegrationType = "TEF"
+)

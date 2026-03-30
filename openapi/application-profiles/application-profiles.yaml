@@ -1,0 +1,113 @@
+openapi: 3.0.0
+servers:
+  - url: http://localhost:8080
+info:
+  title: Application Profiles API
+  version: 1.0.0
+  description: API para gerenciamento de perfis de aplicação.
+  contact:
+    name: Suporte
+    email: suporte@example.com
+tags:
+  - name: application-profiles
+    description: Operações relacionadas a perfis de aplicação
+paths:
+  /applications/{applicationId}/application-profiles:
+    post:
+      summary: Criar perfil de aplicação
+      description: Cria um novo perfil para a aplicação informada.
+      operationId: createApplicationProfile
+      tags: ["application-profiles"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas.yaml#/components/schemas/ApplicationProfile'
+      responses:
+        '201':
+          description: Criado
+    get:
+      summary: Listar perfis de aplicação
+      description: Retorna a lista de perfis para a aplicação informada.
+      operationId: listApplicationProfiles
+      tags: ["application-profiles"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+      responses:
+        '206':
+          description: OK
+  /applications/{applicationId}/application-profiles/{applicationProfileId}:
+    get:
+      summary: Detalhar perfil de aplicação
+      description: Retorna detalhes do perfil informado.
+      operationId: getApplicationProfileById
+      tags: ["application-profiles"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: applicationProfileId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+    patch:
+      summary: Atualizar perfil de aplicação
+      description: Atualiza o perfil informado.
+      operationId: updateApplicationProfile
+      tags: ["application-profiles"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: applicationProfileId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas.yaml#/components/schemas/ApplicationProfile'
+      responses:
+        '200':
+          description: Atualizado
+    delete:
+      summary: Remover perfil de aplicação
+      description: Remove o perfil informado.
+      operationId: deleteApplicationProfile
+      tags: ["application-profiles"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: applicationProfileId
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Removido

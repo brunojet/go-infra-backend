@@ -3,40 +3,16 @@ components:
     FilterType:
       type: object
       properties:
-        filterTypeId:
-          type: integer
         name:
           type: string
         description:
           type: string
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-        deletedAt:
-          type: string
-          format: date-time
     Filter:
       type: object
       properties:
-        filterId:
-          type: integer
-        filterTypeId:
-          type: integer
         name:
           type: string
         description:
           type: string
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-        deletedAt:
-          type: string
-          format: date-time
         filterType:
           $ref: '#/components/schemas/FilterType'

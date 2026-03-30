@@ -8,44 +8,10 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	versionStagePending    int16 = applicationStagePending
-	versionStagePilot      int16 = applicationStagePilot
-	versionStageProduction int16 = applicationStageProduction
-	versionStageArchived   int16 = applicationStageArchived
-
-	colAppVersionID                           = "application_version_id"
-	colAppVersionApplicationID                = "application_id"
-	colAppVersionTerminalModelConfigurationID = "terminal_model_configuration_id"
-	colAppVersionStage                        = "stage"
-	colAppVersionDeletedAt                    = "deleted_at"
-
-	ColAppVersionID                           = colAppVersionID
-	ColAppVersionApplicationID                = colAppVersionApplicationID
-	ColAppVersionTerminalModelConfigurationID = colAppVersionTerminalModelConfigurationID
-	ColAppVersionStage                        = colAppVersionStage
-	ColAppVersionDeletedAt                    = colAppVersionDeletedAt
-)
-
 var (
 	errVersionStageInvalid             = porterrors.NewBusinessRuleError(errors.New("stage must be valid"))
 	errVersionStageTransitionInvalid   = porterrors.NewBusinessRuleError(errors.New("invalid stage transition"))
 	errVersionStageBackwardsTransition = porterrors.NewBusinessRuleError(errors.New("stage cannot transition backwards"))
-
-	versionStageAllowedTransitions = map[int16]map[int16]struct{}{
-		versionStagePending: {
-			versionStagePilot:    {},
-			versionStageArchived: {},
-		},
-		versionStagePilot: {
-			versionStageProduction: {},
-			versionStageArchived:   {},
-		},
-		versionStageProduction: {
-			versionStageArchived: {},
-		},
-		versionStageArchived: {},
-	}
 )
 
 type ApplicationVersion struct {

@@ -8,46 +8,12 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	tableApplicationProfileScreenshot = "application_profile_screenshot"
-	tableApplicationProfileHistory    = "application_profile_history"
-
-	profileStagePending    int16 = applicationStagePending
-	profileStageReviewed   int16 = applicationStageReview
-	profileStageProduction int16 = applicationStageProduction
-	profileStageArchived   int16 = applicationStageArchived
-
-	ColAppProfileID            = "application_profile_id"
-	ColAppProfileApplicationID = "application_id"
-	ColAppProfileStage         = "stage"
-	ColAppProfileDeletedAt     = "deleted_at"
-
-	ColAppCatalogApplicationID = "application_id"
-	ColAppCatalogProfileID     = "application_profile_id"
-	ColAppCatalogStage         = "stage"
-)
-
 var (
 	errProfileStageInvalid             = porterrors.NewBusinessRuleError(errors.New("stage must be valid"))
 	errProfileStageTransitionInvalid   = porterrors.NewBusinessRuleError(errors.New("invalid stage transition"))
 	errProfileStageBackwardsTransition = porterrors.NewBusinessRuleError(errors.New("stage cannot transition backwards"))
 	errProfileReviewAtNotAllowed       = porterrors.NewBusinessRuleError(errors.New("review_at must not be set on create"))
 	errProfileProductionAtNotAllowed   = porterrors.NewBusinessRuleError(errors.New("production_at must not be set on create"))
-
-	profileStageAllowedTransitions = map[int16]map[int16]struct{}{
-		profileStagePending: {
-			profileStageReviewed: {},
-			profileStageArchived: {},
-		},
-		profileStageReviewed: {
-			profileStageProduction: {},
-			profileStageArchived:   {},
-		},
-		profileStageProduction: {
-			profileStageArchived: {},
-		},
-		profileStageArchived: {},
-	}
 )
 
 type ApplicationProfileScreenshot struct {
