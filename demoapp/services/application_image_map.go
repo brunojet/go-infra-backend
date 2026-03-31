@@ -24,12 +24,10 @@ func (m applicationImageMapper) toImageModel(dto dtos.ApplicationImagePost, mode
 	return nil
 }
 
-func (m applicationImageMapper) toImageDTO(model *models.ApplicationImage, dto *dtos.ApplicationImage) error {
+func (m applicationImageMapper) toImageDTO(model *models.ApplicationImage, dto *dtos.ApplicationImageGet) error {
 	if model == nil || dto == nil {
 		return errMapperNilModel
 	}
-	dto.ApplicationImageId = model.ApplicationImageId
-	dto.ApplicationId = model.ApplicationId
 	dto.BaseFile = dtos.BaseFile{
 		BaseFilePost: dtos.BaseFilePost{
 			FileName:    utils.FromNullString(model.FileName),

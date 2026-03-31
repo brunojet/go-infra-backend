@@ -24,7 +24,7 @@ func (m applicationProfileNestedMapper) toScreenshotsModel(dtos []dtos.Applicati
 	screenshots := make([]models.ApplicationProfileScreenshot, len(dtos))
 	for i, dto := range dtos {
 		modelImage := models.ApplicationImage{}
-		if err := m.im.toImageModel(dto.ApplicationImagePost, &modelImage); err != nil {
+		if err := m.im.toImageModel(dto.Screenshot, &modelImage); err != nil {
 			return err
 		}
 		screenshots[i].ApplicationImage = &modelImage
@@ -34,17 +34,15 @@ func (m applicationProfileNestedMapper) toScreenshotsModel(dtos []dtos.Applicati
 	return nil
 }
 
-func (m applicationProfileNestedMapper) toScreenshotsDTO(models []models.ApplicationProfileScreenshot, dtosPtr *[]dtos.ApplicationProfileScreenshot) error {
+func (m applicationProfileNestedMapper) toScreenshotsDTO(models []models.ApplicationProfileScreenshot, dtosPtr *[]dtos.ApplicationProfileScreenshotGet) error {
 	if dtosPtr == nil {
 		return errMapperNilModel
 	}
-	screenshots := make([]dtos.ApplicationProfileScreenshot, len(models))
+	screenshots := make([]dtos.ApplicationProfileScreenshotGet, len(models))
 	for i, model := range models {
-		if err := m.im.toImageDTO(model.ApplicationImage, &screenshots[i].ApplicationImage); err != nil {
+		if err := m.im.toImageDTO(model.ApplicationImage, &screenshots[i].Screenshot); err != nil {
 			return err
 		}
-		screenshots[i].ApplicationProfileId = model.ApplicationProfileId
-		screenshots[i].ApplicationImageId = model.ApplicationImageId
 		screenshots[i].Position = model.Position
 	}
 	*dtosPtr = screenshots
@@ -81,7 +79,7 @@ func (m applicationProfileNestedMapper) ApplyParentScopes(parentID string, model
 	return nil
 }
 
-func toDownloadUrl(model *models.ApplicationImage, dto *dtos.ApplicationImage) error {
+func toDownloadUrl(model *models.ApplicationImage, dto *dtos.ApplicationImageGet) error {
 	if model == nil || dto == nil {
 		return errMapperNilModel
 	}
@@ -91,7 +89,7 @@ func toDownloadUrl(model *models.ApplicationImage, dto *dtos.ApplicationImage) e
 	return nil
 }
 
-func toUploadUrl(model *models.ApplicationImage, dto *dtos.ApplicationImage) error {
+func toUploadUrl(model *models.ApplicationImage, dto *dtos.ApplicationImageGet) error {
 	if model == nil || dto == nil {
 		return errMapperNilModel
 	}
@@ -138,7 +136,7 @@ func (m applicationProfileNestedMapper) ToDTO(model *models.ApplicationProfile, 
 	dto.Stage = stageMapFromModel[model.Stage.Int16]
 	dto.Name = utils.FromNullString(model.Name)
 	dto.Description = utils.FromNullString(model.Description)
-	err := m.im.toImageDTO(model.ApplicationImage, &dto.ApplicationImage)
+	err := m.im.toImageDTO(model.ApplicationImage, &dto.Icon)
 	if err != nil {
 		return err
 	}

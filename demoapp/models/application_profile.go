@@ -8,7 +8,6 @@ import (
 )
 
 var (
-	errProfileStageInvalid           = porterrors.NewBusinessRuleError("stage must be valid")
 	errProfileStageTransitionInvalid = porterrors.NewBusinessRuleError("invalid stage transition")
 )
 

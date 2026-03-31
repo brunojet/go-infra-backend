@@ -70,11 +70,9 @@ type DownloadReady struct {
 	URL string `json:"url"`
 }
 
-type ApplicationImage struct {
-	ApplicationImageId int64          `json:"applicationImageId,string"`
-	ApplicationId      int64          `json:"applicationId,string"`
-	UploadPendingDTO   *UploadPending `json:"uploadPending,omitempty"` //upload_pending, failed
-	DownloadReadyDTO   *DownloadReady `json:"downloadReady,omitempty"` //download_ready
-	BaseFile           `json:",inline"`
-	BaseTimestamps     `json:",inline"`
+type ApplicationImageGet struct {
+	UploadPendingDTO *UploadPending `json:"uploadPending,omitempty"` //upload_pending, failed
+	DownloadReadyDTO *DownloadReady `json:"downloadReady,omitempty"` //download_ready
+	BaseFile         `json:",inline"`
+	BaseTimestamps   `json:",inline"`
 }

@@ -13,30 +13,28 @@ type ApplicationProfilePatch struct {
 }
 
 type ApplicationProfileGet struct {
-	ApplicationProfileId          int64                          `json:"applicationProfileId,string"`
-	ApplicationId                 int64                          `json:"applicationId,string"`
-	Name                          string                         `json:"name"`
-	Description                   string                         `json:"description,omitempty"`
-	Stage                         ApplicationStage               `json:"stage"` //pending, review, production
-	ReviewAt                      string                         `json:"reviewAt,omitempty"`
-	ProductionAt                  string                         `json:"productionAt,omitempty"`
-	Filters                       []FilterGet                    `json:"filters,omitempty"`
-	Application                   *ApplicationGet                `json:"application,omitempty"`
-	ApplicationImage              ApplicationImage               `json:"applicationImage"`
-	ApplicationCatalogs           []ApplicationCatalog           `json:"applicationCatalogs,omitempty"`
-	ApplicationProfileScreenshots []ApplicationProfileScreenshot `json:"applicationProfileScreenshots,omitempty"`
+	ApplicationProfileId          int64                             `json:"applicationProfileId,string"`
+	ApplicationId                 int64                             `json:"applicationId,string"`
+	Name                          string                            `json:"name"`
+	Description                   string                            `json:"description,omitempty"`
+	Stage                         ApplicationStage                  `json:"stage"` //pending, review, production
+	ReviewAt                      string                            `json:"reviewAt,omitempty"`
+	ProductionAt                  string                            `json:"productionAt,omitempty"`
+	Filters                       []FilterGet                       `json:"filters,omitempty"`
+	Application                   *ApplicationGet                   `json:"application,omitempty"`
+	Icon                          ApplicationImageGet               `json:"icon"`
+	ApplicationCatalogs           []ApplicationCatalog              `json:"applicationCatalogs,omitempty"`
+	ApplicationProfileScreenshots []ApplicationProfileScreenshotGet `json:"applicationProfileScreenshots,omitempty"`
 	BaseTimestamps                `json:",inline"`
 }
 
 type ApplicationProfileScreenshotPostDTO struct {
-	Position             int16 `json:"position" binding:"required"`
-	ApplicationImagePost `json:",inline" binding:"required"`
+	Position   int16                `json:"position" binding:"required"`
+	Screenshot ApplicationImagePost `json:"screenshot" binding:"required"`
 }
 
-type ApplicationProfileScreenshot struct {
-	ApplicationProfileId int64            `json:"applicationProfileId,string"`
-	ApplicationImageId   int64            `json:"applicationImageId,string"`
-	Position             int16            `json:"position"`
-	ApplicationImage     ApplicationImage `json:"applicationImage"`
-	BaseTimestamps       `json:",inline"`
+type ApplicationProfileScreenshotGet struct {
+	Position       int16               `json:"position"`
+	Screenshot     ApplicationImageGet `json:"screenshot"`
+	BaseTimestamps `json:",inline"`
 }
