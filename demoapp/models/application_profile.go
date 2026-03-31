@@ -8,11 +8,8 @@ import (
 )
 
 var (
-	errProfileStageInvalid             = porterrors.NewBusinessRuleError("stage must be valid")
-	errProfileStageTransitionInvalid   = porterrors.NewBusinessRuleError("invalid stage transition")
-	errProfileStageBackwardsTransition = porterrors.NewBusinessRuleError("stage cannot transition backwards")
-	errProfileReviewAtNotAllowed       = porterrors.NewBusinessRuleError("review_at must not be set on create")
-	errProfileProductionAtNotAllowed   = porterrors.NewBusinessRuleError("production_at must not be set on create")
+	errProfileStageInvalid           = porterrors.NewBusinessRuleError("stage must be valid")
+	errProfileStageTransitionInvalid = porterrors.NewBusinessRuleError("invalid stage transition")
 )
 
 type ApplicationProfileScreenshot struct {
@@ -80,30 +77,10 @@ func (a ApplicationProfile) ValidateProfileStageTransition(current int16) error 
 		}
 	}
 
-	if target < current {
-		return errProfileStageBackwardsTransition
-	}
-
 	return errProfileStageTransitionInvalid
 }
 
-func (a ApplicationProfile) validateRequiredFieldsCreate() error {
-	if a.Stage.Valid && a.Stage.Int16 != profileStagePending {
-		return errProfileStageInvalid
-	} else if a.ReviewAt.Valid {
-		return errProfileReviewAtNotAllowed
-	} else if a.ProductionAt.Valid {
-		return errProfileProductionAtNotAllowed
-	}
-
-	return nil
-}
-
 func (a *ApplicationProfile) BeforeCreate(tx *gorm.DB) (err error) {
-	if err := a.validateRequiredFieldsCreate(); err != nil {
-		return err
-	}
-
 	if a.ApplicationImage != nil {
 		if err := a.ApplicationImage.GetOrCreate(tx); err != nil {
 			return err
@@ -116,7 +93,6 @@ func (a *ApplicationProfile) BeforeCreate(tx *gorm.DB) (err error) {
 
 func (a *ApplicationProfile) BeforeUpdate(tx *gorm.DB) (err error) {
 	now := sql.NullTime{Time: tx.NowFunc(), Valid: true}
-
 	switch a.Stage.Int16 {
 	case profileStageReviewed:
 		a.ReviewAt = now

@@ -68,6 +68,11 @@ var (
 		},
 		versionStageArchived: {},
 	}
+
+	ValidVersionStagesCatalog = map[int16]struct{}{
+		versionStagePilot:      {},
+		versionStageProduction: {},
+	}
 )
 
 // Application profile

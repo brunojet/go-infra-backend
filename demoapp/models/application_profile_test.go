@@ -40,26 +40,6 @@ func TestApplicationProfile_BeforeCreate_AlwaysStartsPending(t *testing.T) {
 	app := createApplication(t, gdb, "app-profile-pending", "cust-1")
 	img := createApplicationImage(t, gdb, app.ApplicationId, 1, 11)
 
-	invalidReview := ApplicationProfile{
-		ApplicationId:      app.ApplicationId,
-		ApplicationImageId: img.ApplicationImageId,
-		Name:               sql.NullString{String: "main", Valid: true},
-		ReviewAt:           nullTimeNow(),
-	}
-	err := gdb.Create(&invalidReview).Error
-	require.Error(t, err)
-	require.ErrorIs(t, err, errProfileReviewAtNotAllowed)
-
-	invalidProduction := ApplicationProfile{
-		ApplicationId:      app.ApplicationId,
-		ApplicationImageId: img.ApplicationImageId,
-		Name:               sql.NullString{String: "main", Valid: true},
-		ProductionAt:       nullTimeNow(),
-	}
-	err = gdb.Create(&invalidProduction).Error
-	require.Error(t, err)
-	require.ErrorIs(t, err, errProfileProductionAtNotAllowed)
-
 	valid := ApplicationProfile{
 		ApplicationId:      app.ApplicationId,
 		ApplicationImageId: img.ApplicationImageId,

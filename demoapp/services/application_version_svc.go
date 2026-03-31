@@ -176,10 +176,9 @@ func (s *applicationVersionNestedService) updateAndArchive(ctx context.Context, 
 }
 
 func (s *applicationVersionNestedService) syncCatalogFromVersion(ctx context.Context, version models.ApplicationVersion) error {
-	if version.Stage.Int16 != models.ApplicationStagePilot && version.Stage.Int16 != models.ApplicationStageProduction {
-		return nil
+	if _, valid := models.ValidVersionStagesCatalog[version.Stage.Int16]; !valid {
+		return nil // if the version stage is not one that should be in catalog, we skip syncing to catalog
 	}
-
 	profileID, err := s.pRepo.FindCurrentProductionProfileID(ctx, version.ApplicationId)
 	if err != nil {
 		return err

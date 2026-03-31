@@ -52,16 +52,14 @@ func (a ApplicationVersion) ValidateVersionStageTransition(current int16) error 
 
 func (a *ApplicationVersion) BeforeUpdate(tx *gorm.DB) error {
 	now := sql.NullTime{Time: tx.NowFunc(), Valid: true}
-
 	switch a.Stage.Int16 {
 	case versionStagePilot:
 		a.ReviewAt = now
 	case versionStageProduction:
 		a.ProductionAt = now
 	case versionStageArchived:
-		a.DeletedAt = gorm.DeletedAt{Time: tx.NowFunc(), Valid: true}
+		a.DeletedAt = gorm.DeletedAt{Time: now.Time, Valid: true}
 	}
-
 	return nil
 }
 
