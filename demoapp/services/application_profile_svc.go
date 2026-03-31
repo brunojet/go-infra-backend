@@ -154,22 +154,28 @@ type ApplicationProfileNestedService interface {
 	services.NestedService[dtos.ApplicationProfilePost, dtos.ApplicationProfileGet, dtos.ApplicationProfilePatch, models.ApplicationProfile]
 }
 
+// ApplicationProfileNestedService implements the lifecycle for ApplicationProfile entities.
+//
+// The entity is created in a single atomic step (CreateNested), including all associations and filters.
+// After creation, the profile only advances through stages (e.g., Review, Pilot, Production) via updates.
+// No further creation or association of filters is performed after the initial creation; only stage transitions are allowed.
+// This design ensures data consistency and prevents duplicate associations.
 type applicationProfileNestedService struct {
 	services.NestedService[dtos.ApplicationProfilePost, dtos.ApplicationProfileGet, dtos.ApplicationProfilePatch, models.ApplicationProfile]
-	pRepo  repositories.ApplicationProfileRepository
-	acRepo repositories.ApplicationConfigurationRepository
-	vRepo  repositories.ApplicationVersionRepository
-	cRepo  repositories.ApplicationCatalogRepository
+	aprpo  repositories.ApplicationProfileRepository
+	acrpo  repositories.ApplicationConfigurationRepository
+	avrpo  repositories.ApplicationVersionRepository
+	crpo   repositories.ApplicationCatalogRepository
 	mapper applicationProfileNestedMapper
 }
 
 func NewApplicationProfileNestedService(p repositories.ApplicationProfileRepository, a repositories.ApplicationConfigurationRepository, v repositories.ApplicationVersionRepository, c repositories.ApplicationCatalogRepository) ApplicationProfileNestedService {
 	return &applicationProfileNestedService{
 		NestedService: services.NewNestedServiceImpl(p, applicationProfileNestedMapper{}),
-		pRepo:         p,
-		acRepo:        a,
-		vRepo:         v,
-		cRepo:         c,
+		aprpo:         p,
+		acrpo:         a,
+		avrpo:         v,
+		crpo:          c,
 		mapper:        applicationProfileNestedMapper{},
 	}
 }
@@ -186,14 +192,14 @@ func (s *applicationProfileNestedService) createAndArchive(txCtx context.Context
 	debugassert.Assert(inOut != nil, "input model cannot be nil")
 	filtersLen := len(inOut.Filters)
 	inOut.Filters = inOut.Filters[:0] // ensure GORM doesn't create new filters if the same filter is associated multiple times
-	if err := s.pRepo.Create(txCtx, inOut); err != nil {
+	if err := s.aprpo.Create(txCtx, inOut); err != nil {
 		return err
 	}
 	inOut.Filters = inOut.Filters[:filtersLen] // restore original filters for association after creation
-	if err := s.pRepo.AssociateFilters(txCtx, inOut); err != nil {
+	if err := s.aprpo.AssociateFilters(txCtx, inOut); err != nil {
 		return err
 	}
-	return s.pRepo.ArchiveStageDuplicates(txCtx, inOut)
+	return s.aprpo.ArchiveStageDuplicates(txCtx, inOut)
 }
 
 func (s *applicationProfileNestedService) CreateNested(ctx context.Context, parentID string, request dtos.ApplicationProfilePost, response *dtos.ApplicationProfileGet) error {
@@ -204,7 +210,7 @@ func (s *applicationProfileNestedService) CreateNested(ctx context.Context, pare
 	if err := s.mapper.ApplyParentScopes(parentID, &model); err != nil {
 		return err
 	}
-	return s.pRepo.WithTx(ctx, func(txCtx context.Context) error {
+	return s.aprpo.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.createAndArchive(txCtx, &model); err != nil {
 			return err
 		}
@@ -224,7 +230,7 @@ func (s *applicationProfileNestedService) Update(ctx context.Context, id string,
 	if err := s.mapper.ToPatchModel(request, &model); err != nil {
 		return err
 	}
-	return s.pRepo.WithTx(ctx, func(txCtx context.Context) error {
+	return s.aprpo.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.validateProfileStageTransition(txCtx, scopes, &model); err != nil {
 			return err
 		}
@@ -242,7 +248,7 @@ func (s *applicationProfileNestedService) Update(ctx context.Context, id string,
 }
 
 func (s *applicationProfileNestedService) validateProfileStageTransition(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
-	currentStage, err := s.pRepo.LoadCurrentStage(ctx, scopes)
+	currentStage, err := s.aprpo.LoadCurrentStage(ctx, scopes)
 	if err != nil {
 		return err
 	}
@@ -250,10 +256,10 @@ func (s *applicationProfileNestedService) validateProfileStageTransition(ctx con
 }
 
 func (s *applicationProfileNestedService) updateAndArchive(ctx context.Context, scopes map[string]any, inOut *models.ApplicationProfile) error {
-	if err := s.pRepo.Update(ctx, scopes, inOut); err != nil {
+	if err := s.aprpo.Update(ctx, scopes, inOut); err != nil {
 		return err
 	}
-	return s.pRepo.ArchiveStageDuplicates(ctx, inOut)
+	return s.aprpo.ArchiveStageDuplicates(ctx, inOut)
 }
 
 func (s *applicationProfileNestedService) listApplicationConfigurationsPage(ctx context.Context, applicationID int64, page int, configs *[]models.ApplicationConfiguration) (int64, error) {
@@ -265,7 +271,7 @@ func (s *applicationProfileNestedService) listApplicationConfigurationsPage(ctx 
 		OrderBy: profileSyncOrderBy,
 		Order:   profileSyncOrder,
 	}
-	totalItems, err := s.acRepo.List(ctx, params, configs)
+	totalItems, err := s.acrpo.List(ctx, params, configs)
 	if err != nil {
 		return 0, err
 	}
@@ -280,7 +286,7 @@ func (s *applicationProfileNestedService) createCatalogFromProfile(ctx context.C
 		ApplicationProfileId:         profileId,
 		ApplicationVersionId:         &versionId,
 	}
-	if err := s.cRepo.Create(ctx, &catalog); err != nil {
+	if err := s.crpo.Create(ctx, &catalog); err != nil {
 		return err
 	}
 	return nil
@@ -288,7 +294,7 @@ func (s *applicationProfileNestedService) createCatalogFromProfile(ctx context.C
 
 func (s *applicationProfileNestedService) createCatalogsFromProfile(ctx context.Context, configs []models.ApplicationConfiguration, profileId int64, stage int16) error {
 	for _, config := range configs {
-		versionId, err := s.vRepo.FindStageVersionID(ctx, config.ApplicationId, config.TerminalModelConfigurationId, stage)
+		versionId, err := s.avrpo.FindStageVersionID(ctx, config.ApplicationId, config.TerminalModelConfigurationId, stage)
 		if err != nil && err != gorm.ErrRecordNotFound {
 			return err
 		}
