@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -177,7 +179,7 @@ func ValidateTxWithUpdateLock[E contracts.Entity](tx *gorm.DB, spec contracts.Lo
 		if spec.BlockIfFound != nil {
 			return spec.BlockIfFound(&found)
 		}
-		return ErrBusinessRuleViolation
+		return porterrors.ErrBusinessRuleViolation
 	}
 	if err == gorm.ErrRecordNotFound {
 		return nil

@@ -2,23 +2,25 @@ package models
 
 import (
 	"database/sql"
-	"errors"
 
-	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
+	"github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	"gorm.io/gorm"
 )
 
 var (
-	errVersionStageInvalid             = porterrors.NewBusinessRuleError(errors.New("stage must be valid"))
-	errVersionStageTransitionInvalid   = porterrors.NewBusinessRuleError(errors.New("invalid stage transition"))
-	errVersionStageBackwardsTransition = porterrors.NewBusinessRuleError(errors.New("stage cannot transition backwards"))
+	errVersionStageTransitionInvalid = errors.NewBusinessRuleError("invalid stage transition")
 )
 
 type ApplicationVersion struct {
-	ApplicationVersionId         int64         `gorm:"primaryKey;autoIncrement"`
-	ApplicationId                int64         `gorm:"column:application_id;index:idx_appver_app_cfg,priority:1;index:idx_appver_terminal_app,priority:2"`
-	TerminalModelConfigurationId int64         `gorm:"column:terminal_model_configuration_id;index:idx_appver_app_cfg,priority:2;index:idx_appver_terminal_app,priority:1"`
-	Stage                        sql.NullInt16 `gorm:"column:stage;not null;default:0;index:idx_appver_stage_app,priority:2"`
+	ApplicationVersionId         int64          `gorm:"primaryKey;autoIncrement"`
+	ApplicationId                int64          `gorm:"column:application_id;index:idx_appver_app_cfg,priority:1;index:idx_appver_terminal_app,priority:2"`
+	TerminalModelConfigurationId int64          `gorm:"column:terminal_model_configuration_id;index:idx_appver_app_cfg,priority:2;index:idx_appver_terminal_app,priority:1"`
+	ExternalApplicationId        sql.NullString `gorm:"column:ext_app_id;size:32"`
+	ExternalApplicationVersionId sql.NullString `gorm:"column:ext_app_vrs_id;not null;size:32"`
+	VersionName                  sql.NullString `gorm:"column:vrs_name;not null;size:32"`
+	VersionCode                  sql.NullInt64  `gorm:"column:vrs_code;not null"`
+	VersionSize                  sql.NullInt64  `gorm:"column:vrs_size;not null"`
+	Stage                        sql.NullInt16  `gorm:"column:stage;not null;default:0;index:idx_appver_stage_app,priority:2"`
 	ReviewAt                     sql.NullTime
 	ProductionAt                 sql.NullTime
 	CreatedAt                    sql.NullTime   `gorm:"autoCreateTime;index:idx_application_version_history_del_created,priority:2"`
@@ -45,27 +47,7 @@ func (a ApplicationVersion) ValidateVersionStageTransition(current int16) error 
 		}
 	}
 
-	if target < current {
-		return errVersionStageBackwardsTransition
-	}
-
 	return errVersionStageTransitionInvalid
-}
-
-func (a ApplicationVersion) validateRequiredFieldsCreate() error {
-	if a.Stage.Valid && a.Stage.Int16 != versionStagePending {
-		return errVersionStageInvalid
-	}
-
-	return nil
-}
-
-func (a ApplicationVersion) BeforeCreate(tx *gorm.DB) error {
-	if err := a.validateRequiredFieldsCreate(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (a *ApplicationVersion) BeforeUpdate(tx *gorm.DB) error {

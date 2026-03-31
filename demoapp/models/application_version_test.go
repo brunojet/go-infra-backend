@@ -29,7 +29,7 @@ func TestApplicationVersion_PreloadCatalogs(t *testing.T) {
 	catalog := ApplicationCatalog{
 		ApplicationId:                ac.ApplicationId,
 		TerminalModelConfigurationId: tmc.TerminalModelConfigurationId,
-		Stage:                        catalogStageReview,
+		Stage:                        CatalogStageReview,
 		ApplicationVersionId:         &version.ApplicationVersionId,
 		ApplicationProfileId:         prof.ApplicationProfileId,
 	}

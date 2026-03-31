@@ -169,3 +169,17 @@ func (mr *MockRepositoryMockRecorder[E]) WithTx(ctx, fn interface{}) *gomock.Cal
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithTx", reflect.TypeOf((*MockRepository[E])(nil).WithTx), ctx, fn)
 }
+
+// DbFromContext mocks base method.
+func (m *MockRepository[E]) DbFromContext(ctx context.Context) *gorm.DB {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DbFromContext", ctx)
+	ret0, _ := ret[0].(*gorm.DB)
+	return ret0
+}
+
+// DbFromContext indicates an expected call of DbFromContext.
+func (mr *MockRepositoryMockRecorder[E]) DbFromContext(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DbFromContext", reflect.TypeOf((*MockRepository[E])(nil).DbFromContext), ctx)
+}

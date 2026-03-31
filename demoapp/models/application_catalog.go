@@ -2,15 +2,14 @@ package models
 
 import (
 	"database/sql"
-	"errors"
 
-	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
-	repositories "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
+	"github.com/brunojet/go-infra-backend/pkg/ports/errors"
+	"github.com/brunojet/go-infra-backend/pkg/ports/repositories"
 	"gorm.io/gorm"
 )
 
 var (
-	errCatalogStageInvalid = porterrors.NewBusinessRuleError(errors.New(errTextCatalogStageInvalid))
+	errCatalogStageInvalid = errors.NewBusinessRuleError(errTextCatalogStageInvalid)
 )
 
 type ApplicationCatalog struct {
@@ -30,52 +29,17 @@ type ApplicationCatalog struct {
 func (ApplicationCatalog) TableName() string { return "application_catalog" }
 
 func (a *ApplicationCatalog) BeforeCreate(tx *gorm.DB) (err error) {
-	if err := a.hydrateApplicationVersionID(tx); err != nil {
-		return err
-	}
-	if err := a.validateRequiredFieldsCreate(); err != nil {
-		return err
+	if _, valid := validCatalogStages[a.Stage]; !valid {
+		return errCatalogStageInvalid
 	}
 	return repositories.AddOnConflictUpdateAll(
 		tx,
-		colCatalogApplicationID,
-		colCatalogTerminalModelConfigurationID,
-		colCatalogStage,
+		ColApplicationID,
+		ColApplicationConfigurationID,
+		ColStage,
 	)
 }
 
 func (a ApplicationCatalog) WhereOnConflict(tx *gorm.DB) *gorm.DB {
 	return tx
-}
-
-func (a *ApplicationCatalog) validateRequiredFieldsCreate() error {
-	switch a.Stage {
-	case catalogStageReview, catalogStagePilot, catalogStageProduction:
-		return nil
-	default:
-		return errCatalogStageInvalid
-	}
-}
-
-func (a *ApplicationCatalog) hydrateApplicationVersionID(tx *gorm.DB) error {
-	if a.ApplicationVersionId != nil {
-		return nil
-	}
-
-	existing := make([]sql.NullInt64, 0, 1)
-	if err := tx.Model(&ApplicationCatalog{}).
-		Where(whereCatalogApplicationIDEq, a.ApplicationId).
-		Where(whereCatalogTerminalModelIDEq, a.TerminalModelConfigurationId).
-		Where(whereCatalogStageEq, a.Stage).
-		Limit(1).
-		Pluck(colCatalogApplicationVersionID, &existing).Error; err != nil {
-		return err
-	}
-
-	if len(existing) > 0 && existing[0].Valid {
-		existingVersionID := existing[0].Int64
-		a.ApplicationVersionId = &existingVersionID
-	}
-
-	return nil
 }

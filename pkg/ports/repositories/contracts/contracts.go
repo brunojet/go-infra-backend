@@ -49,5 +49,6 @@ type Repository[E Entity] interface {
 	Update(ctx context.Context, id map[string]any, inOut *E) error
 	Delete(ctx context.Context, id map[string]any) error
 	GormDB() *gorm.DB
+	DbFromContext(ctx context.Context) *gorm.DB
 	WithTx(ctx context.Context, fn func(ctx context.Context) error) error
 }

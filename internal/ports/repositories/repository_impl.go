@@ -29,18 +29,18 @@ func (g *gormRepositoryImpl[E]) GormDB() *gorm.DB {
 	return g.db
 }
 
-// dbFromContext retrieves a transaction from the context if present, otherwise returns the base DB with context.
-func (g *gormRepositoryImpl[E]) dbFromContext(ctx context.Context) *gorm.DB {
+// DbFromContext retrieves a transaction from the context if present, otherwise returns the base DB with context.
+func (g *gormRepositoryImpl[E]) DbFromContext(ctx context.Context) *gorm.DB {
 	tx, err := TxFromContext(ctx)
 	if err == nil && tx != nil {
-		return tx // dbFromContext retrieves a transaction from the context if present, otherwise returns the base DB with context.
+		return tx // DbFromContext retrieves a transaction from the context if present, otherwise returns the base DB with context.
 	}
 	return g.db.WithContext(ctx)
 }
 
 // Create inserts a new entity into the database. If a conflict occurs, attempts to retrieve the existing entity.
 func (g *gormRepositoryImpl[E]) Create(ctx context.Context, inOut *E) error {
-	db := g.dbFromContext(ctx)
+	db := g.DbFromContext(ctx)
 	tx := db.Model(new(E)).Create(inOut)
 	err := MapTxError(tx)
 	if err == ErrNotFound {
@@ -51,7 +51,7 @@ func (g *gormRepositoryImpl[E]) Create(ctx context.Context, inOut *E) error {
 
 // GetByID retrieves an entity by its primary key(s) and stores the result in 'out'.
 func (g *gormRepositoryImpl[E]) GetByID(ctx context.Context, id map[string]any, out *E) error {
-	db := g.dbFromContext(ctx)
+	db := g.DbFromContext(ctx)
 	if err := getByScope(db, id, out); err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (g *gormRepositoryImpl[E]) GetByID(ctx context.Context, id map[string]any, 
 
 // List retrieves a list of entities matching the given parameters and returns the total count.
 func (g *gormRepositoryImpl[E]) List(ctx context.Context, listParams contracts.ListParams, out *[]E) (int64, error) {
-	db := g.dbFromContext(ctx)
+	db := g.DbFromContext(ctx)
 	var total int64
 	q, err := buildTxWithScopes[E](db, listParams.QueryParams.Scopes)
 	if err != nil {
@@ -85,7 +85,7 @@ func (g *gormRepositoryImpl[E]) List(ctx context.Context, listParams contracts.L
 
 // Update updates an entity matching the given scopes and refreshes the entity with the latest data from the database.
 func (g *gormRepositoryImpl[E]) Update(ctx context.Context, scopes map[string]any, inOut *E) error {
-	db := g.dbFromContext(ctx)
+	db := g.DbFromContext(ctx)
 	tx, err := buildTxWithFilledScopes[E](db, scopes)
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ func (g *gormRepositoryImpl[E]) Update(ctx context.Context, scopes map[string]an
 
 // Delete removes an entity matching the given scopes from the database.
 func (g *gormRepositoryImpl[E]) Delete(ctx context.Context, scopes map[string]any) error {
-	db := g.dbFromContext(ctx)
+	db := g.DbFromContext(ctx)
 	tx, err := buildTxWithFilledScopes[E](db, scopes)
 	if err != nil {
 		return err
@@ -109,7 +109,7 @@ func (g *gormRepositoryImpl[E]) Delete(ctx context.Context, scopes map[string]an
 
 // WithTx executes the given function within a database transaction, propagating the transaction in the context.
 func (g *gormRepositoryImpl[E]) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
-	return g.dbFromContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return g.DbFromContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return fn(contextWithTx(ctx, tx))
 	})
 }

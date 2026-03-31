@@ -7,10 +7,10 @@ import (
 )
 
 var (
-	errProfileScopeIDRequired             = porterrors.NewBusinessRuleError(errors.New(errTextProfileScopeIDRequired))
-	errNestedProfileApplicationIDRequired = porterrors.NewBusinessRuleError(errors.New(errTextNestedProfileApplicationIDScopeRequired))
-	errNestedVersionApplicationIDRequired = porterrors.NewBusinessRuleError(errors.New(errTextNestedVersionApplicationIDScopeRequired))
-	errNestedVersionIDRequired            = porterrors.NewBusinessRuleError(errors.New(errTextNestedVersionIDScopeRequired))
+	errProfileScopeIDRequired             = porterrors.NewBusinessRuleError(errTextProfileScopeIDRequired)
+	errNestedProfileApplicationIDRequired = porterrors.NewBusinessRuleError(errTextNestedProfileApplicationIDScopeRequired)
+	errNestedVersionApplicationIDRequired = porterrors.NewBusinessRuleError(errTextNestedVersionApplicationIDScopeRequired)
+	errNestedVersionIDRequired            = porterrors.NewBusinessRuleError(errTextNestedVersionIDScopeRequired)
 
 	errMapperInvalidFileHash = errors.New("invalid file hash format")
 	errMapperNilModel        = errors.New("model pointer is nil in mapper")

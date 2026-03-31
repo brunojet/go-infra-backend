@@ -7,6 +7,7 @@ import (
 
 	dbadapters "github.com/brunojet/go-infra-backend/internal/database/adapters"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
+	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -239,7 +240,7 @@ func TestValidateTxWithUpdateLock_FoundDefaultAndCallback(t *testing.T) {
 			WhereArgs:     []any{"t-1"},
 		})
 	})
-	assert.ErrorIs(t, err, ErrBusinessRuleViolation)
+	assert.ErrorIs(t, err, porterrors.ErrBusinessRuleViolation)
 
 	err = gdb.Transaction(func(tx *gorm.DB) error {
 		tx = tx.WithContext(contextWithTx(context.Background(), tx))
@@ -249,7 +250,7 @@ func TestValidateTxWithUpdateLock_FoundDefaultAndCallback(t *testing.T) {
 			WhereArgs:     []any{"t-1"},
 			BlockIfFound: func(found *TestEntity) error {
 				if found.Name == nil || *found.Name != "john" {
-					return ErrBusinessRuleViolation
+					return porterrors.ErrBusinessRuleViolation
 				}
 				return nil
 			},
@@ -287,5 +288,5 @@ func TestValidateTxWithUpdateLock_DBErrorPassthrough(t *testing.T) {
 	})
 	assert.Error(t, err)
 	assert.NotErrorIs(t, err, ErrRequiresTransaction)
-	assert.NotErrorIs(t, err, ErrBusinessRuleViolation)
+	assert.NotErrorIs(t, err, porterrors.ErrBusinessRuleViolation)
 }

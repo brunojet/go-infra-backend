@@ -1,6 +1,9 @@
 package errors
 
-import stdErrors "errors"
+import (
+	"errors"
+	stdErrors "errors"
+)
 
 var ErrBusinessRuleViolation = stdErrors.New("business rule violation")
 
@@ -24,16 +27,8 @@ func (e *BusinessRuleError) Unwrap() error {
 	return e.cause
 }
 
-func NewBusinessRuleError(cause error) error {
-	if cause == nil {
-		return nil
-	}
-
-	var businessErr *BusinessRuleError
-	if stdErrors.As(cause, &businessErr) {
-		return cause
-	}
-
+func NewBusinessRuleError(message string) error {
+	cause := errors.New(message)
 	return &BusinessRuleError{cause: cause}
 }
 

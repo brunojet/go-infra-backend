@@ -7,6 +7,7 @@ const (
 	ColDeletedAt   = "deleted_at"
 	ColName        = "name"
 	ColDescription = "description"
+	ColStage       = "stage"
 
 	ApplicationStagePending    int16 = 0
 	ApplicationStageReview     int16 = 1
@@ -31,7 +32,11 @@ const (
 
 // Application
 const (
-	ColApplicationID              = "application_id"
+	ColApplicationID = "application_id"
+)
+
+// Application configuration
+const (
 	ColApplicationConfigurationID = "application_configuration_id"
 )
 
@@ -104,16 +109,16 @@ var (
 
 // Application catalog
 const (
-	colCatalogApplicationID                = "application_id"
-	colCatalogTerminalModelConfigurationID = "terminal_model_configuration_id"
-	colCatalogStage                        = "stage"
-	colCatalogApplicationVersionID         = "application_version_id"
-	whereCatalogApplicationIDEq            = colCatalogApplicationID + " = ?"
-	whereCatalogTerminalModelIDEq          = colCatalogTerminalModelConfigurationID + " = ?"
-	whereCatalogStageEq                    = colCatalogStage + " = ?"
-	errTextCatalogStageInvalid             = "invalid stage"
+	errTextCatalogStageInvalid       = "invalid stage"
+	CatalogStageReview         int16 = ApplicationStageReview
+	CatalogStagePilot          int16 = ApplicationStagePilot
+	CatalogStageProduction     int16 = ApplicationStageProduction
+)
 
-	catalogStageReview     int16 = ApplicationStageReview
-	catalogStagePilot      int16 = ApplicationStagePilot
-	catalogStageProduction int16 = ApplicationStageProduction
+var (
+	validCatalogStages = map[int16]struct{}{
+		CatalogStageReview:     {},
+		CatalogStagePilot:      {},
+		CatalogStageProduction: {},
+	}
 )

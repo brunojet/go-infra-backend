@@ -2,11 +2,10 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"testing"
 
 	"github.com/brunojet/go-infra-backend/pkg/database"
+	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -46,7 +45,7 @@ func TestValidateTxWithUpdateLock_ExposedForPkgConsumers(t *testing.T) {
 				if found.Name == "alpha" {
 					return nil
 				}
-				return ErrBusinessRuleViolation
+				return porterrors.ErrBusinessRuleViolation
 			},
 		})
 	})
@@ -62,22 +61,7 @@ func TestValidateTxWithUpdateLock_ExposedForPkgConsumers(t *testing.T) {
 			WhereArgs: []any{"1"},
 		})
 	})
-	assert.ErrorIs(t, err, ErrBusinessRuleViolation)
-}
-
-func TestPkgFacade_MapAndBusinessRuleHelpers(t *testing.T) {
-	assert.ErrorIs(t, MapDbError(gorm.ErrRecordNotFound), ErrNotFound)
-	assert.ErrorIs(t, MapDbError(sql.ErrNoRows), ErrNotFound)
-	assert.Nil(t, MapDbError(nil))
-
-	assert.ErrorIs(t, MapTxError(nil), ErrInvalidTx)
-	assert.ErrorIs(t, MapTxError(&gorm.DB{RowsAffected: 0}), ErrNotFound)
-	assert.NoError(t, MapTxError(&gorm.DB{RowsAffected: 1}))
-
-	sentinel := errors.New("business-cause")
-	err := NewBusinessRuleError(sentinel)
-	assert.True(t, IsBusinessRuleError(err))
-	assert.False(t, IsBusinessRuleError(errors.New("plain-error")))
+	assert.ErrorIs(t, err, porterrors.ErrBusinessRuleViolation)
 }
 
 func TestPkgFacade_AddOnConflictWrappers(t *testing.T) {

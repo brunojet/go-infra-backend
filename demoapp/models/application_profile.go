@@ -2,18 +2,17 @@ package models
 
 import (
 	"database/sql"
-	"errors"
 
 	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	"gorm.io/gorm"
 )
 
 var (
-	errProfileStageInvalid             = porterrors.NewBusinessRuleError(errors.New("stage must be valid"))
-	errProfileStageTransitionInvalid   = porterrors.NewBusinessRuleError(errors.New("invalid stage transition"))
-	errProfileStageBackwardsTransition = porterrors.NewBusinessRuleError(errors.New("stage cannot transition backwards"))
-	errProfileReviewAtNotAllowed       = porterrors.NewBusinessRuleError(errors.New("review_at must not be set on create"))
-	errProfileProductionAtNotAllowed   = porterrors.NewBusinessRuleError(errors.New("production_at must not be set on create"))
+	errProfileStageInvalid             = porterrors.NewBusinessRuleError("stage must be valid")
+	errProfileStageTransitionInvalid   = porterrors.NewBusinessRuleError("invalid stage transition")
+	errProfileStageBackwardsTransition = porterrors.NewBusinessRuleError("stage cannot transition backwards")
+	errProfileReviewAtNotAllowed       = porterrors.NewBusinessRuleError("review_at must not be set on create")
+	errProfileProductionAtNotAllowed   = porterrors.NewBusinessRuleError("production_at must not be set on create")
 )
 
 type ApplicationProfileScreenshot struct {

@@ -1,6 +1,9 @@
 package repositories
 
-// Constantes de domínio específicas dos repositórios de demoapp
+import "github.com/brunojet/go-infra-backend/demoapp/models"
+
 const (
-// Exemplo: Coluna customizada, nomes de índices, etc.
+	whereApplicationIDEq   = models.ColApplicationID + " = ?"
+	whereTerminalModelIDEq = models.ColTerminalModelConfigurationID + " = ?"
+	whereStageEq           = models.ColStage + " = ?"
 )

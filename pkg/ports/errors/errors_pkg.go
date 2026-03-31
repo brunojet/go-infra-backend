@@ -6,8 +6,8 @@ type BusinessRuleError = internalerrors.BusinessRuleError
 
 var ErrBusinessRuleViolation = internalerrors.ErrBusinessRuleViolation
 
-func NewBusinessRuleError(cause error) error {
-	return internalerrors.NewBusinessRuleError(cause)
+func NewBusinessRuleError(message string) error {
+	return internalerrors.NewBusinessRuleError(message)
 }
 
 func IsBusinessRuleError(err error) bool {

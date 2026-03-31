@@ -29,7 +29,7 @@ func TestApplicationCatalog_BeforeCreate_UpsertUpdateAll(t *testing.T) {
 	first := ApplicationCatalog{
 		ApplicationId:                ac.ApplicationId,
 		TerminalModelConfigurationId: tmc.TerminalModelConfigurationId,
-		Stage:                        catalogStageReview,
+		Stage:                        CatalogStageReview,
 		ApplicationVersionId:         &versionV1.ApplicationVersionId,
 		ApplicationProfileId:         profileV1.ApplicationProfileId,
 	}
@@ -42,14 +42,14 @@ func TestApplicationCatalog_BeforeCreate_UpsertUpdateAll(t *testing.T) {
 	dup := ApplicationCatalog{
 		ApplicationId:                ac.ApplicationId,
 		TerminalModelConfigurationId: tmc.TerminalModelConfigurationId,
-		Stage:                        catalogStageReview,
+		Stage:                        CatalogStageReview,
 		ApplicationVersionId:         &versionV2.ApplicationVersionId,
 		ApplicationProfileId:         profileV2.ApplicationProfileId,
 	}
 	require.NoError(t, gdb.Create(&dup).Error)
 
 	var got ApplicationCatalog
-	require.NoError(t, gdb.Where("application_id = ? AND terminal_model_configuration_id = ? AND stage = ?", ac.ApplicationId, tmc.TerminalModelConfigurationId, catalogStageReview).
+	require.NoError(t, gdb.Where("application_id = ? AND terminal_model_configuration_id = ? AND stage = ?", ac.ApplicationId, tmc.TerminalModelConfigurationId, CatalogStageReview).
 		First(&got).Error)
 	require.NotNil(t, got.ApplicationVersionId)
 	require.Equal(t, versionV2.ApplicationVersionId, *got.ApplicationVersionId)
@@ -73,7 +73,7 @@ func TestApplicationCatalog_Create_DifferentStageCreatesAnotherRow(t *testing.T)
 	stage1 := ApplicationCatalog{
 		ApplicationId:                ac.ApplicationId,
 		TerminalModelConfigurationId: tmc.TerminalModelConfigurationId,
-		Stage:                        catalogStageReview,
+		Stage:                        CatalogStageReview,
 		ApplicationVersionId:         &version.ApplicationVersionId,
 		ApplicationProfileId:         profile.ApplicationProfileId,
 	}
@@ -82,7 +82,7 @@ func TestApplicationCatalog_Create_DifferentStageCreatesAnotherRow(t *testing.T)
 	stage2 := ApplicationCatalog{
 		ApplicationId:                ac.ApplicationId,
 		TerminalModelConfigurationId: tmc.TerminalModelConfigurationId,
-		Stage:                        catalogStagePilot,
+		Stage:                        CatalogStagePilot,
 		ApplicationVersionId:         &version.ApplicationVersionId,
 		ApplicationProfileId:         profile.ApplicationProfileId,
 	}

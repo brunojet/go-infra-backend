@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 
+	"github.com/brunojet/go-infra-backend/internal/ports/repositories"
+	"github.com/brunojet/go-infra-backend/internal/utils"
 	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
@@ -28,15 +30,23 @@ func (s *nestedServiceImpl[C, R, U, E]) CreateNested(ctx context.Context, parent
 	if err := s.mapper.ApplyParentScopes(parentID, &model); err != nil {
 		return err
 	}
-	return s.rpo.WithTx(ctx, func(txCtx context.Context) error {
+	conflictValidationNeeded := false
+	err := s.rpo.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.rpo.Create(txCtx, &model); err != nil {
-			return err
+			if err != repositories.ErrConflictValidationRequired {
+				return err
+			}
+			conflictValidationNeeded = true
 		}
 		if err := s.mapper.ToDTO(&model, response); err != nil {
 			return err
 		}
 		return nil
 	})
+	if conflictValidationNeeded && !utils.IsSubSetInterface(request, response) {
+		err = repositories.ErrConflictValidationFailed
+	}
+	return err
 }
 
 func (s *nestedServiceImpl[C, R, U, E]) ListNested(ctx context.Context, parentID string, listParams contracts.ListParams, responses *[]R) (int64, error) {

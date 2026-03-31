@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strings"
 
-	porterrors "github.com/brunojet/go-infra-backend/internal/ports/errors"
 	"gorm.io/gorm"
 )
 
@@ -22,21 +21,10 @@ var (
 	ErrInvalidPage                = errors.New("page must be greater than zero")
 	ErrInvalidPageSize            = errors.New("pageSize must be greater than zero")
 	ErrRequiresTransaction        = errors.New("operation must run inside a transaction")
-	ErrBusinessRuleViolation      = porterrors.ErrBusinessRuleViolation
 	ErrLockValidationWhere        = errors.New("where clause must be provided for lock validation")
 	ErrConflictValidationRequired = errors.New("conflict validation is required for this operation")
 	ErrConflictValidationFailed   = errors.New("conflict validation failed: another transaction has modified the same entity")
 )
-
-type BusinessRuleError = porterrors.BusinessRuleError
-
-func NewBusinessRuleError(cause error) error {
-	return porterrors.NewBusinessRuleError(cause)
-}
-
-func IsBusinessRuleError(err error) bool {
-	return porterrors.IsBusinessRuleError(err)
-}
 
 func MapDbError(err error) error {
 	if err == nil {

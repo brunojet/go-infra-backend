@@ -26,7 +26,6 @@ var (
 	ErrInvalidTx                  = repositories.ErrInvalidTx
 	ErrNotFound                   = repositories.ErrNotFound
 	ErrRequiresTransaction        = repositories.ErrRequiresTransaction
-	ErrBusinessRuleViolation      = repositories.ErrBusinessRuleViolation
 	ErrLockValidationWhere        = repositories.ErrLockValidationWhere
 	ErrConflictValidationRequired = repositories.ErrConflictValidationRequired
 )
@@ -58,14 +57,6 @@ func AddOnConflictUpdateAll(tx *gorm.DB, columnNames ...string) error {
 
 func WhereOnConflict(tx *gorm.DB, scopes ...ConflictScope) *gorm.DB {
 	return repositories.WhereOnConflict(tx, scopes...)
-}
-
-func NewBusinessRuleError(cause error) error {
-	return errors.NewBusinessRuleError(cause)
-}
-
-func IsBusinessRuleError(err error) bool {
-	return errors.IsBusinessRuleError(err)
 }
 
 // NewGormRepository delegates to the internal implementation.
