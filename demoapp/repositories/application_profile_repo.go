@@ -23,6 +23,7 @@ type ApplicationProfileRepository interface {
 	contracts.Repository[models.ApplicationProfile]
 	LoadCurrentStage(ctx context.Context, scope map[string]any) (int16, error)
 	FindCurrentProductionProfileID(ctx context.Context, applicationID int64) (int64, error)
+	AssociateFilters(ctx context.Context, model *models.ApplicationProfile) error
 	ArchiveStageDuplicates(ctx context.Context, inOut *models.ApplicationProfile) error
 }
 
@@ -107,4 +108,15 @@ func (r *ApplicationProfileRepo) ArchiveStageDuplicates(ctx context.Context, inO
 		models.ColAppProfileStage:     models.ApplicationStageArchived,
 		models.ColAppProfileDeletedAt: sql.NullTime{Time: tx.NowFunc(), Valid: true},
 	}).Error
+}
+
+func (r *ApplicationProfileRepo) AssociateFilters(ctx context.Context, model *models.ApplicationProfile) error {
+	if len(model.Filters) == 0 {
+		return nil
+	}
+	tx, err := portsrepos.TxFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	return tx.Model(model).Association("Filters").Replace(model.Filters)
 }

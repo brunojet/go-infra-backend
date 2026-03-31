@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/brunojet/go-infra-backend/debugassert"
 	"github.com/brunojet/go-infra-backend/demoapp/dtos"
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	"github.com/brunojet/go-infra-backend/demoapp/repositories"
@@ -183,8 +184,23 @@ func NewApplicationProfileNestedService(p repositories.ApplicationProfileReposit
 	}
 }
 
+// createAndArchive realiza a criação de um ApplicationProfile e garante a associação correta de filtros já existentes.
+//
+// O fluxo é:
+// 1. Salva o profile sem filtros para evitar que o GORM tente criar filtros novos.
+// 2. Restaura o slice de filtros original e associa explicitamente os filtros existentes via many2many.
+// 3. Arquiva duplicatas de estágio, se houver.
+//
+// Essa abordagem garante que apenas a associação seja feita, sem risco de violação de constraint UNIQUE ou duplicidade de filtros.
 func (s *applicationProfileNestedService) createAndArchive(txCtx context.Context, inOut *models.ApplicationProfile) error {
+	debugassert.Assert(inOut != nil, "input model cannot be nil")
+	filtersLen := len(inOut.Filters)
+	inOut.Filters = inOut.Filters[:0] // ensure GORM doesn't create new filters if the same filter is associated multiple times
 	if err := s.pRepo.Create(txCtx, inOut); err != nil {
+		return err
+	}
+	inOut.Filters = inOut.Filters[:filtersLen] // restore original filters for association after creation
+	if err := s.pRepo.AssociateFilters(txCtx, inOut); err != nil {
 		return err
 	}
 	return s.pRepo.ArchiveStageDuplicates(txCtx, inOut)

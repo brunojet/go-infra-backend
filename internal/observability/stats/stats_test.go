@@ -114,7 +114,7 @@ func TestOnqueueExport_ConcurrentRandomized(t *testing.T) {
 
 	health := s.GetHealth()
 	// recorded errors may be removed by successful reports; ensure it's not above capacity
-	require.LessOrEqual(t, len(health.LastErrors), 3, "recorded errors should be capped by maxErrors")
+	require.LessOrEqual(t, len(health.LastErrors), 5, "recorded errors should be capped by maxErrorsInArray (5)")
 }
 
 func TestOnqueueExport_IgnoreNonPositiveCount(t *testing.T) {

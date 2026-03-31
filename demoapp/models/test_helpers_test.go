@@ -3,7 +3,6 @@ package models
 import (
 	"database/sql"
 	"testing"
-	"time"
 
 	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
 	"github.com/stretchr/testify/require"
@@ -228,10 +227,6 @@ func createApplicationProfileWithNestedImage(t *testing.T, gdb *gorm.DB, applica
 	}))
 	require.NotZero(t, profile.ApplicationProfileId)
 	return profile
-}
-
-func nullTimeNow() sql.NullTime {
-	return sql.NullTime{Time: time.Now().UTC(), Valid: true}
 }
 
 func createFilterType(t *testing.T, gdb *gorm.DB, name string) FilterType {
