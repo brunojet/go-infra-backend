@@ -37,11 +37,11 @@ func (m applicationImageMapper) toImageDTO(model *models.ApplicationImage, dto *
 		FileStatus: fileStatusFromModel[model.FileStatus],
 	}
 	switch model.FileStatus {
-	case models.ApplicationImageStatusPending, models.ApplicationImageStatusFailed:
+	case models.FileStatusPending, models.FileStatusFailed:
 		if err := toUploadUrl(model, dto); err != nil {
 			return err
 		}
-	case models.ApplicationImageStatusReady:
+	case models.FileStatusReady:
 		if err := toDownloadUrl(model, dto); err != nil {
 			return err
 		}

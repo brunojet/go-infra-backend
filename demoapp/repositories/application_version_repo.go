@@ -15,9 +15,9 @@ import (
 
 const (
 	whereVersionIDNeq   = models.ColAppVersionID + " <> ?"
-	whereVersionAppIDEq = models.ColAppVersionApplicationID + " = ?"
-	whereVersionTmIDEq  = models.ColAppVersionTerminalModelConfigurationID + " = ?"
-	whereVersionStageEq = models.ColAppVersionStage + " = ?"
+	whereVersionAppIDEq = models.ColApplicationID + " = ?"
+	whereVersionTmIDEq  = models.ColApplicationConfigurationID + " = ?"
+	whereVersionStageEq = models.ColApplicationStage + " = ?"
 	whereVersionDelNil  = models.ColDeletedAt + " IS NULL"
 )
 
@@ -45,7 +45,7 @@ func (r *ApplicationVersionRepo) LoadCurrentStage(ctx context.Context, scope map
 	result := tx.Model(&models.ApplicationVersion{}).
 		Where(scope).
 		Limit(1).
-		Pluck(models.ColAppVersionStage, &stage)
+		Pluck(models.ColApplicationStage, &stage)
 	if err := result.Error; err != nil {
 		return 0, err
 	}
@@ -67,9 +67,9 @@ func (r *ApplicationVersionRepo) FindStageVersionID(ctx context.Context, applica
 	}
 	var versionID int64
 	result := tx.Model(&models.ApplicationVersion{}).
-		Where(models.ColAppVersionApplicationID+" = ?", applicationID).
-		Where(models.ColAppVersionTerminalModelConfigurationID+" = ?", configurationTerminalModelID).
-		Where(models.ColAppVersionStage+" = ?", stage).
+		Where(models.ColApplicationID+" = ?", applicationID).
+		Where(models.ColApplicationConfigurationID+" = ?", configurationTerminalModelID).
+		Where(models.ColApplicationStage+" = ?", stage).
 		Where(models.ColDeletedAt+" IS NULL").
 		Order(clause.OrderByColumn{Column: clause.Column{Name: models.ColAppVersionID}, Desc: true}).
 		Limit(1).
@@ -120,7 +120,7 @@ func (r *ApplicationVersionRepo) ArchiveStageDuplicates(ctx context.Context, inO
 		Where(whereVersionDelNil)
 
 	return query.Updates(map[string]any{
-		models.ColAppVersionStage: models.ApplicationStageArchived,
-		models.ColDeletedAt:       sql.NullTime{Time: tx.NowFunc(), Valid: true},
+		models.ColApplicationStage: models.ApplicationStageArchived,
+		models.ColDeletedAt:        sql.NullTime{Time: tx.NowFunc(), Valid: true},
 	}).Error
 }

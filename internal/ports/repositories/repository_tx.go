@@ -168,6 +168,17 @@ func ValidateTxWithUpdateLock[E contracts.Entity](tx *gorm.DB, spec contracts.Lo
 	if !isTransactionAndContextValid(tx) {
 		return ErrRequiresTransaction
 	}
+	if spec.WhereSQL == "" {
+		return ErrLockValidationWhere
+	}
+	for _, arg := range spec.WhereArgs {
+		if strArg, ok := arg.(string); ok && strings.TrimSpace(strArg) == "" {
+			return ErrLockValidationWhere
+		}
+		if intArg, ok := arg.(int64); ok && intArg == 0 {
+			return ErrLockValidationWhere
+		}
+	}
 	q := tx.Session(&gorm.Session{NewDB: true}).Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
 	if len(spec.SelectColumns) > 0 {
 		q = q.Select(spec.SelectColumns)

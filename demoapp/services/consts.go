@@ -11,7 +11,7 @@ const (
 	errTextProfileScopeIDRequired = "application_profile_id scope must be valid"
 	profileSyncInitialPage        = 1
 	profileSyncPageSize           = 10
-	profileSyncOrderBy            = models.ColAppVersionTerminalModelConfigurationID
+	profileSyncOrderBy            = models.ColApplicationConfigurationID
 	profileSyncOrder              = "asc"
 
 	// Nested/profile parent handling
@@ -27,10 +27,10 @@ const (
 
 var (
 	fileStatusFromModel = map[int16]dtos.FileStatus{
-		models.ApplicationImageStatusPending:    dtos.ApplicationImageStatusPending,
-		models.ApplicationImageStatusProcessing: dtos.ApplicationImageStatusProcessing,
-		models.ApplicationImageStatusReady:      dtos.ApplicationImageStatusReady,
-		models.ApplicationImageStatusFailed:     dtos.ApplicationImageStatusFailed,
+		models.FileStatusPending:    dtos.ApplicationImageStatusPending,
+		models.FileStatusProcessing: dtos.ApplicationImageStatusProcessing,
+		models.FileStatusReady:      dtos.ApplicationImageStatusReady,
+		models.FileStatusFailed:     dtos.ApplicationImageStatusFailed,
 	}
 
 	stageMapFromModel = map[int16]dtos.ApplicationStage{

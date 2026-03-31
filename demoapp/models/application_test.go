@@ -89,20 +89,6 @@ func TestApplicationConfiguration_RejectsSamePackageAcrossDifferentApps(t *testi
 	require.ErrorIs(t, err, gorm.ErrCheckConstraintViolated)
 }
 
-func TestApplicationCreate_InvalidRequiredFields(t *testing.T) {
-	gdb := dbtest.OpenMemoryDB(t, &Application{})
-
-	invalid := Application{
-		Name:       sql.NullString{},
-		CustomerId: sql.NullString{String: "cust-x", Valid: true},
-	}
-	err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
-		return tx.Create(&invalid).Error, nil
-	})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), errNameAndCustomerRequired)
-}
-
 func TestApplicationUpdate_SuccessSameOwnerNoNameCollision(t *testing.T) {
 	gdb := dbtest.OpenMemoryDB(t, &Application{})
 
@@ -116,19 +102,6 @@ func TestApplicationUpdate_SuccessSameOwnerNoNameCollision(t *testing.T) {
 	var got Application
 	require.NoError(t, gdb.First(&got, app.ApplicationId).Error)
 	require.Equal(t, "after", got.Description.String)
-}
-
-func TestApplicationUpdate_InvalidRequiredFields(t *testing.T) {
-	gdb := dbtest.OpenMemoryDB(t, &Application{})
-
-	app := createApplication(t, gdb, "app-invalid-update", "cust-a")
-
-	app.CustomerId = sql.NullString{}
-	err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
-		return tx.Save(&app).Error, nil
-	})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), errAppIDAndCustomerRequired)
 }
 
 func TestApplicationConfigurationUpdate_SuccessAndErrorBranches(t *testing.T) {
@@ -146,17 +119,9 @@ func TestApplicationConfigurationUpdate_SuccessAndErrorBranches(t *testing.T) {
 		return tx.Save(&ac1).Error, nil
 	}))
 
-	// Error branch: invalid package_name
-	ac1.PackageName = sql.NullString{}
-	err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
-		return tx.Save(&ac1).Error, nil
-	})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), errPackageNameRequired)
-
 	// Error branch: package collides with another app
 	ac2.PackageName = sql.NullString{String: "pkg-a-2", Valid: true}
-	err = RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
+	err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
 		return tx.Save(&ac2).Error, nil
 	})
 	require.ErrorIs(t, err, gorm.ErrCheckConstraintViolated)

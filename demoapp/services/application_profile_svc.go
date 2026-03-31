@@ -59,7 +59,7 @@ func (m applicationProfileNestedMapper) ApplyParentQueryScopes(parentID string, 
 	if err != nil {
 		return nil, errNestedProfileApplicationIDRequired
 	}
-	mappedQueryScopes[models.ColAppProfileApplicationID] = applicationProfileID
+	mappedQueryScopes[models.ColApplicationID] = applicationProfileID
 	return mappedQueryScopes, nil
 }
 
@@ -180,14 +180,16 @@ func NewApplicationProfileNestedService(p repositories.ApplicationProfileReposit
 	}
 }
 
-// createAndArchive realiza a criação de um ApplicationProfile e garante a associação correta de filtros já existentes.
+// createAndArchive creates an ApplicationProfile and ensures correct association of existing filters.
 //
-// O fluxo é:
-// 1. Salva o profile sem filtros para evitar que o GORM tente criar filtros novos.
-// 2. Restaura o slice de filtros original e associa explicitamente os filtros existentes via many2many.
-// 3. Arquiva duplicatas de estágio, se houver.
+// Flow:
+// 1. Saves the profile without filters to prevent GORM from creating new filters.
+// 2. Restores the original filters slice and explicitly associates existing filters via many2many.
+// 3. Archives previous profiles with the same stage (if any), so only the latest remains active.
 //
-// Essa abordagem garante que apenas a associação seja feita, sem risco de violação de constraint UNIQUE ou duplicidade de filtros.
+// This approach guarantees only association (not creation) of filters, avoiding UNIQUE constraint violations or duplicates.
+//
+// Note: This method does not provide traditional idempotency protection. If the same or even different profiles are submitted multiple times, previous ones for the same stage will be archived, and only the latest remains active.
 func (s *applicationProfileNestedService) createAndArchive(txCtx context.Context, inOut *models.ApplicationProfile) error {
 	debugassert.Assert(inOut != nil, "input model cannot be nil")
 	filtersLen := len(inOut.Filters)
@@ -265,7 +267,7 @@ func (s *applicationProfileNestedService) updateAndArchive(ctx context.Context, 
 func (s *applicationProfileNestedService) listApplicationConfigurationsPage(ctx context.Context, applicationID int64, page int, configs *[]models.ApplicationConfiguration) (int64, error) {
 	params := contracts.ListParams{
 		QueryParams: contracts.QueryParams{
-			Scopes: map[string]any{models.ColAppProfileApplicationID: applicationID},
+			Scopes: map[string]any{models.ColApplicationID: applicationID},
 		},
 		Page:    page,
 		OrderBy: profileSyncOrderBy,

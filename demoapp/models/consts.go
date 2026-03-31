@@ -2,12 +2,12 @@ package models
 
 // Common
 const (
-	ColCreatedAt   = "created_at"
-	ColUpdatedAt   = "updated_at"
-	ColDeletedAt   = "deleted_at"
-	ColName        = "name"
-	ColDescription = "description"
-	ColStage       = "stage"
+	ColCreatedAt        = "created_at"
+	ColUpdatedAt        = "updated_at"
+	ColDeletedAt        = "deleted_at"
+	ColName             = "name"
+	ColDescription      = "description"
+	ColApplicationStage = "stage"
 
 	ApplicationStagePending    int16 = 0
 	ApplicationStageReview     int16 = 1
@@ -24,37 +24,43 @@ const (
 
 // Terminal
 const (
-	ColTerminalModelID        = "terminal_model_id"
-	IntegrationTypeRFAL int16 = 1
-	IntegrationTypeTEF  int16 = 2
-)
-
-// Terminal model configuration
-const (
-	ColTerminalModelConfigurationID = "terminal_model_configuration_id"
+	ColTerminalModelID                    = "terminal_model_id"
+	ColTerminalModelConfigurationID       = "terminal_model_configuration_id"
+	IntegrationTypeRFAL             int16 = 1
+	IntegrationTypeTEF              int16 = 2
 )
 
 // Application
 const (
-	ColApplicationID = "application_id"
+	tableApplication              = "application"
+	tableApplicationConfiguration = "application_configuration"
+	ColApplicationID              = "application_id"
+	ColApplicationConfigurationID = "application_configuration_id"
+	ColPackageName                = "package_name"
 )
 
-// Application configuration
+// Application Image
 const (
-	ColApplicationConfigurationID = "application_configuration_id"
+	tableApplicationImage       = "application_image"
+	ColFileHash                 = "file_hash"
+	ColAppImageImageType        = "image_type"
+	FileStatusPending     int16 = 0
+	FileStatusProcessing  int16 = 1
+	FileStatusReady       int16 = 2
+	FileStatusFailed      int16 = 3
 )
 
 // Application version
 const (
+	tableApplicationVersionHistory = "application_version_history"
+
 	versionStagePending    int16 = ApplicationStagePending
 	versionStagePilot      int16 = ApplicationStagePilot
 	versionStageProduction int16 = ApplicationStageProduction
 	versionStageArchived   int16 = ApplicationStageArchived
 
-	ColAppVersionID                           = "application_version_id"
-	ColAppVersionApplicationID                = "application_id"
-	ColAppVersionTerminalModelConfigurationID = "terminal_model_configuration_id"
-	ColAppVersionStage                        = "stage"
+	ColAppVersionID = "application_version_id"
+	ColCustomerID   = "customer_id"
 )
 
 var (
@@ -89,14 +95,7 @@ const (
 	profileStageProduction int16 = ApplicationStageProduction
 	profileStageArchived   int16 = ApplicationStageArchived
 
-	ColAppProfileID            = "application_profile_id"
-	ColAppProfileApplicationID = "application_id"
-	ColAppProfileStage         = "stage"
-	ColAppProfileDeletedAt     = "deleted_at"
-
-	ColAppCatalogApplicationID = "application_id"
-	ColAppCatalogProfileID     = "application_profile_id"
-	ColAppCatalogStage         = "stage"
+	ColAppProfileID = "application_profile_id"
 )
 
 var (
@@ -118,10 +117,9 @@ var (
 
 // Application catalog
 const (
-	errTextCatalogStageInvalid       = "invalid stage"
-	CatalogStageReview         int16 = ApplicationStageReview
-	CatalogStagePilot          int16 = ApplicationStagePilot
-	CatalogStageProduction     int16 = ApplicationStageProduction
+	CatalogStageReview     int16 = ApplicationStageReview
+	CatalogStagePilot      int16 = ApplicationStagePilot
+	CatalogStageProduction int16 = ApplicationStageProduction
 )
 
 var (

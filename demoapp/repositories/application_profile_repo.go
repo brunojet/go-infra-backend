@@ -14,9 +14,9 @@ import (
 
 const (
 	whereProfileIDNeq    = models.ColAppProfileID + " <> ?"
-	whereProfileAppIDEq  = models.ColAppProfileApplicationID + " = ?"
-	whereProfileStageEq  = models.ColAppProfileStage + " = ?"
-	whereProfileDelIsNil = models.ColAppProfileDeletedAt + " IS NULL"
+	whereProfileAppIDEq  = models.ColApplicationID + " = ?"
+	whereProfileStageEq  = models.ColApplicationStage + " = ?"
+	whereProfileDelIsNil = models.ColDeletedAt + " IS NULL"
 )
 
 type ApplicationProfileRepository interface {
@@ -44,7 +44,7 @@ func (r *ApplicationProfileRepo) LoadCurrentStage(ctx context.Context, scope map
 	result := tx.Model(&models.ApplicationProfile{}).
 		Where(scope).
 		Limit(1).
-		Pluck(models.ColAppProfileStage, &stage)
+		Pluck(models.ColApplicationStage, &stage)
 	if err := result.Error; err != nil {
 		return 0, err
 	}
@@ -105,8 +105,8 @@ func (r *ApplicationProfileRepo) ArchiveStageDuplicates(ctx context.Context, inO
 		Where(whereProfileStageEq, inOut.Stage.Int16).
 		Where(whereProfileDelIsNil)
 	return query.Updates(map[string]any{
-		models.ColAppProfileStage:     models.ApplicationStageArchived,
-		models.ColAppProfileDeletedAt: sql.NullTime{Time: tx.NowFunc(), Valid: true},
+		models.ColApplicationStage: models.ApplicationStageArchived,
+		models.ColDeletedAt:        sql.NullTime{Time: tx.NowFunc(), Valid: true},
 	}).Error
 }
 

@@ -3,13 +3,8 @@ package models
 import (
 	"database/sql"
 
-	"github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	"github.com/brunojet/go-infra-backend/pkg/ports/repositories"
 	"gorm.io/gorm"
-)
-
-var (
-	errCatalogStageInvalid = errors.NewBusinessRuleError(errTextCatalogStageInvalid)
 )
 
 type ApplicationCatalog struct {
@@ -30,13 +25,13 @@ func (ApplicationCatalog) TableName() string { return "application_catalog" }
 
 func (a *ApplicationCatalog) BeforeCreate(tx *gorm.DB) (err error) {
 	if _, valid := validCatalogStages[a.Stage]; !valid {
-		return errCatalogStageInvalid
+		return errInvalidStage
 	}
 	return repositories.AddOnConflictUpdateAll(
 		tx,
 		ColApplicationID,
 		ColTerminalModelConfigurationID,
-		ColStage,
+		ColApplicationStage,
 	)
 }
 

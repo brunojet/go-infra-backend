@@ -22,8 +22,8 @@ func (m applicationVersionNestedMapper) ApplyParentQueryScopes(parentID string, 
 	if err := utils.DecodeCompositeKey(parentID, &applicationID, &terminalModelConfigurationID); err != nil {
 		return nil, errNestedVersionApplicationIDRequired
 	}
-	queryScopes[models.ColAppVersionApplicationID] = applicationID
-	queryScopes[models.ColAppVersionTerminalModelConfigurationID] = terminalModelConfigurationID
+	queryScopes[models.ColApplicationID] = applicationID
+	queryScopes[models.ColApplicationConfigurationID] = terminalModelConfigurationID
 	return queryScopes, nil
 }
 

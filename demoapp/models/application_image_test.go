@@ -61,10 +61,3 @@ func TestApplicationImage_CreateOrGet_CreateAndGetBranches(t *testing.T) {
 		Count(&count).Error)
 	require.EqualValues(t, 1, count)
 }
-
-func TestApplicationImage_CreateOrGet_RequiresTx(t *testing.T) {
-	img := ApplicationImage{}
-	err := img.GetOrCreate(nil)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), errTransactionRequired)
-}

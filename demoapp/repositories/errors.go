@@ -12,4 +12,9 @@ var (
 
 	ErrInvalidApplicationVersionModel = errors.New("application version model is required")
 	ErrInvalidApplicationProfileModel = errors.New("application profile model is required")
+
+	ErrCustomerIdRequired     = errors.New("customer_id is required")
+	ErrCustomerIdViolation    = errors.New("customer_id violates ownership rules")
+	ErrWhereArgInvalid        = errors.New("where argument is invalid")
+	ErrApplicationIdViolation = errors.New("application_id violates ownership rules")
 )

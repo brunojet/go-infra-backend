@@ -2,18 +2,10 @@ package models
 
 import (
 	"database/sql"
-	"errors"
 
-	repositories "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
+	"github.com/brunojet/go-infra-backend/debugassert"
+	"github.com/brunojet/go-infra-backend/pkg/ports/repositories"
 	"gorm.io/gorm"
-)
-
-const (
-	tableApplicationImage    = "application_image"
-	errTransactionRequired   = "transaction is required"
-	colAppImageApplicationID = "application_id"
-	colAppImageFileHash      = "file_hash"
-	colAppImageImageType     = "image_type"
 )
 
 type ApplicationImage struct {
@@ -34,21 +26,13 @@ type ApplicationImage struct {
 	ApplicationProfileScreenshots []ApplicationProfileScreenshot `gorm:"foreignKey:ApplicationImageId;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
 }
 
-// Status constants for ApplicationImage
-const (
-	ApplicationImageStatusPending    int16 = 0
-	ApplicationImageStatusProcessing int16 = 1
-	ApplicationImageStatusReady      int16 = 2
-	ApplicationImageStatusFailed     int16 = 3
-)
-
 func (ApplicationImage) TableName() string { return tableApplicationImage }
 
 func (a ApplicationImage) BeforeCreate(tx *gorm.DB) (err error) {
 	return repositories.AddOnConflictDoNothing(tx,
-		colAppImageApplicationID,
-		colAppImageFileHash,
-		colAppImageImageType,
+		ColApplicationID,
+		ColFileHash,
+		ColAppImageImageType,
 	)
 }
 
@@ -65,10 +49,7 @@ func (a ApplicationImage) WhereOnConflict(tx *gorm.DB) *gorm.DB {
 //
 // IMPORTANT: Always call this method within an active transaction to ensure consistency when used in composite creations.
 func (a *ApplicationImage) GetOrCreate(tx *gorm.DB) error {
-	if tx == nil {
-		return errors.New(errTransactionRequired)
-	}
-
+	debugassert.Assert(tx != nil, "GetOrCreate must be called with a non-nil transaction")
 	tx = tx.Create(a)
 
 	if tx.Error != nil {

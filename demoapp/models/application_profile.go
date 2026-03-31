@@ -3,12 +3,7 @@ package models
 import (
 	"database/sql"
 
-	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	"gorm.io/gorm"
-)
-
-var (
-	errProfileStageTransitionInvalid = porterrors.NewBusinessRuleError("invalid stage transition")
 )
 
 type ApplicationProfileScreenshot struct {
@@ -76,7 +71,7 @@ func (a ApplicationProfile) ValidateProfileStageTransition(current int16) error 
 		}
 	}
 
-	return errProfileStageTransitionInvalid
+	return errInvalidStageTransition
 }
 
 func (a *ApplicationProfile) BeforeCreate(tx *gorm.DB) (err error) {
