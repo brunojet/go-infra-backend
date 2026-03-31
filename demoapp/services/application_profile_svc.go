@@ -19,9 +19,7 @@ type applicationProfileNestedMapper struct {
 }
 
 func (m applicationProfileNestedMapper) toScreenshotsModel(dtos []dtos.ApplicationProfileScreenshotPostDTO, modelsPtr *[]models.ApplicationProfileScreenshot) error {
-	if modelsPtr == nil {
-		return errMapperNilModel
-	}
+	debugassert.Assert(modelsPtr != nil, "modelsPtr cannot be nil")
 	screenshots := make([]models.ApplicationProfileScreenshot, len(dtos))
 	for i, dto := range dtos {
 		modelImage := models.ApplicationImage{}
@@ -36,9 +34,7 @@ func (m applicationProfileNestedMapper) toScreenshotsModel(dtos []dtos.Applicati
 }
 
 func (m applicationProfileNestedMapper) toScreenshotsDTO(models []models.ApplicationProfileScreenshot, dtosPtr *[]dtos.ApplicationProfileScreenshotGet) error {
-	if dtosPtr == nil {
-		return errMapperNilModel
-	}
+	debugassert.Assert(dtosPtr != nil, "dtosPtr cannot be nil")
 	screenshots := make([]dtos.ApplicationProfileScreenshotGet, len(models))
 	for i, model := range models {
 		if err := m.im.toImageDTO(model.ApplicationImage, &screenshots[i].Screenshot); err != nil {
@@ -68,6 +64,7 @@ func (m applicationProfileNestedMapper) ApplyParentQueryScopes(parentID string, 
 }
 
 func (m applicationProfileNestedMapper) ApplyParentScopes(parentID string, model *models.ApplicationProfile) error {
+	debugassert.Assert(model != nil, "model cannot be nil")
 	applicationID, err := services.ParseScopeIntFromString[int64](parentID, 1)
 	if err != nil {
 		return err
@@ -81,9 +78,8 @@ func (m applicationProfileNestedMapper) ApplyParentScopes(parentID string, model
 }
 
 func toDownloadUrl(model *models.ApplicationImage, dto *dtos.ApplicationImageGet) error {
-	if model == nil || dto == nil {
-		return errMapperNilModel
-	}
+	debugassert.Assert(model != nil, "model cannot be nil")
+	debugassert.Assert(dto != nil, "dto cannot be nil")
 	var downloadDTO dtos.DownloadReady
 	downloadDTO.URL = "/applications/" + strconv.FormatInt(model.ApplicationId, 10) + "/applications-images/" + strconv.FormatInt(model.ApplicationImageId, 10) + "/download"
 	dto.DownloadReadyDTO = &downloadDTO
@@ -91,9 +87,8 @@ func toDownloadUrl(model *models.ApplicationImage, dto *dtos.ApplicationImageGet
 }
 
 func toUploadUrl(model *models.ApplicationImage, dto *dtos.ApplicationImageGet) error {
-	if model == nil || dto == nil {
-		return errMapperNilModel
-	}
+	debugassert.Assert(model != nil, "model cannot be nil")
+	debugassert.Assert(dto != nil, "dto cannot be nil")
 	var uploadDTO dtos.UploadPending
 	uploadDTO.Method = "PUT"
 	uploadDTO.URL = "/applications/" + strconv.FormatInt(model.ApplicationId, 10) + "/applications-images/" + strconv.FormatInt(model.ApplicationImageId, 10) + "/upload"
@@ -103,9 +98,7 @@ func toUploadUrl(model *models.ApplicationImage, dto *dtos.ApplicationImageGet) 
 
 // Converte de DTO para Model (POST)
 func (m applicationProfileNestedMapper) ToPostModel(dto dtos.ApplicationProfilePost, model *models.ApplicationProfile) error {
-	if model == nil {
-		return errMapperNilModel
-	}
+	debugassert.Assert(model != nil, "model cannot be nil")
 	model.Name = utils.ToNullString(dto.Name)
 	model.Description = utils.ToNullString(dto.Description)
 	model.ApplicationImage = &models.ApplicationImage{}
@@ -120,18 +113,15 @@ func (m applicationProfileNestedMapper) ToPostModel(dto dtos.ApplicationProfileP
 
 // Converte de DTO para Model (PATCH)
 func (applicationProfileNestedMapper) ToPatchModel(dto dtos.ApplicationProfilePatch, model *models.ApplicationProfile) error {
-	if model == nil {
-		return errMapperNilModel
-	}
+	debugassert.Assert(model != nil, "model cannot be nil")
 	model.Stage = utils.ToNullInt16(stageMapToModel[dto.Stage])
 	return nil
 }
 
 // Converte de Model para DTO
 func (m applicationProfileNestedMapper) ToDTO(model *models.ApplicationProfile, dto *dtos.ApplicationProfileGet) error {
-	if model == nil || dto == nil {
-		return errMapperNilModel
-	}
+	debugassert.Assert(model != nil, "model cannot be nil")
+	debugassert.Assert(dto != nil, "dto cannot be nil")
 	dto.ApplicationProfileId = model.ApplicationProfileId
 	dto.ApplicationId = model.ApplicationId
 	dto.Stage = stageMapFromModel[model.Stage.Int16]
