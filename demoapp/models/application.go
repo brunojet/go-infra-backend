@@ -25,11 +25,6 @@ type Application struct {
 
 func (Application) TableName() string { return tableApplication }
 
-// validateAppOwnerCreate checks whether there is an existing Application with the
-// same name owned by a different customer. candidateCustomer is the customer
-// identifier to validate (useful for Create and Update flows). It requires the
-// caller to run inside a transaction so SELECT ... FOR UPDATE is effective.
-
 func (a Application) BeforeCreate(tx *gorm.DB) error {
 	return repositories.AddOnConflictDoNothing(tx, ColName)
 }
