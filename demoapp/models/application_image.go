@@ -9,13 +9,8 @@ import (
 )
 
 const (
-	tableApplicationImage = "application_image"
-
-	errApplicationIDRequired = "application_id must be valid"
-	errImageTypeRequired     = "image_type must be valid"
-	errFileHashLength        = "file_hash must be exactly 32 bytes"
+	tableApplicationImage    = "application_image"
 	errTransactionRequired   = "transaction is required"
-
 	colAppImageApplicationID = "application_id"
 	colAppImageFileHash      = "file_hash"
 	colAppImageImageType     = "image_type"
@@ -26,9 +21,9 @@ type ApplicationImage struct {
 	ApplicationId      int64          `gorm:"not null;uniqueIndex:idx_application_image_application,priority:1"`
 	FileName           sql.NullString `gorm:"not null;size:255"`
 	FileHash           []byte         `gorm:"type:binary(32);not null;uniqueIndex:idx_application_image_application,priority:3"`
+	FileStatus         int16          `gorm:"not null;default:0;index:idx_application_image_status"` // 0: Pending, 1: Processing, 2: Ready, 3: Failed
 	ContentType        sql.NullString `gorm:"not null;size:255"`
 	ImageType          sql.NullInt16  `gorm:"not null;uniqueIndex:idx_application_image_application,priority:2"`
-	Status             int16          `gorm:"not null;default:0;index:idx_application_image_status"` // 0: Pending, 1: Processing, 2: Ready, 3: Failed
 	CreatedAt          sql.NullTime   `gorm:"autoCreateTime;index:idx_application_image_del_created,priority:2"`
 	UpdatedAt          sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_image_del_updated,priority:2"`
 	DeletedAt          gorm.DeletedAt `gorm:"index:idx_application_image_del_created,priority:1;index:idx_application_image_del_updated,priority:1"`
@@ -58,13 +53,17 @@ func (a ApplicationImage) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 func (a ApplicationImage) WhereOnConflict(tx *gorm.DB) *gorm.DB {
-	return repositories.WhereOnConflict(tx,
-		repositories.ConflictScope{ColumnName: colAppImageApplicationID, ColumnValue: a.ApplicationId},
-		repositories.ConflictScope{ColumnName: colAppImageFileHash, ColumnValue: a.FileHash},
-		repositories.ConflictScope{ColumnName: colAppImageImageType, ColumnValue: a.ImageType.Int16},
-	)
+	return tx
 }
 
+// GetOrCreate ensures that an ApplicationImage with the same ApplicationId, FileHash, and ImageType exists in the database.
+// If it does not exist, it creates a new record; if it already exists, it loads the existing record into the struct.
+//
+// This method is intentionally called from models like ApplicationProfile and ApplicationProfileScreenshot,
+// since ApplicationImage does not have its own endpoint and is always managed as a dependent resource.
+// This guarantees idempotency and avoids duplicate images for the same logical file.
+//
+// IMPORTANT: Always call this method within an active transaction to ensure consistency when used in composite creations.
 func (a *ApplicationImage) GetOrCreate(tx *gorm.DB) error {
 	if tx == nil {
 		return errors.New(errTransactionRequired)

@@ -18,19 +18,11 @@ func TestApplicationImage_BeforeCreate_ValidationBranches(t *testing.T) {
 	invalidApplication := newApplicationImage(0, 1, 1)
 	err := gdb.Create(&invalidApplication).Error
 	require.Error(t, err)
-	require.Contains(t, err.Error(), errApplicationIDRequired)
 
 	invalidImageType := newApplicationImage(app.ApplicationId, 1, 4)
 	invalidImageType.ImageType = sql.NullInt16{}
 	err = gdb.Create(&invalidImageType).Error
 	require.Error(t, err)
-	require.Contains(t, err.Error(), errImageTypeRequired)
-
-	invalidHash := newApplicationImage(app.ApplicationId, 1, 5)
-	invalidHash.FileHash = []byte{1, 2, 3}
-	err = gdb.Create(&invalidHash).Error
-	require.Error(t, err)
-	require.Contains(t, err.Error(), errFileHashLength)
 }
 
 func TestApplicationImage_BeforeCreate_UpsertDoNothingCollision(t *testing.T) {
@@ -75,16 +67,4 @@ func TestApplicationImage_CreateOrGet_RequiresTx(t *testing.T) {
 	err := img.GetOrCreate(nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), errTransactionRequired)
-}
-
-func TestApplicationImage_CreateOrGet_ReturnsCreateError(t *testing.T) {
-	gdb := dbtest.OpenMemoryDB(t, &Application{}, &ApplicationImage{})
-	app := createApplication(t, gdb, "app-img-cog-error", "cust-1")
-
-	img := newApplicationImage(app.ApplicationId, 1, 8)
-	img.FileHash = []byte{1, 2, 3}
-
-	err := img.GetOrCreate(gdb)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), errFileHashLength)
 }

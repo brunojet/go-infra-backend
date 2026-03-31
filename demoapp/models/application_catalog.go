@@ -35,7 +35,7 @@ func (a *ApplicationCatalog) BeforeCreate(tx *gorm.DB) (err error) {
 	return repositories.AddOnConflictUpdateAll(
 		tx,
 		ColApplicationID,
-		ColApplicationConfigurationID,
+		ColTerminalModelConfigurationID,
 		ColStage,
 	)
 }

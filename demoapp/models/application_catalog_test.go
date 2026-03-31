@@ -1,6 +1,7 @@
 package models
 
 import (
+	"database/sql"
 	"testing"
 
 	"github.com/brunojet/go-infra-backend/pkg/testutil/dbtest"
@@ -23,7 +24,14 @@ func TestApplicationCatalog_BeforeCreate_UpsertUpdateAll(t *testing.T) {
 	ac := createApplicationConfigurationOneShot(t, gdb, "app-cat-upd", "cust-1", tmc.TerminalModelConfigurationId, "pkg.cat.upd")
 
 	profileV1 := createApplicationProfile(t, gdb, ac.ApplicationId, "profile-v1", 11)
-	versionV1 := ApplicationVersion{ApplicationId: ac.ApplicationId, TerminalModelConfigurationId: tmc.TerminalModelConfigurationId}
+	versionV1 := ApplicationVersion{
+		ApplicationId:                ac.ApplicationId,
+		TerminalModelConfigurationId: tmc.TerminalModelConfigurationId,
+		ExternalApplicationVersionId: sql.NullString{String: "v1", Valid: true},
+		VersionName:                  sql.NullString{String: "Version 1", Valid: true},
+		VersionCode:                  sql.NullInt64{Int64: 1, Valid: true},
+		VersionSize:                  sql.NullInt64{Int64: 100, Valid: true},
+	}
 	require.NoError(t, gdb.Create(&versionV1).Error)
 
 	first := ApplicationCatalog{
@@ -36,7 +44,14 @@ func TestApplicationCatalog_BeforeCreate_UpsertUpdateAll(t *testing.T) {
 	require.NoError(t, gdb.Create(&first).Error)
 
 	profileV2 := createApplicationProfile(t, gdb, ac.ApplicationId, "profile-v2", 12)
-	versionV2 := ApplicationVersion{ApplicationId: ac.ApplicationId, TerminalModelConfigurationId: tmc.TerminalModelConfigurationId}
+	versionV2 := ApplicationVersion{
+		ApplicationId:                ac.ApplicationId,
+		TerminalModelConfigurationId: tmc.TerminalModelConfigurationId,
+		ExternalApplicationVersionId: sql.NullString{String: "v2", Valid: true},
+		VersionName:                  sql.NullString{String: "Version 2", Valid: true},
+		VersionCode:                  sql.NullInt64{Int64: 2, Valid: true},
+		VersionSize:                  sql.NullInt64{Int64: 200, Valid: true},
+	}
 	require.NoError(t, gdb.Create(&versionV2).Error)
 
 	dup := ApplicationCatalog{
@@ -67,7 +82,14 @@ func TestApplicationCatalog_Create_DifferentStageCreatesAnotherRow(t *testing.T)
 	tmc := createTerminalModelConfigurationOneShot(t, gdb, "tm-cat-stage", 1)
 	ac := createApplicationConfigurationOneShot(t, gdb, "app-cat-stage", "cust-1", tmc.TerminalModelConfigurationId, "pkg.cat.stage")
 	profile := createApplicationProfile(t, gdb, ac.ApplicationId, "profile-stage", 21)
-	version := ApplicationVersion{ApplicationId: ac.ApplicationId, TerminalModelConfigurationId: tmc.TerminalModelConfigurationId}
+	version := ApplicationVersion{
+		ApplicationId:                ac.ApplicationId,
+		TerminalModelConfigurationId: tmc.TerminalModelConfigurationId,
+		ExternalApplicationVersionId: sql.NullString{String: "v1", Valid: true},
+		VersionName:                  sql.NullString{String: "Version 1", Valid: true},
+		VersionCode:                  sql.NullInt64{Int64: 1, Valid: true},
+		VersionSize:                  sql.NullInt64{Int64: 100, Valid: true},
+	}
 	require.NoError(t, gdb.Create(&version).Error)
 
 	stage1 := ApplicationCatalog{

@@ -36,9 +36,9 @@ func (m applicationImageMapper) toImageDTO(model *models.ApplicationImage, dto *
 			ContentType: utils.FromNullString(model.ContentType),
 			FileHash:    hex.EncodeToString(model.FileHash),
 		},
-		FileStatus: fileStatusFromModel[model.Status],
+		FileStatus: fileStatusFromModel[model.FileStatus],
 	}
-	switch model.Status {
+	switch model.FileStatus {
 	case models.ApplicationImageStatusPending, models.ApplicationImageStatusFailed:
 		if err := toUploadUrl(model, dto); err != nil {
 			return err

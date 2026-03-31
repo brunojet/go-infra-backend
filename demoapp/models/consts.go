@@ -24,10 +24,14 @@ const (
 
 // Terminal
 const (
-	ColTerminalModelID                    = "terminal_model_id"
-	ColTerminalModelConfigurationID       = "terminal_model_configuration_id"
-	IntegrationTypeRFAL             int16 = 1
-	IntegrationTypeTEF              int16 = 2
+	ColTerminalModelID        = "terminal_model_id"
+	IntegrationTypeRFAL int16 = 1
+	IntegrationTypeTEF  int16 = 2
+)
+
+// Terminal model configuration
+const (
+	ColTerminalModelConfigurationID = "terminal_model_configuration_id"
 )
 
 // Application

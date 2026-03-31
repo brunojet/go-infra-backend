@@ -1,6 +1,7 @@
 package models
 
 import (
+	"database/sql"
 	"testing"
 
 	"github.com/brunojet/go-infra-backend/pkg/testutil/dbtest"
@@ -23,7 +24,14 @@ func TestApplicationVersion_PreloadCatalogs(t *testing.T) {
 	ac := createApplicationConfigurationOneShot(t, gdb, "app-appver-preload", "cust-1", tmc.TerminalModelConfigurationId, "pkg.appver.preload")
 	prof := createApplicationProfile(t, gdb, ac.ApplicationId, "profile-appver", 7)
 
-	version := ApplicationVersion{ApplicationId: ac.ApplicationId, TerminalModelConfigurationId: tmc.TerminalModelConfigurationId}
+	version := ApplicationVersion{
+		ApplicationId:                ac.ApplicationId,
+		TerminalModelConfigurationId: tmc.TerminalModelConfigurationId,
+		ExternalApplicationVersionId: sql.NullString{String: "v1", Valid: true},
+		VersionName:                  sql.NullString{String: "Version 1", Valid: true},
+		VersionCode:                  sql.NullInt64{Int64: 1, Valid: true},
+		VersionSize:                  sql.NullInt64{Int64: 100, Valid: true},
+	}
 	require.NoError(t, gdb.Create(&version).Error)
 
 	catalog := ApplicationCatalog{

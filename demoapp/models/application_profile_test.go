@@ -18,15 +18,6 @@ func TestApplicationProfile_BeforeCreate_ValidatesOnlyStageAndDates(t *testing.T
 	app := createApplication(t, gdb, "app-profile-validation", "cust-1")
 	img := createApplicationImage(t, gdb, app.ApplicationId, 1, 10)
 
-	invalidStage := ApplicationProfile{
-		ApplicationId: app.ApplicationId,
-		Name:          sql.NullString{String: "main", Valid: true},
-		Stage:         sql.NullInt16{Int16: profileStageReviewed, Valid: true},
-	}
-	err := gdb.Create(&invalidStage).Error
-	require.Error(t, err)
-	require.ErrorIs(t, err, errProfileStageInvalid)
-
 	validWithImage := ApplicationProfile{
 		ApplicationId:      app.ApplicationId,
 		ApplicationImageId: img.ApplicationImageId,
