@@ -22,7 +22,6 @@ type ApplicationGet struct {
 }
 
 type ApplicationConfigurationPost struct {
-	//Requerido junto ao parent applicationId para formar a PK composta.
 	TerminalModelConfigurationId int64  `json:"terminalModelConfigurationId,string" binding:"required"`
 	PackageName                  string `json:"packageName" binding:"required"`
 }
@@ -32,11 +31,12 @@ type ApplicationConfigurationPatch struct {
 }
 
 type ApplicationConfigurationGet struct {
-	ApplicationConfigurationId string                         `json:"applicationConfigurationId"`
-	PackageName                string                         `json:"packageName"`
-	Application                *ApplicationGet                `json:"application,omitempty"`
-	TerminalModelConfiguration *TerminalModelConfigurationGet `json:"terminalModelConfiguration,omitempty"`
-	BaseTimestamps             `json:",inline"`
+	ApplicationConfigurationId   string                         `json:"applicationConfigurationId"`
+	TerminalModelConfigurationId int64                          `json:"terminalModelConfigurationId,string" binding:"ignored"`
+	PackageName                  string                         `json:"packageName"`
+	Application                  *ApplicationGet                `json:"application,omitempty"`
+	TerminalModelConfiguration   *TerminalModelConfigurationGet `json:"terminalModelConfiguration,omitempty"`
+	BaseTimestamps               `json:",inline"`
 }
 
 // ApplicationCatalogDTO representa o catálogo de aplicações, com relacionamentos aninhados

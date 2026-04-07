@@ -55,7 +55,7 @@ func (s *nestedServiceImpl[C, R, U, E]) ListNested(ctx context.Context, parentID
 		return 0, err
 	}
 	repoParams := toRepoListParams(listParams, mergedScopes)
-	responseModels := make([]E, len(*responses))
+	responseModels := make([]E, cap(*responses))
 	total, err := s.rpo.List(ctx, repoParams, &responseModels)
 	if err != nil {
 		return 0, err

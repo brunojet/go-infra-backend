@@ -129,6 +129,7 @@ func (applicationConfigurationNestedMapper) ToDTO(model *models.ApplicationConfi
 		return err
 	}
 	dto.ApplicationConfigurationId = applicationConfigurationId
+	dto.TerminalModelConfigurationId = model.TerminalModelConfigurationId
 	dto.PackageName = utils.FromNullString(model.PackageName)
 	dto.CreatedAt = utils.FromNullTimeRFC3339(model.CreatedAt)
 	dto.UpdatedAt = utils.FromNullTimeRFC3339(model.UpdatedAt)

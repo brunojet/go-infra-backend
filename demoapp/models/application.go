@@ -11,7 +11,7 @@ const ()
 
 type Application struct {
 	ApplicationId int64          `gorm:"primaryKey;autoIncrement"`
-	CustomerId    sql.NullString `gorm:"size:32;not null;index:idx_application_customer"`
+	CustomerId    sql.NullString `gorm:"size:36;not null;index:idx_application_customer"`
 	Name          sql.NullString `gorm:"not null;size:32;uniqueIndex:ux_application_name"`
 	Description   sql.NullString `gorm:"size:500"`
 	CreatedAt     sql.NullTime   `gorm:"autoCreateTime;index:idx_application_del_created,priority:2"`
