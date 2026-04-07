@@ -125,7 +125,7 @@ func FromNullInt16(ni sql.NullInt16) int16 {
 }
 
 // ToNullInt64 converts an int to sql.NullInt64.
-func ToNullInt64(i int) sql.NullInt64 {
+func ToNullInt64(i int64) sql.NullInt64 {
 	if i == 0 {
 		return sql.NullInt64{Valid: false}
 	}
@@ -133,9 +133,9 @@ func ToNullInt64(i int) sql.NullInt64 {
 }
 
 // FromNullInt64 converts sql.NullInt64 to int (zero when NULL).
-func FromNullInt64(ni sql.NullInt64) int {
+func FromNullInt64(ni sql.NullInt64) int64 {
 	if ni.Valid {
-		return int(ni.Int64)
+		return ni.Int64
 	}
 	return 0
 }

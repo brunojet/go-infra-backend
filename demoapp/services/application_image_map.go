@@ -20,6 +20,7 @@ func (m applicationImageMapper) toImageModel(dto dtos.ApplicationImagePost, mode
 	}
 	model.FileHash = hashBytes
 	model.FileName = utils.ToNullString(dto.FileName)
+	model.FileSize = utils.ToNullInt64(dto.FileSize)
 	model.ContentType = utils.ToNullString(dto.ContentType)
 	return nil
 }
@@ -30,9 +31,10 @@ func (m applicationImageMapper) toImageDTO(model *models.ApplicationImage, dto *
 	}
 	dto.BaseFile = dtos.BaseFile{
 		BaseFilePost: dtos.BaseFilePost{
-			FileName:    utils.FromNullString(model.FileName),
-			ContentType: utils.FromNullString(model.ContentType),
 			FileHash:    hex.EncodeToString(model.FileHash),
+			FileName:    utils.FromNullString(model.FileName),
+			FileSize:    utils.FromNullInt64(model.FileSize),
+			ContentType: utils.FromNullString(model.ContentType),
 		},
 		FileStatus: fileStatusFromModel[model.FileStatus],
 	}

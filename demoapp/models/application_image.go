@@ -11,8 +11,9 @@ import (
 type ApplicationImage struct {
 	ApplicationImageId int64          `gorm:"primaryKey;autoIncrement"`
 	ApplicationId      int64          `gorm:"not null;uniqueIndex:idx_application_image_application,priority:1"`
-	FileName           sql.NullString `gorm:"not null;size:255"`
 	FileHash           []byte         `gorm:"type:binary(32);not null;uniqueIndex:idx_application_image_application,priority:3"`
+	FileName           sql.NullString `gorm:"not null;size:255"`
+	FileSize           sql.NullInt64  `gorm:"not null"`
 	FileStatus         int16          `gorm:"not null;default:0;index:idx_application_image_status"` // 0: Pending, 1: Processing, 2: Ready, 3: Failed
 	ContentType        sql.NullString `gorm:"not null;size:255"`
 	ImageType          sql.NullInt16  `gorm:"not null;default:0;uniqueIndex:idx_application_image_application,priority:2"`
