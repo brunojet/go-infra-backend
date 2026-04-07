@@ -1,8 +1,81 @@
-def merge_applications_by_name(apps_file, apps_backend):
+import json
+import os
+import requests
+import mimetypes
+import hashlib
+
+def create_application_profile(app):
+	"""
+	Cria um perfil de aplicação (application-profile) para o app informado.
+	Aceita um dict único ou uma lista de dicts (apps_with_ids).
+	"""
+	if isinstance(app, list):
+		results = []
+		for single_app in app:
+			results.append(create_application_profile(single_app))
+		return results
+	application_id = app.get("applicationId")
+	if not application_id:
+		print(f"[profile] ApplicationId ausente para app {app.get('name')}")
+		return False
+	url = f"{BACKEND_URL}/applications/{application_id}/application-profiles"
+	profile_data = {
+		"name": app.get("name"),
+		"description": app.get("description", ""),
+		"filterIds": app.get("filterIds", []),
+		"applicationImage": app.get("icon_metadata"),
+	}
+	# Screenshots
+	screenshots = app.get("screenshots_metadata", [])
+	if screenshots:
+		profile_data["applicationProfileScreenshots"] = [
+			{"position": i+1, "screenshot": meta} for i, meta in enumerate(screenshots)
+		]
+	resp = requests.post(url, json=profile_data)
+	print(f"[profile] {profile_data['name']}: {resp.status_code} {resp.text}")
+	return resp.ok
+
+
+init_file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'demoapp', 'data', 'init'))
+
+def build_image_metadata(file_path):
+	"""
+	Dado o caminho de um arquivo de imagem, retorna um dicionário com os campos obrigatórios para ApplicationImagePost/BaseFilePost:
+	  - fileName
+	  - fileHash (sha256)
+	  - fileSize
+	  - contentType
+	"""
+	if not file_path or not os.path.exists(file_path):
+		raise ValueError(f"Arquivo de imagem não encontrado: {file_path}")
+	file_name = os.path.basename(file_path)
+	file_size = os.path.getsize(file_path)
+	content_type, _ = mimetypes.guess_type(file_name)
+	if not content_type:
+		content_type = "application/octet-stream"
+	# Calcula hash SHA-256
+	sha256 = hashlib.sha256()
+	with open(file_path, "rb") as f:
+		for chunk in iter(lambda: f.read(8192), b""):
+			sha256.update(chunk)
+	file_hash = sha256.hexdigest()
+	return {
+		"fileName": file_name,
+		"fileHash": file_hash,
+		"fileSize": file_size,
+		"contentType": content_type
+	}
+
+def merge_applications_by_name(apps_file, apps_backend, filters_by_type):
 	"""
 	Cruza as listas de apps do arquivo (apps_file) e do backend (apps_backend) pelo nome,
-	retornando uma lista de dicts com todos os campos do arquivo e o applicationId do backend.
+	retornando uma lista de dicts com todos os campos do arquivo, o applicationId do backend,
+	os ids dos filtros (filterIds) e metadados das imagens (icon/screenshot) se disponíveis.
+	Usa filters_by_type para mapear nomes de filtros para IDs.
 	"""
+
+
+	# filters_by_type já é dict nome_filtro -> filterId
 	apps_by_name = {a.get("name"): a for a in apps_backend if a.get("name")}
 	apps_with_ids = []
 	for app in apps_file:
@@ -13,8 +86,67 @@ def merge_applications_by_name(apps_file, apps_backend):
 		if backend_app and backend_app.get("applicationId"):
 			app_with_id = dict(app)
 			app_with_id["applicationId"] = backend_app["applicationId"]
+
+			# Preenche filterIds usando filters_by_type (nomes -> ids)
+			filter_ids = []
+			if "filters" in app and isinstance(app["filters"], list):
+				for fname in app["filters"]:
+					fid = filters_by_type.get(fname)
+					if fid is not None:
+						try:
+							filter_ids.append(int(fid))
+						except Exception:
+							pass
+			if filter_ids:
+				app_with_id["filterIds"] = filter_ids
+
+			# Adiciona metadados de imagens usando build_image_metadata
+			icon_path = app.get("icon").replace('/', '\\') if app.get("icon") else None
+			if icon_path:
+				# Se for relativo, resolve para absoluto a partir de init_file_path
+				if not os.path.isabs(icon_path):
+					icon_path = os.path.join(init_file_path, icon_path)
+			else:
+				package = app.get("package") or app.get("packageName")
+				if package:
+					icon_path = os.path.join(init_file_path, 'images', package, 'icon.png')
+			if icon_path and os.path.exists(icon_path):
+				try:
+					app_with_id["icon_metadata"] = build_image_metadata(icon_path)
+				except Exception as e:
+					print(f"[imagem] Falha ao processar ícone {icon_path}: {e}")
+
+			# Screenshots (lista de caminhos)
+			screenshots = app.get("screenshots")
+			if screenshots:
+				resolved_screenshots = []
+				for s in screenshots:
+					s = s.replace('/', '\\')
+					if not os.path.isabs(s):
+						resolved = os.path.join(init_file_path, s.replace('images/', 'images\\')) if s.startswith('images/') else os.path.join(init_file_path, s)
+					else:
+						resolved = s
+					resolved_screenshots.append(resolved)
+			else:
+				package = app.get("package") or app.get("packageName")
+				resolved_screenshots = []
+				if package:
+					img_dir = os.path.join(init_file_path, 'images', package)
+					if os.path.isdir(img_dir):
+						resolved_screenshots = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if f.startswith('screenshot')]
+			if resolved_screenshots:
+				metadata_list = []
+				for s in resolved_screenshots:
+					if os.path.exists(s):
+						try:
+							metadata_list.append(build_image_metadata(s))
+						except Exception as e:
+							print(f"[imagem] Falha ao processar screenshot {s}: {e}")
+				app_with_id["screenshots_metadata"] = metadata_list
+
 			apps_with_ids.append(app_with_id)
 	return apps_with_ids
+
 def get_applications():
 	"""
 	Busca e retorna a lista de aplicativos cadastrados no backend.
@@ -50,6 +182,7 @@ def get_terminal_models_with_configurations():
 			"configurations": conf_data
 		})
 	return result
+
 def create_application_configurations(app_list, terminal_models_with_configs):
 	"""
 	Cria configurações de aplicativos para cada app cadastrado e cada terminal model configuration existente.
@@ -77,6 +210,7 @@ def create_application_configurations(app_list, terminal_models_with_configs):
 				url = f"{BACKEND_URL}/applications/{application_id}/application-configurations/"
 				conf_resp = requests.post(url, json=payload)
 				print(f"[app-config] app={application_id} terminal_conf={terminal_conf_id}: {conf_resp.status_code} {conf_resp.text}")
+
 def register_application(app):
 	"""
 	Cadastra um aplicativo usando o endpoint correto do backend.
@@ -91,9 +225,6 @@ def register_application(app):
 	resp = requests.post(url, json=payload)
 	print(f"[application] {payload['name']}: {resp.status_code} {resp.text}")
 	return resp.ok
-import json
-import os
-import requests
 
 BACKEND_URL = "http://localhost:8080"
 APPLICATIONS_JSON = os.path.join(os.path.dirname(__file__), '..', 'demoapp', 'data', 'init', 'applications.json')
@@ -156,7 +287,12 @@ def register_filter(filter_type_id, filter_name):
 	payload = {"name": filter_name}
 	resp = requests.post(url, json=payload)
 	print(f"[filter] {filter_type_id} - {filter_name}: {resp.status_code} {resp.text}")
-	return resp.ok
+	if resp.ok:
+		try:
+			return resp.json()
+		except Exception:
+			pass
+	return None
 
 
 def main():
@@ -170,17 +306,17 @@ def main():
 		if filter_type_id:
 			filter_type_ids[ftype] = filter_type_id
 
-	# Novo: monta filters_by_type_id
+	# Monta filters_by_type como dict nome_filtro -> filterId
 	filters_by_type = {}
 	for ftype, filters in filters_by_type_name.items():
 		filter_type_id = filter_type_ids.get(ftype)
 		if filter_type_id:
-			filters_by_type[filter_type_id] = filters
-
-	# Cadastra filtros usando o id correto
-	for filter_type_id, filters in filters_by_type.items():
-		for fname in filters:
-			register_filter(filter_type_id, fname)
+			for fname in filters:
+				filtro_obj = register_filter(filter_type_id, fname)
+				if filtro_obj:
+					filter_id = filtro_obj.get("filterId") or filtro_obj.get("id")
+					if filter_id:
+						filters_by_type[fname] = filter_id
 
 
 	# Cadastra aplicativos
@@ -189,10 +325,12 @@ def main():
 
 	# Criar configurações de aplicativos
 	terminal_models_with_configs = get_terminal_models_with_configurations()
+
 	# Carrega apps do backend para obter applicationId e cruza com apps do arquivo
 	apps_backend = get_applications()
-	apps_with_ids = merge_applications_by_name(apps, apps_backend)
+	apps_with_ids = merge_applications_by_name(apps, apps_backend, filters_by_type)
 	create_application_configurations(apps_with_ids, terminal_models_with_configs)
+	create_application_profile(apps_with_ids)
 
 if __name__ == "__main__":
 	main()

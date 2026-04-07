@@ -15,7 +15,7 @@ type ApplicationImage struct {
 	FileHash           []byte         `gorm:"type:binary(32);not null;uniqueIndex:idx_application_image_application,priority:3"`
 	FileStatus         int16          `gorm:"not null;default:0;index:idx_application_image_status"` // 0: Pending, 1: Processing, 2: Ready, 3: Failed
 	ContentType        sql.NullString `gorm:"not null;size:255"`
-	ImageType          sql.NullInt16  `gorm:"not null;uniqueIndex:idx_application_image_application,priority:2"`
+	ImageType          sql.NullInt16  `gorm:"not null;default:0;uniqueIndex:idx_application_image_application,priority:2"`
 	CreatedAt          sql.NullTime   `gorm:"autoCreateTime;index:idx_application_image_del_created,priority:2"`
 	UpdatedAt          sql.NullTime   `gorm:"autoUpdateTime;index:idx_application_image_del_updated,priority:2"`
 	DeletedAt          gorm.DeletedAt `gorm:"index:idx_application_image_del_created,priority:1;index:idx_application_image_del_updated,priority:1"`
