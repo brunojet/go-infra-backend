@@ -1,0 +1,187 @@
+openapi: 3.0.0
+servers:
+  - url: http://localhost:8080
+info:
+  title: Applications API
+  version: 1.0.0
+  description: API para gerenciamento de aplicações.
+  contact:
+    name: Suporte
+    email: suporte@example.com
+tags:
+  - name: applications
+    description: Operações relacionadas a aplicações
+  - name: application-configurations
+    description: Operações relacionadas a configurações de aplicações
+paths:
+  /applications:
+    post:
+      summary: Criar aplicação
+      description: Cria uma nova aplicação.
+      operationId: createApplication
+      tags: ["applications"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas.yaml#/components/schemas/Application'
+      responses:
+        '201':
+          description: Criado
+    get:
+      summary: Listar aplicações
+      description: Retorna a lista de aplicações.
+      operationId: listApplications
+      tags: ["applications"]
+      responses:
+        '206':
+          description: OK
+  /applications/{applicationId}:
+    get:
+      summary: Detalhar aplicação
+      description: Retorna detalhes da aplicação informada.
+      operationId: getApplicationById
+      tags: ["applications"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+    put:
+      summary: Atualizar aplicação
+      description: Atualiza a aplicação informada.
+      operationId: updateApplicationById
+      tags: ["applications"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas.yaml#/components/schemas/Application'
+      responses:
+        '200':
+          description: Atualizado
+    delete:
+      summary: Remover aplicação
+      description: Remove a aplicação informada.
+      operationId: deleteApplicationById
+      tags: ["applications"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Removido
+  /applications/{applicationId}/application-configurations:
+    post:
+      summary: Create application configuration
+      description: Creates a new configuration for a specific application.
+      operationId: createApplicationConfiguration
+      tags: ["application-configurations"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas.yaml#/components/schemas/ApplicationConfiguration'
+      responses:
+        '201':
+          description: Created
+    get:
+      summary: List application configurations
+      description: Returns a list of configurations for a specific application.
+      operationId: listApplicationConfigurations
+      tags: ["application-configurations"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+      responses:
+        '206':
+          description: OK
+  /applications/{applicationId}/application-configurations/{applicationConfigurationId}:
+    get:
+      summary: Get application configuration
+      description: Returns details of a specific application configuration.
+      operationId: getApplicationConfigurationById
+      tags: ["application-configurations"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: applicationConfigurationId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+    patch:
+      summary: Update application configuration
+      description: Updates a specific application configuration.
+      operationId: updateApplicationConfiguration
+      tags: ["application-configurations"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: applicationConfigurationId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas.yaml#/components/schemas/ApplicationConfiguration'
+      responses:
+        '200':
+          description: Updated
+    delete:
+      summary: Delete application configuration
+      description: Deletes a specific application configuration.
+      operationId: deleteApplicationConfiguration
+      tags: ["application-configurations"]
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: applicationConfigurationId
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No Content

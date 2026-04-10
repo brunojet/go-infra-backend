@@ -1,0 +1,114 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Server (gin + sqlite mem)",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "cwd": "${workspaceFolder}/demoapp",
+            "program": "${workspaceFolder}/demoapp/cmd",
+            "env": {
+                "HTTP_DRIVER": "gin",
+                "CORS_ENABLED": "true",
+                "CORS_ALLOW_ORIGINS": "*",
+                "CORS_ALLOW_CREDENTIALS": "false",
+                "DB_DRIVER": "sqlite",
+                "DB_MIGRATE": "true",
+                "DB_DSN": "",
+                "OBS_REQUEST_ID": "true",
+                "OBS_ACCESS_LOG": "true",
+                "OBS_TELEMETRY": "true",
+                "OBS_RECOVERY": "true",
+                "PORT": "8080",
+                "OTEL_SERVICE_NAME": "demo-go-service-no-resource",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "localhost:4317",
+                "OTEL_EXPORTER_OTLP_INSECURE": "true",
+                "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+                "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "localhost:4317",
+                "OTEL_TRACES_EXPORTER": "otlp",
+                "OTEL_RESOURCE_ATTRIBUTES": "service.version=1.2.3,deployment.environment.name=staging",
+                "CONSOLE_LOGGER_REDIRECT_ENABLE": "true"
+            }
+        },
+        {
+            "name": "Debug Server (sqlite file)",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "cwd": "${workspaceFolder}/demoapp",
+            "program": "${workspaceFolder}/demoapp/cmd",
+            "env": {
+                "HTTP_DRIVER": "gin",
+                "CORS_ENABLED": "true",
+                "CORS_ALLOW_ORIGINS": "*",
+                "CORS_ALLOW_CREDENTIALS": "false",
+                "DB_DRIVER": "sqlite",
+                "DB_MIGRATE": "true",
+                "DB_NAME": "data/dev.db",
+                "DB_MODE": "disk",
+                "OBS_REQUEST_ID": "true",
+                "OBS_ACCESS_LOG": "true",
+                "OBS_TELEMETRY": "true",
+                "OBS_RECOVERY": "true",
+                "PORT": "8080",
+                "OTEL_SERVICE_NAME": "demo-go-service-no-resource",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "localhost:4317",
+                "OTEL_EXPORTER_OTLP_INSECURE": "true",
+                "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+                "OTEL_RESOURCE_ATTRIBUTES": "service.version=1.2.3,deployment.environment.name=staging",
+                "CONSOLE_LOGGER_REDIRECT_ENABLE": "true"
+            }
+        },
+        {
+            "name": "Debug Server MySQL",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "cwd": "${workspaceFolder}/demoapp",
+            "program": "${workspaceFolder}/demoapp/cmd",
+            "env": {
+                "HTTP_DRIVER": "gin",
+                "CORS_ENABLED": "true",
+                "CORS_ALLOW_ORIGINS": "*",
+                "CORS_ALLOW_CREDENTIALS": "false",
+                "DB_DRIVER": "mysql",
+                "DB_MIGRATE": "true",
+                "DB_HOST": "localhost",
+                "DB_PORT": "3306",
+                "DB_NAME": "go-infra-db",
+                "DB_MODE": "disk",
+                "DB_USER": "root",
+                "DB_PASS": "p0o9i8u7",
+                "OBS_REQUEST_ID": "true",
+                "OBS_ACCESS_LOG": "true",
+                "OBS_TELEMETRY": "true",
+                "OBS_RECOVERY": "true",
+                "PORT": "8080",
+                "OTEL_SERVICE_NAME": "demo-go-service-no-resource",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "localhost:4317",
+                "OTEL_EXPORTER_OTLP_INSECURE": "true",
+                "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+                "OTEL_RESOURCE_ATTRIBUTES": "service.version=1.2.3,deployment.environment.name=staging",
+                "CONSOLE_LOGGER_REDIRECT_ENABLE": "true"
+            }
+        },
+        {
+            "name": "Launch file",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${file}"
+        },
+        {
+            "name": "Launch Package",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${fileDirname}"
+        }
+    ]
+}

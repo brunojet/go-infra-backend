@@ -1,0 +1,18 @@
+components:
+  schemas:
+    FilterType:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    Filter:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        filterType:
+          $ref: '#/components/schemas/FilterType'

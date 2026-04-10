@@ -1,0 +1,79 @@
+{
+	"terminal.integrated.env.windows": {
+		"HTTP_DRIVER": "gin",
+		"CORS_ENABLED": "true",
+		"CORS_ALLOW_ORIGINS": "*",
+		"CORS_ALLOW_CREDENTIALS": "false",
+		"DB_DRIVER": "sqlite",
+		"DB_MIGRATE": "true",
+		"DB_DSN": "",
+		"OBS_REQUEST_ID": "true",
+		"OBS_ACCESS_LOG": "true",
+		"OBS_TELEMETRY": "true",
+		"OBS_RECOVERY": "true",
+		"PORT": "8080",
+		"OTEL_SERVICE_NAME": "demo-go-service-no-resource",
+		"OTEL_EXPORTER_OTLP_ENDPOINT": "localhost:4317",
+		"OTEL_EXPORTER_OTLP_INSECURE": "true",
+		"OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+		"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "localhost:4317",
+		"OTEL_TRACES_EXPORTER": "otlp",
+		"OTEL_RESOURCE_ATTRIBUTES": "service.version=1.2.3,deployment.environment.name=staging",
+        "CONSOLE_LOGGER_REDIRECT_ENABLE": "true"
+	},
+	"terminal.integrated.profiles.windows": {
+		"PowerShell": {
+			"path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+			"env": {
+				"HTTP_DRIVER": "gin",
+				"CORS_ENABLED": "true",
+				"CORS_ALLOW_ORIGINS": "*",
+				"CORS_ALLOW_CREDENTIALS": "false",
+				"DB_DRIVER": "sqlite",
+				"DB_MIGRATE": "true",
+				"DB_DSN": "",
+				"OBS_REQUEST_ID": "true",
+				"OBS_ACCESS_LOG": "true",
+				"OBS_TELEMETRY": "true",
+				"OBS_RECOVERY": "true",
+				"PORT": "8080",
+				"OTEL_SERVICE_NAME": "demo-go-service-no-resource",
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "localhost:4317",
+				"OTEL_EXPORTER_OTLP_INSECURE": "true",
+				"OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "localhost:4317",
+				"OTEL_TRACES_EXPORTER": "otlp",
+				"OTEL_RESOURCE_ATTRIBUTES": "service.version=1.2.3,deployment.environment.name=staging",
+                "CONSOLE_LOGGER_REDIRECT_ENABLE": "true"
+			}
+		},
+		"Command Prompt": {
+			"path": "C:\\Windows\\System32\\cmd.exe",
+			"env": {
+				"HTTP_DRIVER": "gin",
+				"CORS_ENABLED": "true",
+				"CORS_ALLOW_ORIGINS": "*",
+				"CORS_ALLOW_CREDENTIALS": "false",
+				"DB_DRIVER": "sqlite",
+				"DB_MIGRATE": "true",
+				"DB_DSN": "",
+				"OBS_REQUEST_ID": "true",
+				"OBS_ACCESS_LOG": "true",
+				"OBS_TELEMETRY": "true",
+				"OBS_RECOVERY": "true",
+				"PORT": "8080",
+				"OTEL_SERVICE_NAME": "demo-go-service-no-resource",
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "localhost:4317",
+				"OTEL_EXPORTER_OTLP_INSECURE": "true",
+				"OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "localhost:4317",
+				"OTEL_TRACES_EXPORTER": "otlp",
+				"OTEL_RESOURCE_ATTRIBUTES": "service.version=1.2.3,deployment.environment.name=staging",
+                "CONSOLE_LOGGER_REDIRECT_ENABLE": "true"
+			}
+		}
+	},
+	"chat.tools.terminal.autoApprove": {
+		"go": true
+	}
+}

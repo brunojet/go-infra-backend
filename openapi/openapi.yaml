@@ -1,0 +1,21 @@
+openapi: 3.0.0
+info:
+  title: Filter API
+  version: 1.0.0
+paths:
+  /filter-types:
+    $ref: './filters/filter-types.yaml#/paths/~1filter-types'
+  /filter-types/{filterTypeId}:
+    $ref: './filters/filter-types.yaml#/paths/~1filter-types~1{filterTypeId}'
+  /filter-types/{filterTypeId}/filters:
+    $ref: './filters/filters.yaml#/paths/~1filter-types~1{filterTypeId}~1filters'
+  /filter-types/{filterTypeId}/filters/{filterId}:
+    $ref: './filters/filters.yaml#/paths/~1filter-types~1{filterTypeId}~1filters~1{filterId}'
+  /applications:
+    $ref: './applications/applications.yaml#/paths/~1applications'
+  /applications/{applicationId}:
+    $ref: './applications/applications.yaml#/paths/~1applications~1{applicationId}'
+  /application-configurations:
+    $ref: './application-configurations/application-configurations.yaml#/paths/~1application-configurations'
+  /application-configurations/{configurationId}:
+    $ref: './application-configurations/application-configurations.yaml#/paths/~1application-configurations~1{configurationId}'

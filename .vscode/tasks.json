@@ -1,0 +1,244 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "go: fmt",
+			"type": "shell",
+			"command": "go",
+			"args": [
+				"fmt",
+				"./..."
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"options": {
+				"shell": {
+					"executable": "cmd",
+					"args": [
+						"/C"
+					]
+				}
+			}
+		},
+		{
+			"label": "go: vet",
+			"type": "shell",
+			"dependsOn": [
+				"go: fmt"
+			],
+			"dependsOrder": "sequence",
+			"command": "go",
+			"args": [
+				"vet",
+				"./..."
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"options": {
+				"shell": {
+					"executable": "cmd",
+					"args": [
+						"/C"
+					]
+				}
+			}
+		},
+		{
+			"label": "go: test",
+			"type": "shell",
+			"dependsOn": [
+				"go: vet"
+			],
+			"dependsOrder": "sequence",
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"command": "go",
+			"args": [
+				"test",
+				"-tags=debug",
+				"./..."
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"shell": {
+					"executable": "cmd",
+					"args": [
+						"/C"
+					]
+				}
+			}
+		},
+		{
+			"label": "go: coverage dir",
+			"type": "shell",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"command": "cmd",
+			"args": [
+				"/C",
+				"if not exist coverage\\ mkdir coverage"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"shell": {
+					"executable": "cmd",
+					"args": [
+						"/C"
+					]
+				}
+			}
+		},
+		{
+			"label": "go: coverage profile",
+			"type": "shell",
+			"dependsOn": [
+				"go: coverage dir",
+				"go: vet"
+			],
+			"dependsOrder": "sequence",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"command": "go",
+			"args": [
+				"test",
+				"-tags=debug",
+				"./...",
+				"-coverprofile=coverage\\coverage.out"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"shell": {
+					"executable": "cmd",
+					"args": [
+						"/C"
+					]
+				}
+			}
+		},
+		{
+			"label": "go: coverage func",
+			"type": "shell",
+			"dependsOn": [
+				"go: coverage profile"
+			],
+			"dependsOrder": "sequence",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"command": "go",
+			"args": [
+				"tool",
+				"cover",
+				"-func=coverage\\coverage.out"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"shell": {
+					"executable": "cmd",
+					"args": [
+						"/C"
+					]
+				}
+			}
+		},
+		{
+			"label": "go: coverage html",
+			"type": "shell",
+			"dependsOn": [
+				"go: coverage profile"
+			],
+			"dependsOrder": "sequence",
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"command": "go",
+			"args": [
+				"tool",
+				"cover",
+				"-html=coverage\\coverage.out",
+				"-o",
+				"coverage\\coverage.html"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"shell": {
+					"executable": "cmd",
+					"args": [
+						"/C"
+					]
+				}
+			}
+		},
+		{
+			"label": "go: coverage",
+			"type": "shell",
+			"dependsOn": [
+				"go: coverage profile",
+				"go: coverage func"
+			],
+			"dependsOrder": "sequence",
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"command": "cmd",
+			"args": [
+				"/C",
+				"echo done"
+			]
+		},
+		{
+			"label": "go: test (debug tag)",
+			"type": "shell",
+			"command": "go",
+			"args": [
+				"test",
+				"-tags=debug",
+				"./..."
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		}
+	]
+}
