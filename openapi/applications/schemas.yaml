@@ -1,0 +1,22 @@
+components:
+  schemas:
+    Application:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+      required:
+        - name
+    ApplicationConfiguration:
+      type: object
+      properties:
+        terminalModelConfigurationId:
+          type: string
+          description: Required with parent applicationId to form the composite PK.
+        packageName:
+          type: string
+      required:
+        - terminalModelConfigurationId
+        - packageName

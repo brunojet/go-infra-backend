@@ -1,0 +1,21 @@
+components:
+  schemas:
+    TerminalModel:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+      required:
+        - name
+    TerminalModelConfiguration:
+      type: object
+      properties:
+        integrationType:
+          type: string
+          enum:
+            - RFAL
+            - TEF
+      required:
+        - integrationType

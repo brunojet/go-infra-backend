@@ -1,0 +1,61 @@
+package services
+
+import (
+	"github.com/brunojet/go-infra-backend/demoapp/dtos"
+	"github.com/brunojet/go-infra-backend/demoapp/models"
+)
+
+// Package-level constants for demoapp services to avoid magic literals.
+const (
+	// Profile service
+	errTextProfileScopeIDRequired = "application_profile_id scope must be valid"
+	profileSyncInitialPage        = 1
+	profileSyncPageSize           = 10
+	profileSyncOrderBy            = models.ColApplicationConfigurationID
+	profileSyncOrder              = "asc"
+
+	// Nested/profile parent handling
+	errTextNestedProfileApplicationIDScopeRequired = "application_id parent scope must be valid"
+
+	// Hello world
+	helloWorldIDKey = "id"
+
+	// Nested/version parent error texts
+	errTextNestedVersionApplicationIDScopeRequired = "application_id parent scope must be valid"
+	errTextNestedVersionIDScopeRequired            = "application_version_id scope must be valid"
+)
+
+var (
+	fileStatusFromModel = map[int16]dtos.FileStatus{
+		models.FileStatusPending:    dtos.ApplicationImageStatusPending,
+		models.FileStatusProcessing: dtos.ApplicationImageStatusProcessing,
+		models.FileStatusReady:      dtos.ApplicationImageStatusReady,
+		models.FileStatusFailed:     dtos.ApplicationImageStatusFailed,
+	}
+
+	stageMapFromModel = map[int16]dtos.ApplicationStage{
+		models.ApplicationStagePending:    dtos.ApplicationStagePending,
+		models.ApplicationStageReview:     dtos.ApplicationStageReview,
+		models.ApplicationStagePilot:      dtos.ApplicationStagePilot,
+		models.ApplicationStageProduction: dtos.ApplicationStageProduction,
+		models.ApplicationStageArchived:   dtos.ApplicationStageArchived,
+	}
+
+	stageMapToModel = map[dtos.ApplicationStage]int16{
+		dtos.ApplicationStagePending:    models.ApplicationStagePending,
+		dtos.ApplicationStageReview:     models.ApplicationStageReview,
+		dtos.ApplicationStagePilot:      models.ApplicationStagePilot,
+		dtos.ApplicationStageProduction: models.ApplicationStageProduction,
+		dtos.ApplicationStageArchived:   models.ApplicationStageArchived,
+	}
+
+	integrationTypeMapFromModel = map[int16]dtos.IntegrationType{
+		models.IntegrationTypeRFAL: dtos.IntegrationTypeRFAL,
+		models.IntegrationTypeTEF:  dtos.IntegrationTypeTEF,
+	}
+
+	integrationTypeMapToModel = map[dtos.IntegrationType]int16{
+		dtos.IntegrationTypeRFAL: models.IntegrationTypeRFAL,
+		dtos.IntegrationTypeTEF:  models.IntegrationTypeTEF,
+	}
+)

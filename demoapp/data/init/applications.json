@@ -1,0 +1,77 @@
+[
+  {
+    "name": "Pac-Man",
+    "description": "Lançado em 1980. Maze arcade onde o jogador coleta pontos fugindo de fantasmas.",
+    "package": "com.namcobandaigames.pacmanmobile",
+    "customer-id": "e2e1a1c2-1b2a-4c1a-9a1a-1a2b3c4d5e6f",
+    "filter-type": "Arcade",
+    "filters": [
+      "Clássico",
+      "Puzzle"
+    ],
+    "icon": "images/com.namcobandaigames.pacmanmobile/icon.jpeg",
+    "screenshots": [
+      "images/com.namcobandaigames.pacmanmobile/screenshot_0.jpeg"
+    ]
+  },
+  {
+    "name": "Donkey Kong",
+    "description": "Lançado em 1981. Plataforma onde Mario precisa resgatar Pauline.",
+    "package": "com.nintendo.donkeykong",
+    "customer-id": "a3b2c1d4-2c3b-4d2c-8b2c-2c3d4e5f6a7b",
+    "filter-type": "Plataforma",
+    "filters": [
+      "Arcade",
+      "Retro"
+    ],
+    "icon": "images/com.nintendo.donkeykong/icon.jpeg",
+    "screenshots": [
+      "images/com.nintendo.donkeykong/screenshot_0.jpeg"
+    ]
+  },
+  {
+    "name": "Frogger",
+    "description": "Lançado em 1981. Guiar um sapo por ruas e rios cheios de obstáculos.",
+    "package": "com.sega.frogger",
+    "customer-id": "c4d3e2f1-3d4c-5e3d-7c3d-3d4e5f6a7b8c",
+    "filter-type": "Arcade",
+    "filters": [
+      "Puzzle",
+      "Reflexo"
+    ],
+    "icon": "images/com.sega.frogger/icon.png",
+    "screenshots": [
+      "images/com.sega.frogger/screenshot_0.jpeg"
+    ]
+  },
+  {
+    "name": "Galaga",
+    "description": "Lançado em 1981. Shooter espacial com ondas de inimigos.",
+    "package": "com.nintendo.galaga",
+    "customer-id": "a3b2c1d4-2c3b-4d2c-8b2c-2c3d4e5f6a7b",
+    "filter-type": "Tiro",
+    "filters": [
+      "Arcade",
+      "Nave"
+    ],
+    "icon": "images/com.nintendo.galaga/icon.png",
+    "screenshots": [
+      "images/com.nintendo.galaga/screenshot_0.jpeg"
+    ]
+  },
+  {
+    "name": "Pitfall!",
+    "description": "Lançado em 1982. Aventura em selva com obstáculos e buracos.",
+    "package": "com.activision.pitfall",
+    "customer-id": "e6f5a4b3-5f6e-7a5f-0e5f-5f6a7b8c9d0e",
+    "filter-type": "Aventura",
+    "filters": [
+      "Plataforma",
+      "Retro"
+    ],
+    "icon": "images/com.activision.pitfall/icon.png",
+    "screenshots": [
+      "images/com.activision.pitfall/screenshot_0.png"
+    ]
+  }
+]
