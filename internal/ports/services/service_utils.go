@@ -8,10 +8,6 @@ import (
 	"github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
-type AnyInt interface {
-	~int64 | ~int32 | ~int16
-}
-
 func normalizeListParams(params contracts.ListParams) contracts.ListParams {
 	if params.Page <= 0 {
 		params.Page = DefaultListPage
@@ -48,7 +44,7 @@ func toRepoListParams(params contracts.ListParams, scopes map[string]any) rpocts
 
 // ParseScopeInt extrai e valida um valor inteiro de um map de scopes.
 // Retorna o valor se presente, do tipo correto e >= minValue, caso contrário retorna um erro genérico.
-func ParseScopeInt[T AnyInt](scopes map[string]any, key string, minValue T) (T, error) {
+func ParseScopeInt[T contracts.AnyInt](scopes map[string]any, key string, minValue T) (T, error) {
 	rawValue, ok := scopes[key]
 	if !ok {
 		var zero T
@@ -65,7 +61,7 @@ func ParseScopeInt[T AnyInt](scopes map[string]any, key string, minValue T) (T, 
 }
 
 // StringToInt converte string para inteiro genérico, validando se > 0
-func StringToInt[T AnyInt](s string) (T, error) {
+func StringToInt[T contracts.AnyInt](s string) (T, error) {
 	id, err := utils.StringToInt64(s)
 	if err != nil || id <= 0 {
 		var zero T
@@ -75,7 +71,7 @@ func StringToInt[T AnyInt](s string) (T, error) {
 }
 
 // ParseScopeIntFromString converte e valida string para inteiro de escopo, com valor mínimo
-func ParseScopeIntFromString[T AnyInt](value string, minValue T) (T, error) {
+func ParseScopeIntFromString[T contracts.AnyInt](value string, minValue T) (T, error) {
 	id, err := StringToInt[T](value)
 	if err != nil || id < minValue {
 		var zero T
