@@ -13,7 +13,11 @@ import (
 	otellogglobal "go.opentelemetry.io/otel/log/global"
 )
 
-const initialStdLogBufferCap = 16 * 1024
+const (
+	initialStdLogBufferCap = 16 * 1024
+	maxStdLogBufferCap     = 64 * 1024
+	truncatedLogSuffix     = " [truncated]"
+)
 
 type otelStdLogWriter struct {
 	loggerName string
@@ -36,6 +40,7 @@ func (w *otelStdLogWriter) Write(p []byte) (int, error) {
 		b := w.buf.Bytes()
 		idx := bytes.IndexByte(b, '\n')
 		if idx < 0 {
+			w.flushOversizedBufferLocked()
 			return len(p), nil
 		}
 
@@ -50,6 +55,21 @@ func (w *otelStdLogWriter) Write(p []byte) (int, error) {
 		}
 
 		w.emitLine(line)
+	}
+}
+
+func (w *otelStdLogWriter) flushOversizedBufferLocked() {
+	for w.buf.Len() > maxStdLogBufferCap {
+		chunk := string(w.buf.Bytes()[:maxStdLogBufferCap])
+		w.buf.Next(maxStdLogBufferCap)
+
+		chunk = strings.TrimSuffix(chunk, "\r")
+		chunk = strings.TrimSpace(chunk)
+		if chunk == "" {
+			continue
+		}
+
+		w.emitLine(chunk + truncatedLogSuffix)
 	}
 }
 
