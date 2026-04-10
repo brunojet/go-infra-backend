@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
@@ -19,12 +18,7 @@ type nestedGinHandler[C, R, U any] struct {
 }
 
 func NewGenericNestedHandler[C, R, U any](php HandlerParameters, hp HandlerParameters, s svccontracts.NestedService[C, R, U]) hndcontracts.NestedGenericHandler[C, R, U] {
-	var baseHandler hndcontracts.GenericHandler[C, R, U]
-	if svc, ok := s.(svccontracts.Service[C, R, U]); ok {
-		baseHandler = NewGenericHandler(hp, svc)
-	} else {
-		log.Default().Panic("provided service does not implement Service[D, D, D, E]")
-	}
+	baseHandler := NewGenericHandler(hp, s)
 	return &nestedGinHandler[C, R, U]{
 		GenericHandler: baseHandler, // Use the base service for non-nested operations
 		php:            php,
