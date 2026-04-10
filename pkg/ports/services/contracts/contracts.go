@@ -3,7 +3,7 @@ package contracts
 import (
 	"context"
 
-	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 )
 
 type AnyInt interface {
@@ -22,7 +22,7 @@ type ListParams struct {
 	Order   string
 }
 
-type ServiceMapper[C, R, U any, E repoContracts.Entity] interface {
+type ServiceMapper[C, R, U any, E contracts.Entity] interface {
 	ToPostModel(dto C, model *E) error
 	ToPatchModel(dto U, model *E) error
 	ToDTO(model *E, dto *R) error
@@ -38,7 +38,7 @@ type Service[C, R, U any] interface {
 	Delete(ctx context.Context, id string) error
 }
 
-type NestedServiceMapper[C, R, U any, E repoContracts.Entity] interface {
+type NestedServiceMapper[C, R, U any, E contracts.Entity] interface {
 	ServiceMapper[C, R, U, E]
 	ApplyParentQueryScopes(parentID string, queryScopes map[string]any) (map[string]any, error)
 	ApplyParentScopes(parentID string, model *E) error
