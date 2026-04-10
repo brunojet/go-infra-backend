@@ -1,6 +1,6 @@
-% pkg/eventbus
+# pkg/eventbus
 
-% Contratos e wrapper de alto-nível para o EventBus usado pelo projeto.
+Contratos e wrapper de alto-nível para o EventBus usado pelo projeto.
 
 Resumo
 - Exporta tipos de contrato (Handler, HandlerName, EventBus) e fornece um
