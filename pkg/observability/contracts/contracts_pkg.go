@@ -22,21 +22,21 @@ const (
 )
 
 type ObservabilityAdapterError struct {
-	Timestamp time.Time "json:\"timestamp\""
-	Error     string    "json:\"error\""
+	Timestamp time.Time `json:"timestamp"`
+	Error     string    `json:"error"`
 }
 
 type ObservabilityAdapterHealth struct {
-	HealthState HealthState                 "json:\"health_state\""
-	LastErrors  []ObservabilityAdapterError "json:\"last_errors\""
+	HealthState HealthState                 `json:"health_state"`
+	LastErrors  []ObservabilityAdapterError `json:"last_errors"`
 }
 
 type ObservabilityAdapterStats struct {
-	Endpoint   string "json:\"endpoint\""
-	IsInsecure bool   "json:\"is_insecure\""
-	Onqueue    int    "json:\"onqueue\""
-	Sent       int    "json:\"sent\""
-	Failed     int    "json:\"failed\""
+	Endpoint   string `json:"endpoint"`
+	IsInsecure bool   `json:"is_insecure"`
+	Onqueue    int    `json:"onqueue"`
+	Sent       int    `json:"sent"`
+	Failed     int    `json:"failed"`
 }
 
 type ObservabilityAdapter interface {
