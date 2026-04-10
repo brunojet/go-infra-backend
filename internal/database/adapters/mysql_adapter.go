@@ -26,6 +26,7 @@ func NewMySQL(dsn string) (dbcontracts.DatabaseAdapter, error) {
 
 	db, err := gorm.Open(mysql.New(mysql.Config{Conn: sqlDb}), &gorm.Config{})
 	if err != nil {
+		_ = sqlDb.Close()
 		return nil, err
 	}
 
