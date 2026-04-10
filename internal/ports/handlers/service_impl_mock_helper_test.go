@@ -31,9 +31,9 @@ func ExpectServiceGetByID[C, R, U any, E rpocts.Entity](svc *MockService[C, R, U
 	)
 }
 
-func ExpectServiceList[C, R, U any, E rpocts.Entity](svc *MockService[C, R, U, E], fn func(ctx context.Context, params contracts.ListParams, response *[]C) (int64, error)) *gomock.Call {
+func ExpectServiceList[C, R, U any, E rpocts.Entity](svc *MockService[C, R, U, E], fn func(ctx context.Context, params contracts.ListParams, response *[]R) (int64, error)) *gomock.Call {
 	return svc.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-		func(ctx context.Context, params contracts.ListParams, response *[]C) (int64, error) {
+		func(ctx context.Context, params contracts.ListParams, response *[]R) (int64, error) {
 			if fn != nil {
 				return fn(ctx, params, response)
 			}
