@@ -14,7 +14,7 @@ type serviceImpl[C, R, U any, E rpocts.Entity] struct {
 	mapper contracts.ServiceMapper[C, R, U, E]
 }
 
-func NewServiceImpl[C, R, U any, E rpocts.Entity](r rpocts.Repository[E], m contracts.ServiceMapper[C, R, U, E]) contracts.Service[C, R, U, E] {
+func NewServiceImpl[C, R, U any, E rpocts.Entity](r rpocts.Repository[E], m contracts.ServiceMapper[C, R, U, E]) contracts.Service[C, R, U] {
 	return &serviceImpl[C, R, U, E]{rpo: r, mapper: m}
 }
 

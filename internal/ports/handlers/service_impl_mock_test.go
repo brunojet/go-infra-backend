@@ -11,7 +11,7 @@ import (
 )
 
 // ensure the generated mock (for concrete test types) implements the service contract
-var _ svcContracts.Service[any, any, any, repoContracts.Entity] = (*MockService[any, any, any, repoContracts.Entity])(nil)
+var _ svcContracts.Service[any, any, any] = (*MockService[any, any, any, repoContracts.Entity])(nil)
 
 var _ svcContracts.ServiceMapper[any, any, any, repoContracts.Entity] = (*MockServiceMapper[any, any, any, repoContracts.Entity])(nil)
 

@@ -7,16 +7,15 @@ import (
 	"github.com/gin-gonic/gin"
 
 	hndcts "github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
-	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	svccts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
 type ginHandler[C, R, U any] struct {
 	hp      HandlerParameters
-	service svccts.Service[C, R, U, rpocts.Entity]
+	service svccts.Service[C, R, U]
 }
 
-func NewGenericHandler[C, R, U any](hp HandlerParameters, s svccts.Service[C, R, U, rpocts.Entity]) hndcts.GenericHandler[C, R, U] {
+func NewGenericHandler[C, R, U any](hp HandlerParameters, s svccts.Service[C, R, U]) hndcts.GenericHandler[C, R, U] {
 	return &ginHandler[C, R, U]{hp: hp, service: s}
 }
 

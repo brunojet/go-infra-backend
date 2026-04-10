@@ -30,7 +30,7 @@ type ServiceMapper[C, R, U any, E repoContracts.Entity] interface {
 	ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error)
 }
 
-type Service[C, R, U any, E repoContracts.Entity] interface {
+type Service[C, R, U any] interface {
 	Create(ctx context.Context, dto C, response *R) error
 	List(ctx context.Context, params ListParams, response *[]R) (int64, error)
 	GetByID(ctx context.Context, id string, response *R) error
@@ -44,8 +44,8 @@ type NestedServiceMapper[C, R, U any, E repoContracts.Entity] interface {
 	ApplyParentScopes(parentID string, model *E) error
 }
 
-type NestedService[C, R, U any, E repoContracts.Entity] interface {
-	Service[C, R, U, E]
+type NestedService[C, R, U any] interface {
+	Service[C, R, U]
 	CreateNested(ctx context.Context, parentID string, dto C, response *R) error
 	ListNested(ctx context.Context, parentID string, params ListParams, response *[]R) (int64, error)
 }

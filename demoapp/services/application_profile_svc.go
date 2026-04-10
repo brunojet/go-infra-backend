@@ -13,7 +13,7 @@ import (
 )
 
 type ApplicationProfileNestedService interface {
-	services.NestedService[dtos.ApplicationProfilePost, dtos.ApplicationProfileGet, dtos.ApplicationProfilePatch, models.ApplicationProfile]
+	services.NestedService[dtos.ApplicationProfilePost, dtos.ApplicationProfileGet, dtos.ApplicationProfilePatch]
 }
 
 // ApplicationProfileNestedService implements the lifecycle for ApplicationProfile entities.
@@ -23,7 +23,7 @@ type ApplicationProfileNestedService interface {
 // No further creation or association of filters is performed after the initial creation; only stage transitions are allowed.
 // This design ensures data consistency and prevents duplicate associations.
 type applicationProfileNestedService struct {
-	services.NestedService[dtos.ApplicationProfilePost, dtos.ApplicationProfileGet, dtos.ApplicationProfilePatch, models.ApplicationProfile]
+	services.NestedService[dtos.ApplicationProfilePost, dtos.ApplicationProfileGet, dtos.ApplicationProfilePatch]
 	aprpo  repositories.ApplicationProfileRepository
 	acrpo  repositories.ApplicationConfigurationRepository
 	avrpo  repositories.ApplicationVersionRepository

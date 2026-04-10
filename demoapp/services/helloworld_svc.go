@@ -2,10 +2,10 @@ package services
 
 import (
 	"github.com/brunojet/go-infra-backend/demoapp/repositories"
-	"github.com/brunojet/go-infra-backend/internal/ports/services"
-	"github.com/brunojet/go-infra-backend/internal/utils"
 	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/services"
 	svccts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/utils"
 )
 
 type HelloWorldDTO struct {
@@ -50,11 +50,11 @@ func (helloWorldMapper) ToDTO(mdl *repositories.HelloWorld, dto *HelloWorldDTO) 
 }
 
 type HelloWorldService interface {
-	svccts.Service[HelloWorldDTO, HelloWorldDTO, HelloWorldDTO, repositories.HelloWorld]
+	svccts.Service[HelloWorldDTO, HelloWorldDTO, HelloWorldDTO]
 }
 
 type helloWorldService struct {
-	svccts.Service[HelloWorldDTO, HelloWorldDTO, HelloWorldDTO, repositories.HelloWorld]
+	svccts.Service[HelloWorldDTO, HelloWorldDTO, HelloWorldDTO]
 }
 
 func NewHelloWorldService(repo rpocts.Repository[repositories.HelloWorld]) HelloWorldService {

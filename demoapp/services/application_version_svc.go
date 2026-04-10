@@ -5,25 +5,25 @@ import (
 
 	"github.com/brunojet/go-infra-backend/demoapp/dtos"
 	"github.com/brunojet/go-infra-backend/demoapp/models"
-	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
+	"github.com/brunojet/go-infra-backend/demoapp/repositories"
 	"github.com/brunojet/go-infra-backend/pkg/ports/services"
-	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	svccts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
 type ApplicationVersionNestedService interface {
-	svcContracts.NestedService[dtos.ApplicationVersionPost, dtos.ApplicationVersionGet, dtos.ApplicationVersionPatch, models.ApplicationVersion]
+	svccts.NestedService[dtos.ApplicationVersionPost, dtos.ApplicationVersionGet, dtos.ApplicationVersionPatch]
 }
 
 type applicationVersionNestedService struct {
-	svcContracts.NestedService[dtos.ApplicationVersionPost, dtos.ApplicationVersionGet, dtos.ApplicationVersionPatch, models.ApplicationVersion]
-	vRepo  repo.ApplicationVersionRepository
-	pRepo  repo.ApplicationProfileRepository
-	cRepo  repo.ApplicationCatalogRepository
+	svccts.NestedService[dtos.ApplicationVersionPost, dtos.ApplicationVersionGet, dtos.ApplicationVersionPatch]
+	vRepo  repositories.ApplicationVersionRepository
+	pRepo  repositories.ApplicationProfileRepository
+	cRepo  repositories.ApplicationCatalogRepository
 	mapper applicationVersionNestedMapper
 	zero   dtos.ApplicationVersionGet
 }
 
-func NewApplicationVersionNestedService(r repo.ApplicationVersionRepository, p repo.ApplicationProfileRepository, c repo.ApplicationCatalogRepository) ApplicationVersionNestedService {
+func NewApplicationVersionNestedService(r repositories.ApplicationVersionRepository, p repositories.ApplicationProfileRepository, c repositories.ApplicationCatalogRepository) ApplicationVersionNestedService {
 	return &applicationVersionNestedService{
 		NestedService: services.NewNestedServiceImpl(r, applicationVersionNestedMapper{}),
 		vRepo:         r,

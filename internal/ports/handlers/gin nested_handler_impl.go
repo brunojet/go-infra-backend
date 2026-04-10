@@ -9,19 +9,18 @@ import (
 	"github.com/gin-gonic/gin"
 
 	hndcontracts "github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
-	rpocontracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	svccontracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
 )
 
 type nestedGinHandler[C, R, U any] struct {
 	hndcontracts.GenericHandler[C, R, U]
 	php HandlerParameters
-	svc svccontracts.NestedService[C, R, U, rpocontracts.Entity]
+	svc svccontracts.NestedService[C, R, U]
 }
 
-func NewGenericNestedHandler[C, R, U any](php HandlerParameters, hp HandlerParameters, s svccontracts.NestedService[C, R, U, rpocontracts.Entity]) hndcontracts.NestedGenericHandler[C, R, U] {
+func NewGenericNestedHandler[C, R, U any](php HandlerParameters, hp HandlerParameters, s svccontracts.NestedService[C, R, U]) hndcontracts.NestedGenericHandler[C, R, U] {
 	var baseHandler hndcontracts.GenericHandler[C, R, U]
-	if svc, ok := s.(svccontracts.Service[C, R, U, rpocontracts.Entity]); ok {
+	if svc, ok := s.(svccontracts.Service[C, R, U]); ok {
 		baseHandler = NewGenericHandler(hp, svc)
 	} else {
 		log.Default().Panic("provided service does not implement Service[D, D, D, E]")

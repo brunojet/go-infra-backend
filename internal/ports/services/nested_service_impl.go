@@ -10,7 +10,7 @@ import (
 )
 
 type nestedServiceImpl[C, R, U any, E rpocts.Entity] struct {
-	contracts.Service[C, R, U, E]
+	contracts.Service[C, R, U]
 	rpo    rpocts.Repository[E]
 	mapper contracts.NestedServiceMapper[C, R, U, E]
 }
@@ -18,7 +18,7 @@ type nestedServiceImpl[C, R, U any, E rpocts.Entity] struct {
 func NewNestedServiceImpl[C, R, U any, E rpocts.Entity](
 	r rpocts.Repository[E],
 	m contracts.NestedServiceMapper[C, R, U, E],
-) contracts.NestedService[C, R, U, E] {
+) contracts.NestedService[C, R, U] {
 	return &nestedServiceImpl[C, R, U, E]{Service: NewServiceImpl(r, m), rpo: r, mapper: m}
 }
 

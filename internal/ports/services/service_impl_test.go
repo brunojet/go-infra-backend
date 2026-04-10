@@ -130,7 +130,7 @@ func (m TestMapper) ToDTO(model *TestModel, dto *TestDTO) error {
 	return nil
 }
 
-func testCreateDTO(t *testing.T, svc contracts.Service[TestDTO, TestDTO, TestDTO, TestModel], ctx context.Context, in TestDTO) TestDTO {
+func testCreateDTO(t *testing.T, svc contracts.Service[TestDTO, TestDTO, TestDTO], ctx context.Context, in TestDTO) TestDTO {
 	var out TestDTO
 	err := svc.Create(ctx, in, &out)
 	assert.NoError(t, err)
@@ -152,7 +152,7 @@ func testCreateDTO(t *testing.T, svc contracts.Service[TestDTO, TestDTO, TestDTO
 type testServiceDeps struct {
 	ctrl *gomock.Controller
 	repo *MockRepository[TestModel]
-	svc  contracts.Service[TestDTO, TestDTO, TestDTO, TestModel]
+	svc  contracts.Service[TestDTO, TestDTO, TestDTO]
 	ctx  context.Context
 }
 
