@@ -97,6 +97,23 @@
             }
         },
         {
+            "name": "Debug demobff",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "cwd": "${workspaceFolder}/demobff",
+            "program": "${workspaceFolder}/demobff/cmd",
+            "env": {
+                "HTTP_ADDR": ":9090",
+                "DEMOAPP_BASE_URL": "http://localhost:8080",
+                "OTEL_SERVICE_NAME": "demobff",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "localhost:4317",
+                "OTEL_EXPORTER_OTLP_INSECURE": "true",
+                "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+                "OTEL_RESOURCE_ATTRIBUTES": "service.version=0.1.0,deployment.environment.name=local"
+            }
+        },
+        {
             "name": "Launch file",
             "type": "go",
             "request": "launch",
