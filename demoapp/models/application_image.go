@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"errors"
 
 	"github.com/brunojet/go-infra-backend/debugassert"
 	"github.com/brunojet/go-infra-backend/pkg/ports/repositories"
@@ -30,6 +31,9 @@ type ApplicationImage struct {
 func (ApplicationImage) TableName() string { return tableApplicationImage }
 
 func (a ApplicationImage) BeforeCreate(tx *gorm.DB) (err error) {
+	if !a.ImageType.Valid {
+		return errors.New("image_type is required")
+	}
 	return repositories.AddOnConflictDoNothing(tx,
 		ColApplicationID,
 		ColFileHash,

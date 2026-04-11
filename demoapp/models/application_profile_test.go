@@ -69,6 +69,7 @@ func TestApplicationProfileScreenshot_BeforeCreate_ResolvesNestedImage(t *testin
 		ApplicationImage: &ApplicationImage{
 			ApplicationId: app.ApplicationId,
 			FileName:      sql.NullString{String: "screen.png", Valid: true},
+			FileSize:      sql.NullInt64{Int64: 1024, Valid: true},
 			ContentType:   sql.NullString{String: "image/png", Valid: true},
 			FileHash:      hash32(20),
 			ImageType:     sql.NullInt16{Int16: 2, Valid: true},

@@ -163,6 +163,7 @@ func newApplicationImage(applicationID int64, imageType int16, hashByte byte) Ap
 	return ApplicationImage{
 		ApplicationId: applicationID,
 		FileName:      sql.NullString{String: "icon.png", Valid: true},
+		FileSize:      sql.NullInt64{Int64: 1024, Valid: true},
 		ContentType:   sql.NullString{String: "image/png", Valid: true},
 		FileHash:      hash32(hashByte),
 		ImageType:     sql.NullInt16{Int16: imageType, Valid: true},
@@ -214,6 +215,7 @@ func createApplicationProfileWithNestedImage(t *testing.T, gdb *gorm.DB, applica
 			ApplicationImage: &ApplicationImage{
 				ApplicationId: applicationID,
 				FileName:      sql.NullString{String: "icon.png", Valid: true},
+				FileSize:      sql.NullInt64{Int64: 1024, Valid: true},
 				ContentType:   sql.NullString{String: "image/png", Valid: true},
 				FileHash:      hash32(imageHashByte),
 				ImageType:     sql.NullInt16{Int16: 1, Valid: true},

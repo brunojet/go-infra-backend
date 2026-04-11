@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"testing"
 
+	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
 	"github.com/brunojet/go-infra-backend/pkg/testutil/dbtest"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -32,7 +33,11 @@ func TestApplicationCreate_UpsertSameNameSameCustomer(t *testing.T) {
 	require.Equal(t, "cust-1", got.CustomerId.String)
 }
 
-func TestApplicationCreate_RejectsSameNameDifferentCustomer(t *testing.T) {
+// TestApplicationCreate_ConflictSameNameDifferentCustomer_IsIgnored verifies the model-level
+// behavior: BeforeCreate uses INSERT OR IGNORE, so a name collision with a different customer
+// results in a silent no-op at the GORM level (err=nil, struct not populated).
+// Conflict rejection is enforced at the service layer via ErrConflictValidationFailed.
+func TestApplicationCreate_ConflictSameNameDifferentCustomer_IsIgnored(t *testing.T) {
 	gdb := dbtest.OpenMemoryDB(t, &Application{})
 
 	_ = createApplication(t, gdb, "app-conflict", "cust-1")
@@ -43,7 +48,12 @@ func TestApplicationCreate_RejectsSameNameDifferentCustomer(t *testing.T) {
 	err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
 		return tx.Create(&second).Error, nil
 	})
-	require.ErrorIs(t, err, gorm.ErrCheckConstraintViolated)
+	require.NoError(t, err)
+	require.Zero(t, second.ApplicationId) // insert silently ignored; struct not populated
+
+	var found Application
+	require.NoError(t, gdb.Where("name = ?", "app-conflict").First(&found).Error)
+	require.Equal(t, "cust-1", found.CustomerId.String) // original record preserved
 }
 
 func TestApplicationUpdate_RejectsNameCollisionWithOtherCustomer(t *testing.T) {
@@ -56,7 +66,7 @@ func TestApplicationUpdate_RejectsNameCollisionWithOtherCustomer(t *testing.T) {
 	err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
 		return tx.Save(&app1).Error, nil
 	})
-	require.ErrorIs(t, err, gorm.ErrCheckConstraintViolated)
+	require.ErrorIs(t, portsrepos.MapDbError(err), portsrepos.ErrConstraintViolation)
 }
 
 func TestApplicationConfiguration_PackageCanRepeatInsideSameApp(t *testing.T) {
@@ -73,7 +83,11 @@ func TestApplicationConfiguration_PackageCanRepeatInsideSameApp(t *testing.T) {
 	require.EqualValues(t, 2, count)
 }
 
-func TestApplicationConfiguration_RejectsSamePackageAcrossDifferentApps(t *testing.T) {
+// TestApplicationConfiguration_ConflictSamePackageSameCfgTerm_IsIgnored verifies the
+// model-level behavior: BeforeCreate uses INSERT OR IGNORE, so a (terminal_model_configuration_id,
+// package_name) collision across different apps results in a silent no-op at the GORM level.
+// Conflict rejection is enforced at the service layer via ErrConflictValidationFailed.
+func TestApplicationConfiguration_ConflictSamePackageSameCfgTerm_IsIgnored(t *testing.T) {
 	gdb := dbtest.OpenMemoryDB(t, &TerminalModel{}, &TerminalModelConfiguration{}, &Application{}, &ApplicationConfiguration{})
 
 	cfgTerm := createTerminalModelConfigurationOneShot(t, gdb, "tm-appcfg-diff", 1)
@@ -86,7 +100,11 @@ func TestApplicationConfiguration_RejectsSamePackageAcrossDifferentApps(t *testi
 	err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
 		return tx.Create(&ac2).Error, nil
 	})
-	require.ErrorIs(t, err, gorm.ErrCheckConstraintViolated)
+	require.NoError(t, err)
+
+	var count int64
+	require.NoError(t, gdb.Model(&ApplicationConfiguration{}).Where("terminal_model_configuration_id = ? AND package_name = ?", cfgTerm.TerminalModelConfigurationId, "pkg.global").Count(&count).Error)
+	require.EqualValues(t, 1, count) // original record preserved
 }
 
 func TestApplicationUpdate_SuccessSameOwnerNoNameCollision(t *testing.T) {
@@ -107,22 +125,21 @@ func TestApplicationUpdate_SuccessSameOwnerNoNameCollision(t *testing.T) {
 func TestApplicationConfigurationUpdate_SuccessAndErrorBranches(t *testing.T) {
 	gdb := dbtest.OpenMemoryDB(t, &TerminalModel{}, &TerminalModelConfiguration{}, &Application{}, &ApplicationConfiguration{})
 
-	cfgTerm1 := createTerminalModelConfigurationOneShot(t, gdb, "tm-appcfg-update", 1)
-	cfgTerm2 := createTerminalModelConfigurationOneShot(t, gdb, "tm-appcfg-update", 2)
+	cfgTerm := createTerminalModelConfigurationOneShot(t, gdb, "tm-appcfg-update", 1)
 
-	ac1 := createApplicationConfigurationOneShot(t, gdb, "app-upd-cfg-a", "cust-a", cfgTerm1.TerminalModelConfigurationId, "pkg-a")
-	ac2 := createApplicationConfigurationOneShot(t, gdb, "app-upd-cfg-b", "cust-b", cfgTerm2.TerminalModelConfigurationId, "pkg-b")
+	ac1 := createApplicationConfigurationOneShot(t, gdb, "app-upd-cfg-a", "cust-a", cfgTerm.TerminalModelConfigurationId, "pkg-a")
+	ac2 := createApplicationConfigurationOneShot(t, gdb, "app-upd-cfg-b", "cust-b", cfgTerm.TerminalModelConfigurationId, "pkg-b")
 
-	// Success branch of BeforeUpdate
+	// Success branch: rename to a non-conflicting package name
 	ac1.PackageName = sql.NullString{String: "pkg-a-2", Valid: true}
 	require.NoError(t, RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
 		return tx.Save(&ac1).Error, nil
 	}))
 
-	// Error branch: package collides with another app
+	// Error branch: rename ac2 to a package that already exists for the same cfgTerm
 	ac2.PackageName = sql.NullString{String: "pkg-a-2", Valid: true}
 	err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
 		return tx.Save(&ac2).Error, nil
 	})
-	require.ErrorIs(t, err, gorm.ErrCheckConstraintViolated)
+	require.ErrorIs(t, portsrepos.MapDbError(err), portsrepos.ErrConstraintViolation)
 }

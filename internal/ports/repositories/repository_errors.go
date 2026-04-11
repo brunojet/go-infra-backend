@@ -3,10 +3,16 @@ package repositories
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 
 	"gorm.io/gorm"
 )
+
+// ErrConstraintViolation is the sentinel for any database constraint violation
+// (UNIQUE, CHECK, FK). Use errors.Is to detect it; the original database error
+// is also preserved in the chain via fmt.Errorf with multiple %%w.
+var ErrConstraintViolation = errors.New("constraint violation")
 
 var (
 	ErrDBUnavailable = sql.ErrConnDone
@@ -33,6 +39,11 @@ func MapDbError(err error) error {
 		return ErrNotFound
 	} else if errors.Is(err, sql.ErrConnDone) || strings.Contains(err.Error(), "database is closed") {
 		return ErrDBUnavailable
+	} else if errors.Is(err, gorm.ErrDuplicatedKey) ||
+		strings.Contains(err.Error(), "UNIQUE constraint failed") ||
+		strings.Contains(err.Error(), "CHECK constraint failed") ||
+		strings.Contains(err.Error(), "FOREIGN KEY constraint failed") {
+		return fmt.Errorf("%w: %w", ErrConstraintViolation, err)
 	}
 	return err
 }

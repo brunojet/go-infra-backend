@@ -28,6 +28,7 @@ var (
 	ErrRequiresTransaction        = repositories.ErrRequiresTransaction
 	ErrLockValidationWhere        = repositories.ErrLockValidationWhere
 	ErrConflictValidationRequired = repositories.ErrConflictValidationRequired
+	ErrConstraintViolation        = repositories.ErrConstraintViolation
 )
 
 // ---- Helpers (delegating to internal) ----

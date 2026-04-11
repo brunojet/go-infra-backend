@@ -126,11 +126,11 @@ func TestNullIntBoolFloat(t *testing.T) {
 	a := assert.New(t)
 	n := ToNullInt64(0)
 	a.False(n.Valid)
-	a.Equal(0, FromNullInt64(n))
+	a.Equal(int64(0), FromNullInt64(n))
 
 	n2 := ToNullInt64(5)
 	a.True(n2.Valid)
-	a.Equal(5, FromNullInt64(n2))
+	a.Equal(int64(5), FromNullInt64(n2))
 
 	nb := ToNullBool(true)
 	a.True(nb.Valid)
