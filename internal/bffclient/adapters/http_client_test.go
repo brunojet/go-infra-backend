@@ -28,7 +28,7 @@ func newAdapter(t *testing.T, serverURL string, opts ...func(*bffcts.BffClientCo
 	for _, o := range opts {
 		o(&cfg)
 	}
-	a, err := NewNetHttpAdapter(cfg)
+	a, err := NewNetHttpAdapter(cfg, nil) // nil → http.DefaultTransport
 	require.NoError(t, err)
 	return a
 }
@@ -48,7 +48,7 @@ func jsonHandler(t *testing.T, status int, body any) http.HandlerFunc {
 // ---------------------------------------------------------------------------
 
 func TestNewNetHttpAdapter_EmptyBaseURL(t *testing.T) {
-	_, err := NewNetHttpAdapter(bffcts.BffClientConfig{})
+	_, err := NewNetHttpAdapter(bffcts.BffClientConfig{}, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "BaseURL")
 }
@@ -125,33 +125,17 @@ func TestGet_NotFound(t *testing.T) {
 // List
 // ---------------------------------------------------------------------------
 
-func TestList_WithTotalCountHeader(t *testing.T) {
+func TestList_Success(t *testing.T) {
 	items := []testPayload{{ID: "1"}, {ID: "2"}}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set(headerTotalCount, "50")
-		jsonHandler(t, http.StatusOK, items)(w, r)
-	}))
+	srv := httptest.NewServer(jsonHandler(t, http.StatusOK, items))
 	t.Cleanup(srv.Close)
 
 	a := newAdapter(t, srv.URL)
 	var got []testPayload
-	total, err := a.List(context.Background(), "/items", nil, &got)
+	err := a.List(context.Background(), "/items", nil, &got)
 
 	require.NoError(t, err)
-	assert.Equal(t, int64(50), total)
 	assert.Len(t, got, 2)
-}
-
-func TestList_NoTotalHeader_ReturnsZero(t *testing.T) {
-	srv := httptest.NewServer(jsonHandler(t, http.StatusOK, []testPayload{}))
-	t.Cleanup(srv.Close)
-
-	a := newAdapter(t, srv.URL)
-	var got []testPayload
-	total, err := a.List(context.Background(), "/items", nil, &got)
-
-	require.NoError(t, err)
-	assert.Equal(t, int64(0), total)
 }
 
 // ---------------------------------------------------------------------------
@@ -237,57 +221,32 @@ func TestHealthChecker_CircuitOpensAfterMaxFailures(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Middleware
+// Custom RoundTripper — verifies transport injection
 // ---------------------------------------------------------------------------
 
-type recordingMiddleware struct {
-	requests  []bffcts.BffRequestInfo
-	responses []bffcts.BffResponseInfo
+type headerCapturingTransport struct {
+	base    http.RoundTripper
+	headers http.Header
 }
 
-func (m *recordingMiddleware) OnRequest(ctx context.Context, req bffcts.BffRequestInfo) context.Context {
-	m.requests = append(m.requests, req)
-	return ctx
+func (t *headerCapturingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	t.headers = req.Header.Clone()
+	return t.base.RoundTrip(req)
 }
 
-func (m *recordingMiddleware) OnResponse(_ context.Context, _ bffcts.BffRequestInfo, resp bffcts.BffResponseInfo) {
-	m.responses = append(m.responses, resp)
-}
-
-func TestMiddleware_CalledOnSuccess(t *testing.T) {
+func TestCustomTransport_IsUsed(t *testing.T) {
 	srv := httptest.NewServer(jsonHandler(t, http.StatusOK, testPayload{ID: "1"}))
 	t.Cleanup(srv.Close)
 
-	rec := &recordingMiddleware{}
-	a, err := NewNetHttpAdapter(bffcts.BffClientConfig{BaseURL: srv.URL}, rec)
+	cap := &headerCapturingTransport{base: http.DefaultTransport}
+	a, err := NewNetHttpAdapter(bffcts.BffClientConfig{BaseURL: srv.URL}, cap)
 	require.NoError(t, err)
 
 	var got testPayload
 	_ = a.Get(context.Background(), "/items/1", nil, &got)
 
-	require.Len(t, rec.requests, 1)
-	assert.Equal(t, http.MethodGet, rec.requests[0].Method)
-	require.Len(t, rec.responses, 1)
-	assert.Equal(t, http.StatusOK, rec.responses[0].StatusCode)
-	assert.NoError(t, rec.responses[0].Err)
-}
-
-func TestMiddleware_CalledOnError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "unprocessable", http.StatusUnprocessableEntity)
-	}))
-	t.Cleanup(srv.Close)
-
-	rec := &recordingMiddleware{}
-	a, err := NewNetHttpAdapter(bffcts.BffClientConfig{BaseURL: srv.URL}, rec)
-	require.NoError(t, err)
-
-	_ = a.Post(context.Background(), "/items", testPayload{}, nil)
-
-	require.Len(t, rec.responses, 1)
-	assert.Equal(t, http.StatusUnprocessableEntity, rec.responses[0].StatusCode)
-	assert.Error(t, rec.responses[0].Err)
-	assert.True(t, bffcts.IsUnprocessable(rec.responses[0].Err))
+	// Transport was invoked — it captured at least the standard headers.
+	assert.NotNil(t, cap.headers)
 }
 
 // ---------------------------------------------------------------------------

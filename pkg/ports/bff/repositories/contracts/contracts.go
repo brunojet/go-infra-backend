@@ -44,7 +44,9 @@ type BffListParams struct {
 type BffRepository[CE, RE, UE BffEntity] interface {
 	Create(ctx context.Context, upstream CE, downstream *RE) error
 	GetByID(ctx context.Context, id string, downstream *RE) error
-	List(ctx context.Context, params BffListParams, downstream *[]RE) (int64, error)
+	// List populates downstream with the upstream page results. The total item count
+	// is extracted by the mapper via ExtractUpstreamTotal, not returned here.
+	List(ctx context.Context, params BffListParams, downstream *[]RE) error
 	Update(ctx context.Context, id string, upstream UE, downstream *RE) error
 	Delete(ctx context.Context, id string) error
 }
@@ -54,5 +56,7 @@ type BffRepository[CE, RE, UE BffEntity] interface {
 type BffNestedRepository[CE, RE, UE BffEntity] interface {
 	BffRepository[CE, RE, UE]
 	CreateNested(ctx context.Context, parentID string, upstream CE, downstream *RE) error
-	ListNested(ctx context.Context, parentID string, params BffListParams, downstream *[]RE) (int64, error)
+	// ListNested populates downstream with the upstream page results scoped to parentID.
+	// The total item count is extracted by the mapper via ExtractUpstreamTotal.
+	ListNested(ctx context.Context, parentID string, params BffListParams, downstream *[]RE) error
 }

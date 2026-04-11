@@ -118,9 +118,11 @@ type BffClient interface {
 	// deserialises the response into downstream.
 	Get(ctx context.Context, path string, queryParams map[string]string, downstream any) error
 
-	// List sends GET to path with pagination query parameters.
-	// Returns the total number of matching upstream resources alongside the page.
-	List(ctx context.Context, path string, queryParams map[string]string, downstream any) (total int64, err error)
+	// List sends GET to path with pagination query parameters and deserialises
+	// the response body into downstream. Total item count, when available, is
+	// part of the response body — extracting it is the responsibility of the
+	// BffRepository adapter, not the transport client.
+	List(ctx context.Context, path string, queryParams map[string]string, downstream any) error
 
 	// Patch serialises upstream and sends it as PATCH to path/id.
 	// The updated upstream resource is deserialised into downstream.

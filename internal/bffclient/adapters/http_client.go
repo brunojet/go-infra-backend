@@ -14,7 +14,6 @@ import (
 
 	backoff "github.com/cenkalti/backoff/v4"
 	"github.com/sony/gobreaker"
-	"go.opentelemetry.io/otel/propagation"
 
 	bffcts "github.com/brunojet/go-infra-backend/pkg/bffclient/contracts"
 )
@@ -29,20 +28,28 @@ const (
 // netHttpAdapter implements BffClient and BffHealthChecker using net/http,
 // cenkalti/backoff for exponential-backoff retry, and sony/gobreaker for
 // circuit-breaking.
+//
+// OTel tracing is injected via http.RoundTripper (e.g. otelhttp.NewTransport),
+// following the same pattern used by the GORM adapter (gorm.Plugin) and
+// the Gin adapter (gin.HandlerFunc).
 type netHttpAdapter struct {
-	client      *http.Client
-	config      bffcts.BffClientConfig
-	middlewares []bffcts.BffClientMiddleware
-	breaker     *gobreaker.CircuitBreaker // nil when circuit breaker is disabled
-	propagator  propagation.TextMapPropagator
+	client  *http.Client
+	config  bffcts.BffClientConfig
+	breaker *gobreaker.CircuitBreaker // nil when circuit breaker is disabled
 }
 
 // NewNetHttpAdapter creates a new adapter that implements BffClient and BffHealthChecker.
-// The caller can supply zero or more middlewares (e.g. OtelMiddleware) that will be
-// called in order for every request.
-func NewNetHttpAdapter(config bffcts.BffClientConfig, middlewares ...bffcts.BffClientMiddleware) (*netHttpAdapter, error) {
+//
+// transport is the http.RoundTripper used for every outgoing request.
+// Pass otelhttp.NewTransport(http.DefaultTransport) to enable OTel tracing,
+// or nil to use http.DefaultTransport as-is.
+func NewNetHttpAdapter(config bffcts.BffClientConfig, transport http.RoundTripper) (*netHttpAdapter, error) {
 	if config.BaseURL == "" {
 		return nil, fmt.Errorf("bffclient: BaseURL is required")
+	}
+
+	if transport == nil {
+		transport = http.DefaultTransport
 	}
 
 	timeout := config.Timeout
@@ -51,10 +58,8 @@ func NewNetHttpAdapter(config bffcts.BffClientConfig, middlewares ...bffcts.BffC
 	}
 
 	adapter := &netHttpAdapter{
-		client:      &http.Client{Timeout: timeout},
-		config:      config,
-		middlewares: middlewares,
-		propagator:  propagation.TraceContext{},
+		client: &http.Client{Timeout: timeout, Transport: transport},
+		config: config,
 	}
 
 	if config.CircuitBreaker.Enabled {
@@ -107,10 +112,8 @@ func (a *netHttpAdapter) Get(ctx context.Context, path string, queryParams map[s
 	return a.do(ctx, http.MethodGet, path, "", queryParams, nil, downstream, nil)
 }
 
-func (a *netHttpAdapter) List(ctx context.Context, path string, queryParams map[string]string, downstream any) (int64, error) {
-	var total int64
-	err := a.do(ctx, http.MethodGet, path, "", queryParams, nil, downstream, &total)
-	return total, err
+func (a *netHttpAdapter) List(ctx context.Context, path string, queryParams map[string]string, downstream any) error {
+	return a.do(ctx, http.MethodGet, path, "", queryParams, nil, downstream, nil)
 }
 
 func (a *netHttpAdapter) Patch(ctx context.Context, path, id string, upstream, downstream any) error {
@@ -132,25 +135,18 @@ func (a *netHttpAdapter) do(
 	upstream, downstream any,
 	totalOut *int64,
 ) error {
-	reqInfo := bffcts.BffRequestInfo{Method: method, Path: path}
-
-	// Notify middleware chain — OnRequest may add trace spans to the context.
-	enriched := ctx
-	for _, m := range a.middlewares {
-		enriched = m.OnRequest(enriched, reqInfo)
-	}
-
 	// execute is the atomic unit of work, re-invoked on each retry attempt.
 	// It rebuilds the request body reader each time so retries see a fresh stream.
 	// It returns raw typed errors — the retry wrapper (run) decides what is permanent.
-	var statusCode int
+	// OTel tracing (spans + traceparent header injection) is handled by the
+	// http.RoundTripper supplied at construction (e.g. otelhttp.NewTransport).
 	execute := func() error {
 		body, err := marshalBody(upstream)
 		if err != nil {
 			return err
 		}
 
-		httpReq, err := http.NewRequestWithContext(enriched, method, a.buildURL(path, id), body)
+		httpReq, err := http.NewRequestWithContext(ctx, method, a.buildURL(path, id), body)
 		if err != nil {
 			return err
 		}
@@ -162,9 +158,6 @@ func (a *netHttpAdapter) do(
 		if upstream != nil {
 			httpReq.Header.Set(headerContentType, contentTypeJSON)
 		}
-
-		// Inject W3C traceparent/tracestate from the enriched context into HTTP headers.
-		a.propagator.Inject(enriched, propagation.HeaderCarrier(httpReq.Header))
 
 		// Apply caller-supplied query parameters.
 		if len(queryParams) > 0 {
@@ -180,8 +173,6 @@ func (a *netHttpAdapter) do(
 			return err // transport error — retriable
 		}
 		defer resp.Body.Close()
-
-		statusCode = resp.StatusCode
 
 		if resp.StatusCode >= 400 {
 			msg, _ := io.ReadAll(resp.Body)
@@ -208,15 +199,7 @@ func (a *netHttpAdapter) do(
 	}
 
 	// Wrap execute with circuit breaker and/or retry.
-	execErr := a.run(execute)
-
-	// Notify middleware chain after the call completes (or fails).
-	respInfo := bffcts.BffResponseInfo{StatusCode: statusCode, Err: execErr}
-	for _, m := range a.middlewares {
-		m.OnResponse(enriched, reqInfo, respInfo)
-	}
-
-	return execErr
+	return a.run(execute)
 }
 
 // run wraps execute with the configured retry and circuit-breaker policies.

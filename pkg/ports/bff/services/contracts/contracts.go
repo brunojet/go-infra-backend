@@ -16,6 +16,11 @@ type BffServiceMapper[C, R, U, CE, RE, UE any] interface {
 	// by the upstream API (e.g., numeric string → UUID, or direct passthrough).
 	GetUpstreamID(id string) (string, error)
 	ApplyQueryScopes(queryScopes map[string]any) (map[string]any, error)
+	// ExtractUpstreamTotal reads the total item count from a slice of upstream
+	// read DTOs. Only the mapper knows the RE shape and where the count lives
+	// (e.g. a metadata field in the first element), so extraction is delegated here
+	// rather than handled by the repository or transport layers.
+	ExtractUpstreamTotal(upstream []RE) int64
 }
 
 // BffNestedServiceMapper extends BffServiceMapper with parent-awareness,
