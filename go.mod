@@ -22,13 +22,13 @@ require (
 	modernc.org/sqlite v1.44.1
 )
 
-require github.com/google/go-cmp v0.7.0
-
 require (
-	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/sony/gobreaker v1.0.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0 // indirect
+	github.com/google/go-cmp v0.7.0
+	github.com/sony/gobreaker v1.0.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
 )
+
+require github.com/felixge/httpsnoop v1.0.4 // indirect
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -39,7 +39,7 @@ require (
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.14.2 // indirect
 	github.com/bytedance/sonic/loader v0.4.0 // indirect
-	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
+	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect

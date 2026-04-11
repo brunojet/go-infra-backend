@@ -2,25 +2,34 @@
 
 ## Architecture
 
-This project follows the **Ports & Adapters (Hexagonal)** pattern.
+This project follows the **Ports & Adapters (Hexagonal)** pattern with three distinct layers:
 
-- `pkg/ports/` — public port contracts (interfaces) consumed by the application layer
-- `pkg/` (non-ports) — public facades that re-export internal constructors and type aliases
-- `internal/` — adapter implementations (net/http, GORM, OTel, etc.)
-- `demoapp/` — application layer: handlers, services, repositories, models, DTOs
+| Layer | Location | Responsibility |
+|---|---|---|
+| **infra** | `internal/` | Adapter implementations (net/http, GORM, OTel, etc.) — never imported directly by app code |
+| **ports** | `pkg/ports/`, `pkg/` | Public port contracts (interfaces) and public facades re-exporting internal constructors |
+| **app** | `demoapp/`, `demobff/`, … | Application layer: handlers, services, repositories, models, DTOs — consumes only `pkg/` contracts |
 
-External dependencies are **never imported directly** from `demoapp/`. Application code depends only on `pkg/` contracts.
+External dependencies are **never imported directly** from application packages (`demoapp/`, `demobff/`, etc.). Application code depends only on `pkg/` contracts.
 
 ## Context Documents
 
 Detailed architectural decisions, patterns, and current implementation state are maintained in `context-docs/`.
+Context documents are organized to mirror the three-layer architecture:
+
+| Category | Folder | Contents |
+|---|---|---|
+| **infra** | `context-docs/feature/infra/` | Infrastructure adapters: transport, database, observability |
+| **ports** | `context-docs/feature/ports/` | Reusable port contracts and public facades |
+| **app** | `context-docs/feature/app/` | Application-level features consuming infra and ports |
+
 When working in a specific subsystem, **read the corresponding context document before making changes**:
 
 | Area | Context file |
 |---|---|
-| BFF / upstream HTTP layer | [`context-docs/feature/infra/bff.instructions.md`](../context-docs/feature/infra/bff.instructions.md) |
-| Observability (OTel, metrics, logging) | [`context-docs/observability-contracts.md`](../context-docs/observability-contracts.md) |
-| Coverage directives | [`context-docs/diretivas-cobertura-go.md`](../context-docs/diretivas-cobertura-go.md) |
+| BFF / upstream HTTP layer (infra) | [context-docs/feature/infra/bff.instructions.md](../context-docs/feature/infra/bff.instructions.md) |
+| Observability (OTel, metrics, logging) | [context-docs/observability-contracts.md](../context-docs/observability-contracts.md) |
+| Coverage directives | [context-docs/diretivas-cobertura-go.md](../context-docs/diretivas-cobertura-go.md) |
 
 ## Observability plugin pattern
 
