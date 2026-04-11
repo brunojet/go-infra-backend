@@ -3,14 +3,17 @@ package bffclient
 import (
 	"net/http"
 
+	internalbff "github.com/brunojet/go-infra-backend/internal/infra/bffclient"
 	internaladapters "github.com/brunojet/go-infra-backend/internal/infra/bffclient/adapters"
 	"github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
+	"github.com/gin-gonic/gin"
 )
 
 // ---- Contracts ----
 
 type (
 	BffClientConfig         = contracts.BffClientConfig
+	BffMiddlewareConfig     = contracts.BffMiddlewareConfig
 	BffRetryConfig          = contracts.BffRetryConfig
 	BffCircuitBreakerConfig = contracts.BffCircuitBreakerConfig
 	BffCircuitState         = contracts.BffCircuitState
@@ -50,3 +53,19 @@ func NewNetHttpAdapter(config contracts.BffClientConfig, transport http.RoundTri
 	a, err := internaladapters.NewNetHttpAdapter(config, transport)
 	return a, a, err
 }
+
+// BffHeadersMiddleware returns a Gin middleware for bidirectional header propagation.
+// Pass cfg.HeadersProxy from the BffClientConfig used to create the adapter.
+func BffHeadersMiddleware(cfg contracts.BffMiddlewareConfig) gin.HandlerFunc {
+	return internalbff.BffHeadersMiddleware(cfg)
+}
+
+// ---- Context helpers ----
+
+var (
+	WithRequestHeaders     = internalbff.WithRequestHeaders
+	RequestHeadersFromCtx  = internalbff.RequestHeadersFromCtx
+	InitResponseCapture    = internalbff.InitResponseCapture
+	CaptureResponseHeader  = internalbff.CaptureResponseHeader
+	ResponseHeadersFromCtx = internalbff.ResponseHeadersFromCtx
+)

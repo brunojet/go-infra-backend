@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/brunojet/go-infra-backend/internal/config"
+	httpserver "github.com/brunojet/go-infra-backend/internal/infra/http_server"
 	middlewares "github.com/brunojet/go-infra-backend/internal/infra/observability/http_middlewares"
 	bootcontracts "github.com/brunojet/go-infra-backend/pkg/bootstrap/contracts"
 	"github.com/gin-gonic/gin"
@@ -24,12 +25,14 @@ type HttpServer struct {
 	sm     bootcontracts.ShutdownManager
 }
 
-func NewHttpServerWithObservability(sm bootcontracts.ShutdownManager) *HttpServer {
+func NewHttpServerWithObservability(sm bootcontracts.ShutdownManager, middlewareFuncs ...gin.HandlerFunc) *HttpServer {
 	router := gin.New()
 	router.Use(gin.Recovery())
-	router.Use(middlewares.CORSMiddleware())
+	router.Use(httpserver.CORSMiddleware())
+	router.Use(httpserver.ProblemDetailsMiddleware())
 	router.Use(middlewares.OtelGinMiddleware())
 	router.Use(middlewares.OTLPErrorLogMiddleware(middlewares.WithMinStatus(http.StatusBadRequest)))
+	router.Use(middlewareFuncs...)
 	addr := config.GetEnv(httpAddrEnv, defaultHTTPAddr)
 	srv := http.Server{
 		Addr:    addr,

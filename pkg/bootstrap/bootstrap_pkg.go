@@ -8,6 +8,7 @@ import (
 	internalbootstrap "github.com/brunojet/go-infra-backend/internal/bootstrap"
 	bootcontracts "github.com/brunojet/go-infra-backend/pkg/bootstrap/contracts"
 	db "github.com/brunojet/go-infra-backend/pkg/infra/database"
+	"github.com/gin-gonic/gin"
 )
 
 // ---- Shutdown ----
@@ -38,8 +39,8 @@ func SetShutdownLogger(sm ShutdownManager, logger *slog.Logger) {
 
 type HttpServer = internalbootstrap.HttpServer
 
-func NewHttpServerWithObservability(sm ShutdownManager) *HttpServer {
-	return internalbootstrap.NewHttpServerWithObservability(sm)
+func NewHttpServerWithObservability(sm ShutdownManager, middlewareFuncs ...gin.HandlerFunc) *HttpServer {
+	return internalbootstrap.NewHttpServerWithObservability(sm, middlewareFuncs...)
 }
 
 // ---- Database ----

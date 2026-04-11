@@ -5,9 +5,9 @@ import (
 	"time"
 
 	demobff "github.com/brunojet/go-infra-backend/demobff/bootstrap"
-	"github.com/brunojet/go-infra-backend/pkg/infra/bffclient"
 	"github.com/brunojet/go-infra-backend/pkg/bootstrap"
 	"github.com/brunojet/go-infra-backend/pkg/config"
+	"github.com/brunojet/go-infra-backend/pkg/infra/bffclient"
 	"github.com/brunojet/go-infra-backend/pkg/infra/observability/httptransports"
 )
 
@@ -25,7 +25,9 @@ func main() {
 		log.Fatalf("failed to create BFF client: %v", err)
 	}
 
-	httpServer := bootstrap.NewHttpServerWithObservability(sm)
+	httpServer := bootstrap.NewHttpServerWithObservability(sm,
+		bffclient.BffHeadersMiddleware(bffCfg.HeadersProxy),
+	)
 
 	api := httpServer.Router.Group("/")
 

@@ -9,12 +9,21 @@ import (
 // Configuration
 // ---------------------------------------------------------------------------
 
+// BffMiddlewareConfig configures bidirectional header propagation for a BFF client.
+// It is used by both the BFF adapter (to filter headers at transport time) and
+// by BffHeadersMiddleware (to filter headers at the Gin layer).
+type BffMiddlewareConfig struct {
+	RequestHeaders  []string // incoming header keys to forward from ctx → upstream (e.g. "Authorization")
+	ResponseHeaders []string // upstream response header keys to capture into ctx (e.g. "X-Request-Id")
+}
+
 // BffClientConfig holds all configuration for a BFF client instance.
 // It is the bffclient counterpart of database/contracts.DatabaseConfig.
 type BffClientConfig struct {
 	BaseURL        string
 	Timeout        time.Duration
-	Headers        map[string]string // static headers applied to every request (e.g. Authorization, Content-Type)
+	Headers        map[string]string   // static headers applied to every request (e.g. Content-Type, API keys)
+	HeadersProxy   BffMiddlewareConfig // dynamic per-request header propagation (request ctx → upstream, upstream → response ctx)
 	Retry          BffRetryConfig
 	CircuitBreaker BffCircuitBreakerConfig
 }

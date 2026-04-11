@@ -15,6 +15,7 @@ import (
 	backoff "github.com/cenkalti/backoff/v4"
 	"github.com/sony/gobreaker"
 
+	bffctx "github.com/brunojet/go-infra-backend/internal/infra/bffclient"
 	bffcts "github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
 )
 
@@ -151,10 +152,23 @@ func (a *netHttpAdapter) do(
 			return err
 		}
 
-		// Static headers from config (e.g. Authorization, Accept).
+		// Static headers from config (e.g. Content-Type, API keys).
 		for k, v := range a.config.Headers {
 			httpReq.Header.Set(k, v)
 		}
+
+		// Dynamic headers forwarded from the incoming request context
+		// (e.g. Authorization token). Only keys listed in config.HeadersProxy.RequestHeaders
+		// are forwarded; static config.Headers take precedence.
+		if len(a.config.HeadersProxy.RequestHeaders) > 0 {
+			ctxHeaders := bffctx.RequestHeadersFromCtx(ctx)
+			for _, k := range a.config.HeadersProxy.RequestHeaders {
+				if v, ok := ctxHeaders[k]; ok {
+					httpReq.Header.Set(k, v)
+				}
+			}
+		}
+
 		if upstream != nil {
 			httpReq.Header.Set(headerContentType, contentTypeJSON)
 		}
@@ -186,6 +200,14 @@ func (a *netHttpAdapter) do(
 		if totalOut != nil {
 			if v, parseErr := strconv.ParseInt(resp.Header.Get(headerTotalCount), 10, 64); parseErr == nil {
 				*totalOut = v
+			}
+		}
+
+		// Capture configured upstream response headers into the context bag
+		// so the Gin middleware can write them to the outgoing response.
+		for _, k := range a.config.HeadersProxy.ResponseHeaders {
+			if v := resp.Header.Get(k); v != "" {
+				bffctx.CaptureResponseHeader(ctx, k, v)
 			}
 		}
 
