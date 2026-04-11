@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brunojet/go-infra-backend/pkg/database"
-	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/infra/database"
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
 	"gorm.io/gorm"
 )
 

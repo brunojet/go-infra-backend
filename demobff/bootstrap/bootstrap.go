@@ -3,7 +3,7 @@ package demobff
 import (
 	hnd "github.com/brunojet/go-infra-backend/demobff/handlers"
 	svc "github.com/brunojet/go-infra-backend/demobff/services"
-	"github.com/brunojet/go-infra-backend/pkg/bffclient"
+	"github.com/brunojet/go-infra-backend/pkg/infra/bffclient"
 	bffrepo "github.com/brunojet/go-infra-backend/pkg/ports/bff/repositories"
 	bffsvc "github.com/brunojet/go-infra-backend/pkg/ports/bff/services"
 	"github.com/gin-gonic/gin"

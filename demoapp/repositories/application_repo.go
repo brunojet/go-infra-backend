@@ -2,7 +2,7 @@ package repositories
 
 import (
 	"github.com/brunojet/go-infra-backend/demoapp/models"
-	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/repositories"
 	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"gorm.io/gorm"

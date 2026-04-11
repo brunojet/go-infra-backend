@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/brunojet/go-infra-backend/internal/config"
-	middlewares "github.com/brunojet/go-infra-backend/internal/observability/http_middlewares"
+	middlewares "github.com/brunojet/go-infra-backend/internal/infra/observability/http_middlewares"
 	bootcontracts "github.com/brunojet/go-infra-backend/pkg/bootstrap/contracts"
 	"github.com/gin-gonic/gin"
 )

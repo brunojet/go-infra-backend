@@ -4,7 +4,7 @@ import (
 	hnd "github.com/brunojet/go-infra-backend/demoapp/handlers"
 	repo "github.com/brunojet/go-infra-backend/demoapp/repositories"
 	svc "github.com/brunojet/go-infra-backend/demoapp/services"
-	"github.com/brunojet/go-infra-backend/pkg/database"
+	"github.com/brunojet/go-infra-backend/pkg/infra/database"
 	"github.com/gin-gonic/gin"
 )
 

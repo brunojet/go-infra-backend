@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/brunojet/go-infra-backend/internal/ports/repositories"
-	"github.com/brunojet/go-infra-backend/pkg/database"
+	"github.com/brunojet/go-infra-backend/pkg/infra/database"
 	"github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"gorm.io/gorm"

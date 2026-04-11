@@ -1,7 +1,7 @@
 package bootstrap
 
 import (
-	"github.com/brunojet/go-infra-backend/internal/observability/adapters"
+	"github.com/brunojet/go-infra-backend/internal/infra/observability/adapters"
 	bootcontracts "github.com/brunojet/go-infra-backend/pkg/bootstrap/contracts"
 )
 

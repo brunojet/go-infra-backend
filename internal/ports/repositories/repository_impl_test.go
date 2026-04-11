@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	dbadapters "github.com/brunojet/go-infra-backend/internal/database/adapters"
-	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
+	dbadapters "github.com/brunojet/go-infra-backend/internal/infra/database/adapters"
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"github.com/stretchr/testify/assert"

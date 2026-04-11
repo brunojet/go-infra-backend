@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	dbadapters "github.com/brunojet/go-infra-backend/internal/database/adapters"
-	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
+	dbadapters "github.com/brunojet/go-infra-backend/internal/infra/database/adapters"
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
 	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

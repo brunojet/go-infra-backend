@@ -1,10 +1,10 @@
 package bootstrap
 
 import (
-	gormobs "github.com/brunojet/go-infra-backend/internal/observability/gorm_plugins"
+	gormobs "github.com/brunojet/go-infra-backend/internal/infra/observability/gorm_plugins"
 	bootcontracts "github.com/brunojet/go-infra-backend/pkg/bootstrap/contracts"
-	"github.com/brunojet/go-infra-backend/pkg/database"
-	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/infra/database"
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
 )
 
 func NewDatabaseWithObservability(sm bootcontracts.ShutdownManager) (dbcontracts.DatabaseAdapter, error) {

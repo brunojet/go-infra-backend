@@ -2,7 +2,7 @@ package repositories
 
 import (
 	"github.com/brunojet/go-infra-backend/internal/ports/bff/repositories"
-	bffcts "github.com/brunojet/go-infra-backend/pkg/bffclient/contracts"
+	bffcts "github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/bff/repositories/contracts"
 )
 

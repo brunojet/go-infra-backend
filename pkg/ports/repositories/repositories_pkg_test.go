@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/brunojet/go-infra-backend/pkg/database"
+	"github.com/brunojet/go-infra-backend/pkg/infra/database"
 	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

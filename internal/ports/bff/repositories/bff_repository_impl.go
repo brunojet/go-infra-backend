@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/brunojet/go-infra-backend/debugassert"
-	bffcts "github.com/brunojet/go-infra-backend/pkg/bffclient/contracts"
+	bffcts "github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
 	bffrpocts "github.com/brunojet/go-infra-backend/pkg/ports/bff/repositories/contracts"
 )
 

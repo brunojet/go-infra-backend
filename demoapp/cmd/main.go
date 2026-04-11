@@ -6,6 +6,7 @@ import (
 
 	demoapp "github.com/brunojet/go-infra-backend/demoapp/bootstrap"
 	"github.com/brunojet/go-infra-backend/demoapp/models"
+	demorepos "github.com/brunojet/go-infra-backend/demoapp/repositories"
 	"github.com/brunojet/go-infra-backend/pkg/bootstrap"
 )
 
@@ -26,6 +27,7 @@ func main() {
 
 	// AutoMigrate all domain models in dependency order (parents before children).
 	if err := gormDb.AutoMigrate(
+		&demorepos.HelloWorld{},
 		&models.FilterType{},
 		&models.Filter{},
 		&models.TerminalModel{},

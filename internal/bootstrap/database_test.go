@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

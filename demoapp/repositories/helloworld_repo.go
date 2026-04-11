@@ -5,7 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/brunojet/go-infra-backend/internal/ports/repositories"
-	dbcontracts "github.com/brunojet/go-infra-backend/pkg/database/contracts"
+	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 	"gorm.io/gorm"
 )

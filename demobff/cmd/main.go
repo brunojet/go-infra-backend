@@ -5,10 +5,10 @@ import (
 	"time"
 
 	demobff "github.com/brunojet/go-infra-backend/demobff/bootstrap"
-	"github.com/brunojet/go-infra-backend/pkg/bffclient"
+	"github.com/brunojet/go-infra-backend/pkg/infra/bffclient"
 	"github.com/brunojet/go-infra-backend/pkg/bootstrap"
 	"github.com/brunojet/go-infra-backend/pkg/config"
-	"github.com/brunojet/go-infra-backend/pkg/observability/httptransports"
+	"github.com/brunojet/go-infra-backend/pkg/infra/observability/httptransports"
 )
 
 func main() {

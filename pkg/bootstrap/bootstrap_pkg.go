@@ -7,7 +7,7 @@ import (
 
 	internalbootstrap "github.com/brunojet/go-infra-backend/internal/bootstrap"
 	bootcontracts "github.com/brunojet/go-infra-backend/pkg/bootstrap/contracts"
-	db "github.com/brunojet/go-infra-backend/pkg/database"
+	db "github.com/brunojet/go-infra-backend/pkg/infra/database"
 )
 
 // ---- Shutdown ----
