@@ -1,4 +1,4 @@
-package repositories
+﻿package repositories
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
-	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
-	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

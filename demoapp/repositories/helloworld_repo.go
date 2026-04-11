@@ -1,12 +1,12 @@
-package repositories
+﻿package repositories
 
 import (
 	"context"
 	"database/sql"
 
-	"github.com/brunojet/go-infra-backend/internal/ports/repositories"
+	"github.com/brunojet/go-infra-backend/internal/ports/backend/repositories"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
-	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	"gorm.io/gorm"
 )
 

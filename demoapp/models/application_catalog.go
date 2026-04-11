@@ -1,9 +1,9 @@
-package models
+﻿package models
 
 import (
 	"database/sql"
 
-	"github.com/brunojet/go-infra-backend/pkg/ports/repositories"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories"
 	"gorm.io/gorm"
 )
 

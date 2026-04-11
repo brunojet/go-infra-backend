@@ -1,9 +1,9 @@
-package services
+﻿package services
 
 import (
 	"context"
 
-	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	"github.com/golang/mock/gomock"
 )
 

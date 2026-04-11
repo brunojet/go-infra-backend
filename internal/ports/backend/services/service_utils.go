@@ -1,11 +1,11 @@
-package services
+﻿package services
 
 import (
 	"strings"
 
 	"github.com/brunojet/go-infra-backend/internal/utils"
-	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
-	"github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 )
 
 func normalizeListParams(params contracts.ListParams) contracts.ListParams {

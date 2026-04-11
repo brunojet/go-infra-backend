@@ -1,14 +1,14 @@
-package repositories
+﻿package repositories
 
 import (
 	"context"
 	"database/sql"
 
 	"github.com/brunojet/go-infra-backend/demoapp/models"
-	internalrepos "github.com/brunojet/go-infra-backend/internal/ports/repositories"
+	internalrepos "github.com/brunojet/go-infra-backend/internal/ports/backend/repositories"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
-	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
-	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

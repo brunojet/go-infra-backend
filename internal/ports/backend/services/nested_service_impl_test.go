@@ -1,4 +1,4 @@
-package services
+﻿package services
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/brunojet/go-infra-backend/internal/utils"
-	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
-	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
+	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	gorm "gorm.io/gorm"

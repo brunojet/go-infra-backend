@@ -1,12 +1,12 @@
-package repositories
+﻿package repositories
 
 import (
 	"context"
 
 	"github.com/brunojet/go-infra-backend/internal/ports/backend/repositories"
 	"github.com/brunojet/go-infra-backend/pkg/infra/database"
-	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/errors"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	"gorm.io/gorm"
 )
 
@@ -28,7 +28,6 @@ var (
 	ErrRequiresTransaction        = repositories.ErrRequiresTransaction
 	ErrLockValidationWhere        = repositories.ErrLockValidationWhere
 	ErrConflictValidationRequired = repositories.ErrConflictValidationRequired
-	ErrConflictValidationFailed   = repositories.ErrConflictValidationFailed
 	ErrConstraintViolation        = repositories.ErrConstraintViolation
 )
 

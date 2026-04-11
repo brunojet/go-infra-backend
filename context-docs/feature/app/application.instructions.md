@@ -104,6 +104,8 @@ All `newApplicationImage(...)` calls and inline `&ApplicationImage{}` structs
 **must include `FileSize: sql.NullInt64{Int64: 1024, Valid: true}`** — the field
 is NOT NULL and SQLite will reject inserts without it.
 
+> Import: `portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories"`
+
 ## Pending
 
 - [ ] Validate that the `Update`/`Patch` service path checks for name collision before

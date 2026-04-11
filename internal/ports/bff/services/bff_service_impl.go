@@ -1,4 +1,4 @@
-package services
+﻿package services
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 
 	bffrpocts "github.com/brunojet/go-infra-backend/pkg/ports/bff/repositories/contracts"
 	bffsvccts "github.com/brunojet/go-infra-backend/pkg/ports/bff/services/contracts"
-	svccts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	svccts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 )
 
 // ---------------------------------------------------------------------------

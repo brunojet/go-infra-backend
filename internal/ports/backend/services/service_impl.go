@@ -1,12 +1,12 @@
-package services
+﻿package services
 
 import (
 	"context"
 
-	"github.com/brunojet/go-infra-backend/internal/ports/repositories"
+	"github.com/brunojet/go-infra-backend/internal/ports/backend/repositories"
 	"github.com/brunojet/go-infra-backend/internal/utils"
-	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
-	"github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 )
 
 type serviceImpl[C, R, U any, E rpocts.Entity] struct {

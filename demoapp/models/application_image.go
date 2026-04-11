@@ -1,11 +1,11 @@
-package models
+﻿package models
 
 import (
 	"database/sql"
 	"errors"
 
 	"github.com/brunojet/go-infra-backend/debugassert"
-	"github.com/brunojet/go-infra-backend/pkg/ports/repositories"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories"
 	"gorm.io/gorm"
 )
 

@@ -1,6 +1,6 @@
-package contracts
+﻿package contracts
 
-import svccts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+import svccts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 
 // BffServiceMapper translates between domain DTOs (C/R/U) and the asymmetric
 // upstream API DTOs (CE/RE/UE). Upstream APIs such as ServiceNow have different

@@ -1,11 +1,11 @@
-package handlers
+﻿package handlers
 
 import (
 	context "context"
 	reflect "reflect"
 
-	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
-	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
+	svcContracts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 
 	gomock "github.com/golang/mock/gomock"
 )

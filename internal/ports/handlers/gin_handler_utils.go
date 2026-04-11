@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"log"
@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/brunojet/go-infra-backend/internal/ports/repositories"
-	"github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	"github.com/brunojet/go-infra-backend/internal/ports/backend/repositories"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 	"github.com/gin-gonic/gin"
 )
 

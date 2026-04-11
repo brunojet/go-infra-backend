@@ -1,5 +1,5 @@
 ---
-applyTo: "internal/ports/repositories/**,pkg/ports/repositories/**"
+applyTo: "internal/ports/backend/repositories/**,pkg/ports/backend/repositories/**"
 ---
 
 # Ports — Repository Contracts
@@ -13,13 +13,13 @@ via the `pkg/` public facade — never on `internal/` directly.
 ## Package Map
 
 ```
-internal/ports/repositories/
+internal/ports/backend/repositories/
     repository_impl.go          ← GenericRepository + GenericNestedRepository concrete impl (GORM)
     repository_errors.go        ← all error sentinels + MapDbError + MapTxError
     repository_impl_test.go     ← GORM repository integration tests
     repository_tx_test.go       ← transaction helper tests
 
-pkg/ports/repositories/
+pkg/ports/backend/repositories/
     repositories_pkg.go         ← public re-exports: NewRepository, NewNestedRepository,
                                     error sentinels, MapDbError, MapTxError
     repositories_pkg_test.go    ← facade smoke tests
@@ -28,8 +28,8 @@ pkg/ports/repositories/
 
 ## Error Sentinels
 
-All sentinels live in `internal/ports/repositories/repository_errors.go` and are
-re-exported via `pkg/ports/repositories/repositories_pkg.go`.
+All sentinels live in `internal/ports/backend/repositories/repository_errors.go` and are
+re-exported via `pkg/ports/backend/repositories/repositories_pkg.go`.
 
 | Sentinel | When emitted |
 |---|---|
@@ -95,7 +95,7 @@ tx.Create(inOut)
 
 | File | Role |
 |---|---|
-| `internal/ports/repositories/repository_errors.go` | All sentinel definitions + MapDbError + MapTxError |
-| `pkg/ports/repositories/repositories_pkg.go` | Public re-export of all sentinels + helpers |
+| `internal/ports/backend/repositories/repository_errors.go` | All sentinel definitions + MapDbError + MapTxError |
+| `pkg/ports/backend/repositories/repositories_pkg.go` | Public re-export of all sentinels + helpers |
 | `demoapp/models/application_test.go` | UPDATE collision assertion |
 | `demoapp/models/application_test.go` | AppConfiguration UPDATE collision assertion |

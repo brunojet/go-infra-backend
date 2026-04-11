@@ -1,9 +1,9 @@
-package contracts
+﻿package contracts
 
 import (
 	"context"
 
-	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 )
 
 type AnyInt interface {
@@ -48,14 +48,4 @@ type NestedService[C, R, U any] interface {
 	Service[C, R, U]
 	CreateNested(ctx context.Context, parentID string, dto C, response *R) error
 	ListNested(ctx context.Context, parentID string, params ListParams, response *[]R) (int64, error)
-}
-
-type BffServiceMapper[C, R, U, CE, RE, UE any] interface {
-	ToExternalPost(dto C, dtoExt *CE) error
-	ToExternalPatch(dto U, dtoExt *UE) error
-	ToInternalDTO(dtoExt *RE, dto *R) error
-}
-
-type BffService[C, R, U any] interface {
-	Service[C, R, U]
 }

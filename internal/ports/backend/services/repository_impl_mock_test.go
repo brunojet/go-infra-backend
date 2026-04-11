@@ -1,10 +1,10 @@
-package services
+﻿package services
 
 import (
 	context "context"
 	reflect "reflect"
 
-	contracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	contracts "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	gomock "github.com/golang/mock/gomock"
 	gorm "gorm.io/gorm"
 )

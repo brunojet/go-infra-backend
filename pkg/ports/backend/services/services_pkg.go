@@ -1,9 +1,9 @@
-package services
+﻿package services
 
 import (
-	"github.com/brunojet/go-infra-backend/internal/ports/services"
-	"github.com/brunojet/go-infra-backend/pkg/ports/repositories"
-	"github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	"github.com/brunojet/go-infra-backend/internal/ports/backend/services"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 )
 
 // ---- Contracts ----

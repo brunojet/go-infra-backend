@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	repoerrs "github.com/brunojet/go-infra-backend/internal/ports/repositories"
+	repoerrs "github.com/brunojet/go-infra-backend/internal/ports/backend/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )

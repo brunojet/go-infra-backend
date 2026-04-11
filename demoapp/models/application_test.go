@@ -1,10 +1,10 @@
-package models
+﻿package models
 
 import (
 	"database/sql"
 	"testing"
 
-	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/repositories"
+	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories"
 	"github.com/brunojet/go-infra-backend/pkg/testutil/dbtest"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"

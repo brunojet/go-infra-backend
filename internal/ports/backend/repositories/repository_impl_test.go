@@ -1,4 +1,4 @@
-package repositories
+﻿package repositories
 
 import (
 	"context"
@@ -9,8 +9,8 @@ import (
 
 	dbadapters "github.com/brunojet/go-infra-backend/internal/infra/database/adapters"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
-	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
-	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
+	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -307,20 +307,6 @@ func TestSetOrderBy_ErrorsAndSuccess(t *testing.T) {
 	// valid desc
 	err = setOrderBy(q, "id", "desc")
 	assert.NoError(t, err)
-}
-
-func TestGetListSize_Branches(t *testing.T) {
-	// total 10, page1 size3 -> capacity 3
-	cap := getListSize(10, 1, 3)
-	assert.Equal(t, 3, cap)
-
-	// total 10, page4 size3 -> offset 9 remaining 1 -> capacity 1
-	cap = getListSize(10, 4, 3)
-	assert.Equal(t, 1, cap)
-
-	// total 5, page3 size3 -> offset 6 remaining -1 -> capacity 0
-	cap = getListSize(5, 3, 3)
-	assert.Equal(t, 0, cap)
 }
 
 func TestList_ErrorsAndSuccess(t *testing.T) {

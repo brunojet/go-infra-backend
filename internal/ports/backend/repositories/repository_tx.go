@@ -1,12 +1,13 @@
-package repositories
+﻿package repositories
 
 import (
 	"context"
 	"fmt"
 	"strings"
 
+	"github.com/brunojet/go-infra-backend/debugassert"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
-	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -108,6 +109,7 @@ func getByScope[E contracts.Entity](db *gorm.DB, scopes map[string]any, out *E) 
 }
 
 func getExistingWhenConflict[E contracts.Entity](tx *gorm.DB, out *E) error {
+	debugassert.Assert(out != nil, "getExistingWhenConflict: out parameter is nil")
 	if conflictTx := (*out).WhereOnConflict(tx).First(out); conflictTx.Error != nil || conflictTx.RowsAffected == 0 {
 		return gorm.ErrCheckConstraintViolated
 	}
@@ -131,16 +133,6 @@ func setPagination(q *gorm.DB, page, pageSize int) error {
 	}
 	q.Limit(pageSize).Offset((page - 1) * pageSize)
 	return nil
-}
-
-func getListSize(total, page, size int) int {
-	capacity := size
-	offset := (page - 1) * size
-	remaining := total - offset
-	if remaining < capacity {
-		capacity = max(remaining, 0)
-	}
-	return capacity
 }
 
 // TxFromContext extracts a *gorm.DB transaction from the context.

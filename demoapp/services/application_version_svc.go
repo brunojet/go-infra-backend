@@ -1,4 +1,4 @@
-package services
+﻿package services
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"github.com/brunojet/go-infra-backend/demoapp/dtos"
 	"github.com/brunojet/go-infra-backend/demoapp/models"
 	"github.com/brunojet/go-infra-backend/demoapp/repositories"
-	"github.com/brunojet/go-infra-backend/pkg/ports/services"
-	svccts "github.com/brunojet/go-infra-backend/pkg/ports/services/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/services"
+	svccts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 )
 
 type ApplicationVersionNestedService interface {

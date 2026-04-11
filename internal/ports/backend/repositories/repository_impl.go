@@ -1,11 +1,11 @@
-package repositories
+﻿package repositories
 
 import (
 	"context"
 
 	"github.com/brunojet/go-infra-backend/debugassert"
 	dbcts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
-	"github.com/brunojet/go-infra-backend/pkg/ports/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	"gorm.io/gorm"
 )
 
@@ -60,6 +60,7 @@ func (g *gormRepositoryImpl[E]) GetByID(ctx context.Context, id map[string]any, 
 
 // List retrieves a list of entities matching the given parameters and returns the total count.
 func (g *gormRepositoryImpl[E]) List(ctx context.Context, listParams contracts.ListParams, out *[]E) (int64, error) {
+	debugassert.Assert(out != nil, "List: out parameter is nil")
 	db := g.DbFromContext(ctx)
 	var total int64
 	q, err := buildTxWithScopes[E](db, listParams.QueryParams.Scopes)
