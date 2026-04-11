@@ -26,6 +26,8 @@ require (
 
 require github.com/google/go-cmp v0.7.0
 
+require github.com/sony/gobreaker v1.0.0 // indirect
+
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/ClickHouse/ch-go v0.61.5 // indirect
