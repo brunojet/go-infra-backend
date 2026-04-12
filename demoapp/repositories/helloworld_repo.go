@@ -7,6 +7,7 @@ import (
 	"github.com/brunojet/go-infra-backend/internal/ports/backend/repositories"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -21,6 +22,13 @@ func (h HelloWorld) TableName() string {
 
 func (HelloWorld) WhereOnConflict(tx *gorm.DB) *gorm.DB {
 	return tx
+}
+
+func (h *HelloWorld) BeforeCreate(_ *gorm.DB) error {
+	if h.ID == "" {
+		h.ID = uuid.NewString()
+	}
+	return nil
 }
 
 type HelloWorldRepo struct {

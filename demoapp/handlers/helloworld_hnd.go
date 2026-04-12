@@ -9,7 +9,7 @@ import (
 func NewHelloWorldHandler(rg *gin.RouterGroup, s services.HelloWorldService) {
 	handlerParameters := handlers.HandlerParameters{
 		HandlerPath:      "hello-worlds",
-		IDValidationRule: handlers.Int64GtZero,
+		IDValidationRule: handlers.Base64UrlSafe,
 	}
 	handler := handlers.NewGenericHandler(handlerParameters, s)
 	handler.RegisterCollection(rg, "POST", handler.Create)

@@ -121,7 +121,7 @@ paths:
       responses:
         '206':
           description: OK
-  /applications/{applicationId}/application-configurations/{applicationConfigurationId}:
+  /application-configurations/{applicationConfigurationId}:
     get:
       summary: Get application configuration
       description: Returns details of a specific application configuration.

@@ -2,8 +2,8 @@
 
 import (
 	"github.com/brunojet/go-infra-backend/demobff/services"
-	"github.com/brunojet/go-infra-backend/pkg/ports/handlers"
 	svccts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/handlers"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,7 +19,7 @@ func NewHelloWorldBffHandler(
 ) {
 	hp := handlers.HandlerParameters{
 		HandlerPath:      "hello-worlds",
-		IDValidationRule: handlers.Int64GtZero,
+		IDValidationRule: handlers.Base64UrlSafe,
 	}
 	h := handlers.NewGenericHandler(hp, s)
 	h.RegisterCollection(rg, "POST", h.Create)

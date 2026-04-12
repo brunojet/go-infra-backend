@@ -1,6 +1,6 @@
 openapi: 3.0.0
 servers:
-  - url: http://localhost:8081
+  - url: http://localhost:9090
 info:
   title: Hello Worlds BFF API
   version: 1.0.0
@@ -46,8 +46,7 @@ paths:
           name: id
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
           description: ID numérico do recurso (inteiro positivo)
       responses:
         '200':
@@ -72,8 +71,7 @@ paths:
           name: id
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
           description: ID numérico do recurso (inteiro positivo)
       responses:
         '204':
