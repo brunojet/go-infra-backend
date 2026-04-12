@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	httpserver "github.com/brunojet/go-infra-backend/internal/infra/http_server"
 	repoerrs "github.com/brunojet/go-infra-backend/internal/ports/backend/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -21,10 +22,18 @@ func TestMapErrorToStatus(t *testing.T) {
 func TestSetResponseFromError_WritesJSON(t *testing.T) {
 	a := assert.New(t)
 	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	SetResponseFromError(c, repoerrs.ErrNotFound)
+	// Wire ProblemDetailsMiddleware so it writes the body, mirroring production.
+	router := gin.New()
+	router.Use(httpserver.ProblemDetailsMiddleware())
+	router.GET("/test", func(c *gin.Context) {
+		SetResponseFromError(c, repoerrs.ErrNotFound)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	router.ServeHTTP(w, req)
 	a.Equal(http.StatusNotFound, w.Code)
-	a.Contains(w.Body.String(), "error")
+	a.Contains(w.Body.String(), `"status":404`)
+	a.Contains(w.Body.String(), `"title":"Not Found"`)
+	a.Equal("application/problem+json", w.Header().Get("Content-Type"))
 }
 
 type sampleDTO struct {

@@ -168,5 +168,3 @@ type BffHttpResponseStream interface {
 type BffClient[Req BffRequestStream, Resp BffResponseStream] interface {
 	Emit(ctx context.Context, req Req, resp Resp) error
 }
-
-

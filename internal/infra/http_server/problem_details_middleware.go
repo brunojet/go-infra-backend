@@ -7,12 +7,34 @@ import (
 )
 
 // ProblemDetails represents an HTTP Problem Details response body per RFC 9457.
+// Errors is an extension member (RFC 9457 §3.2) listing individual error messages
+// when multiple errors are present. Detail holds a stable summary in that case.
 type ProblemDetails struct {
-	Type     string `json:"type"`
-	Title    string `json:"title"`
-	Status   int    `json:"status"`
-	Detail   string `json:"detail,omitempty"`
-	Instance string `json:"instance,omitempty"`
+	Type     string   `json:"type"`
+	Title    string   `json:"title"`
+	Status   int      `json:"status"`
+	Detail   string   `json:"detail,omitempty"`
+	Errors   []string `json:"errors,omitempty"`
+	Instance string   `json:"instance,omitempty"`
+}
+
+func newProblemDetails(errs []*gin.Error, status int) ProblemDetails {
+	var errorMessages []string
+	detail := errs[len(errs)-1].Error()
+	if len(errs) > 1 {
+		errorMessages = make([]string, len(errs))
+		for i, e := range errs {
+			errorMessages[i] = e.Error()
+		}
+		detail = "one or more errors occurred"
+	}
+	return ProblemDetails{
+		Type:   "about:blank",
+		Title:  http.StatusText(status),
+		Status: status,
+		Detail: detail,
+		Errors: errorMessages,
+	}
 }
 
 // ProblemDetailsMiddleware formats errors registered via c.Error(err) as RFC 9457
@@ -38,12 +60,8 @@ func ProblemDetailsMiddleware() gin.HandlerFunc {
 			status = http.StatusInternalServerError
 		}
 
-		c.JSON(status, ProblemDetails{
-			Type:     "about:blank",
-			Title:    http.StatusText(status),
-			Status:   status,
-			Detail:   c.Errors.Last().Err.Error(),
-			Instance: c.Request.URL.Path,
-		})
+		pd := newProblemDetails(c.Errors, status)
+		c.Writer.Header().Set("Content-Type", "application/problem+json")
+		c.JSON(status, pd)
 	}
 }

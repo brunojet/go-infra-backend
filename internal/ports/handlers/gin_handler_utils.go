@@ -59,10 +59,8 @@ func GetValidatedIDFromParam(c *gin.Context, paramName string, validationRule *r
 }
 
 func SetResponseFromError(c *gin.Context, err error) {
-	// Record the error on the gin.Context so otelgin can span.RecordError(...) if enabled.
 	_ = c.Error(err)
-	status := MapErrorToStatus(err)
-	c.AbortWithStatusJSON(status, gin.H{"error": err.Error()})
+	c.AbortWithStatus(MapErrorToStatus(err))
 }
 
 func BindJSONToDTO(c *gin.Context, dto any) bool {
