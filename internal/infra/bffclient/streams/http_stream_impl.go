@@ -91,3 +91,7 @@ func (b *httpResponseBase) SetHeaders(h http.Header) {
 		b.headers.Set(k, strings.Join(v, ", "))
 	}
 }
+
+func (b *httpResponseBase) Headers() http.Header {
+	return b.headers
+}
