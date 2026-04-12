@@ -21,8 +21,6 @@ const (
 	DBErrNotFound                                 // Results a not found error (HTTP 404) and should be exposed to clients.
 )
 
-// DB-layer sentinels — stable port identifiers, independent of any specific driver.
-// Port packages alias these vars so application code never imports GORM directly.
 var (
 	ErrDBUnavailable              = NewDatabaseError(DBErrUnavailable)
 	ErrConflictColumnsMissing     = NewDatabaseError(DBErrInvalidParameters, errors.New("conflict columns missing"))
@@ -41,9 +39,6 @@ var (
 	ErrNotFound                   = NewDatabaseError(DBErrNotFound)
 )
 
-// databaseError is an unexported error type that carries a DBErrorKind and an
-// optional wrapped cause (original driver/ORM error).
-// Construct via NewDatabaseError; inspect via IsDatabaseError and DatabaseErrorKind.
 type databaseError struct {
 	kind    DBErrorKind
 	wrapped error
