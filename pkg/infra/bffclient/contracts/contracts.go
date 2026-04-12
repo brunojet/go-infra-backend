@@ -2,7 +2,6 @@ package contracts
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -170,18 +169,4 @@ type BffClient[Req BffRequestStream, Resp BffResponseStream] interface {
 	Emit(ctx context.Context, req Req, resp Resp) error
 }
 
-// ---------------------------------------------------------------------------
-// Upstream errors
-// ---------------------------------------------------------------------------
 
-// UpstreamStatusError represents a non-2xx HTTP response from the upstream.
-// It is created by the repository layer after inspecting resp.StatusCode();
-// the transport adapter (Emit) never returns this type — it only returns
-// transport-level errors (network failures, timeouts).
-type UpstreamStatusError struct {
-	StatusCode int
-}
-
-func (e *UpstreamStatusError) Error() string {
-	return fmt.Sprintf("upstream error %d", e.StatusCode)
-}

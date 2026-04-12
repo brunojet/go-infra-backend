@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/brunojet/go-infra-backend/internal/ports/backend/repositories"
+	porterrors "github.com/brunojet/go-infra-backend/internal/ports/errors"
 	"github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 	"github.com/gin-gonic/gin"
 )
@@ -23,6 +24,9 @@ var (
 )
 
 func MapErrorToStatus(err error) int {
+	if code, ok := porterrors.HTTPStatusCode(err); ok {
+		return code
+	}
 	switch err {
 	case repositories.ErrConflictValidationFailed:
 		return http.StatusConflict

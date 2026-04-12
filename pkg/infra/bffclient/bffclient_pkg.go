@@ -1,7 +1,6 @@
 package bffclient
 
 import (
-	"errors"
 	"net/http"
 
 	internaladapters "github.com/brunojet/go-infra-backend/internal/infra/bffclient/adapters"
@@ -37,36 +36,6 @@ const (
 	BffCircuitOpen     = contracts.BffCircuitOpen
 	BffCircuitHalfOpen = contracts.BffCircuitHalfOpen
 )
-
-// ---- Upstream error helpers ----
-
-func IsUpstreamError(err error) bool {
-	var ue *contracts.UpstreamStatusError
-	return errors.As(err, &ue)
-}
-
-func IsNotFound(err error) bool {
-	var ue *contracts.UpstreamStatusError
-	return errors.As(err, &ue) && ue.StatusCode == http.StatusNotFound
-}
-
-func IsConflict(err error) bool {
-	var ue *contracts.UpstreamStatusError
-	return errors.As(err, &ue) && ue.StatusCode == http.StatusConflict
-}
-
-func IsUnprocessable(err error) bool {
-	var ue *contracts.UpstreamStatusError
-	return errors.As(err, &ue) && ue.StatusCode == http.StatusUnprocessableEntity
-}
-
-func StatusCodeOf(err error) (int, bool) {
-	var ue *contracts.UpstreamStatusError
-	if errors.As(err, &ue) {
-		return ue.StatusCode, true
-	}
-	return 0, false
-}
 
 // ---- Constructors ----
 

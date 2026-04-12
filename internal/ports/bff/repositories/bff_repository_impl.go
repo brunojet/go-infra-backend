@@ -8,6 +8,7 @@ import (
 
 	"github.com/brunojet/go-infra-backend/debugassert"
 	bffstreams "github.com/brunojet/go-infra-backend/internal/infra/bffclient/streams"
+	porterrors "github.com/brunojet/go-infra-backend/internal/ports/errors"
 	bffcts "github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
 	bffrpocts "github.com/brunojet/go-infra-backend/pkg/ports/bff/repositories/contracts"
 )
@@ -192,12 +193,12 @@ func (r *bffNestedRepositoryImpl[CE, RE, UE]) ListNested(ctx context.Context, pa
 // helpers
 // ---------------------------------------------------------------------------
 
-// checkStatus returns an UpstreamStatusError when the response stream carries
-// a non-2xx status code. Emit only returns transport errors; HTTP-level errors
-// are communicated exclusively through the response stream's StatusCode().
+// checkStatus returns an ErrHTTP when the response stream carries a non-2xx
+// status code. Emit only returns transport errors; HTTP-level errors are
+// communicated exclusively through the response stream's StatusCode().
 func checkStatus(resp bffcts.BffHttpResponseStream) error {
 	if resp.StatusCode() >= http.StatusBadRequest {
-		return &bffcts.UpstreamStatusError{StatusCode: resp.StatusCode()}
+		return porterrors.NewHTTPError(resp.StatusCode())
 	}
 	return nil
 }

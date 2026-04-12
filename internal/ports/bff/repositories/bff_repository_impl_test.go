@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	porterrors "github.com/brunojet/go-infra-backend/internal/ports/errors"
 	"github.com/brunojet/go-infra-backend/pkg/infra/bffclient"
 	bffcts "github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
 	bffrpocts "github.com/brunojet/go-infra-backend/pkg/ports/bff/repositories/contracts"
@@ -120,7 +121,10 @@ func TestBffRepository_GetByID_NotFound(t *testing.T) {
 	err := repo.GetByID(context.Background(), "99", &got)
 
 	require.Error(t, err)
-	assert.True(t, bffclient.IsNotFound(err))
+	assert.True(t, porterrors.IsHTTPError(err))
+	code, ok := porterrors.HTTPStatusCode(err)
+	assert.True(t, ok)
+	assert.Equal(t, http.StatusNotFound, code)
 }
 
 // ---------------------------------------------------------------------------
