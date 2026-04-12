@@ -14,31 +14,31 @@ import (
 type DBErrorKind uint8
 
 const (
-	DBErrUnavailable DBErrorKind = iota + 1
-	DbErrRuntime
-	DBErrInvalidParameters
-	DBErrConstraint
-	DBErrNotFound
+	DBErrUnavailable       DBErrorKind = iota + 1 // Results an internal server error (HTTP 500) and should be exposed to clients.
+	DBErrInvalidParameters                        // Results an internal server error (HTTP 500) and should be exposed to clients.
+	DbErrRuntime                                  // Results an internal server error (HTTP 500) and should be exposed to clients.
+	DBErrConstraint                               // Results a conflict error (HTTP 409) and should be exposed to clients with the message from the wrapped error.
+	DBErrNotFound                                 // Results a not found error (HTTP 404) and should be exposed to clients.
 )
 
 // DB-layer sentinels — stable port identifiers, independent of any specific driver.
 // Port packages alias these vars so application code never imports GORM directly.
 var (
 	ErrDBUnavailable              = NewDatabaseError(DBErrUnavailable)
-	ErrInvalidConflictColumns     = NewDatabaseError(DBErrInvalidParameters, errors.New("invalid conflict columns"))
-	ErrInvalidConflictColumnName  = NewDatabaseError(DBErrInvalidParameters, errors.New("invalid conflict column: field name cannot be empty"))
+	ErrConflictColumnsMissing     = NewDatabaseError(DBErrInvalidParameters, errors.New("conflict columns missing"))
+	ErrInvalidConflictColumnName  = NewDatabaseError(DBErrInvalidParameters, errors.New("invalid conflict column name"))
 	ErrInvalidScope               = NewDatabaseError(DBErrInvalidParameters, errors.New("scope field has invalid value"))
-	ErrScopesMissing              = NewDatabaseError(DBErrInvalidParameters, errors.New("scopes must be non-empty and contain valid field names and values"))
-	ErrOrderByMissing             = NewDatabaseError(DBErrInvalidParameters, errors.New("orderBy must be provided"))
+	ErrScopesMissing              = NewDatabaseError(DBErrInvalidParameters, errors.New("scopes is missing"))
+	ErrOrderByMissing             = NewDatabaseError(DBErrInvalidParameters, errors.New("orderBy is missing"))
 	ErrInvalidPage                = NewDatabaseError(DBErrInvalidParameters, errors.New("page must be greater than zero"))
 	ErrInvalidPageSize            = NewDatabaseError(DBErrInvalidParameters, errors.New("pageSize must be greater than zero"))
 	ErrRequiresTransaction        = NewDatabaseError(DbErrRuntime, errors.New("operation must run inside a transaction"))
 	ErrLockValidationWhere        = NewDatabaseError(DbErrRuntime, errors.New("where clause must be provided for lock validation"))
+	ErrInvalidTx                  = NewDatabaseError(DbErrRuntime, errors.New("invalid transaction"))
 	ErrConflictValidationRequired = NewDatabaseError(DBErrConstraint, errors.New("validation is required for this operation"))
 	ErrConflictValidationFailed   = NewDatabaseError(DBErrConstraint, errors.New("another transaction has modified the same entity"))
 	ErrConstraintViolation        = NewDatabaseError(DBErrConstraint)
 	ErrNotFound                   = NewDatabaseError(DBErrNotFound)
-	ErrInvalidTx                  = NewDatabaseError(DbErrRuntime, errors.New("invalid transaction"))
 )
 
 // databaseError is an unexported error type that carries a DBErrorKind and an
@@ -53,11 +53,6 @@ func (e *databaseError) Error() string {
 	switch e.kind {
 	case DBErrUnavailable:
 		return "db unavailable"
-	case DBErrConstraint:
-		if e.wrapped != nil {
-			return e.wrapped.Error()
-		}
-		return "constraint violation"
 	case DBErrInvalidParameters:
 		if e.wrapped != nil {
 			return e.wrapped.Error()
@@ -68,6 +63,11 @@ func (e *databaseError) Error() string {
 			return e.wrapped.Error()
 		}
 		return "db runtime error"
+	case DBErrConstraint:
+		if e.wrapped != nil {
+			return e.wrapped.Error()
+		}
+		return "constraint violation"
 	case DBErrNotFound:
 		return "record not found"
 	default:
@@ -75,20 +75,13 @@ func (e *databaseError) Error() string {
 	}
 }
 
-// Is enables errors.Is semantics: two databaseErrors match when they share the
-// same DBErrorKind, regardless of the wrapped cause. This allows sentinel vars
-// to be compared against new instances returned by MapDbError.
 func (e *databaseError) Is(target error) bool {
 	var t *databaseError
 	return errors.As(target, &t) && t.kind == e.kind
 }
 
-// Unwrap returns the original driver/ORM error, enabling errors.Is traversal to
-// the underlying cause (e.g. the raw GORM constraint error).
 func (e *databaseError) Unwrap() error { return e.wrapped }
 
-// NewDatabaseError constructs a databaseError of the given kind. Optionally
-// accepts the original cause to wrap — used by MapDbError for constraint violations.
 func NewDatabaseError(kind DBErrorKind, wrapped ...error) error {
 	var w error
 	if len(wrapped) > 0 {
@@ -103,8 +96,6 @@ func IsDatabaseError(err error) bool {
 	return errors.As(err, &de)
 }
 
-// DatabaseErrorKind returns the DBErrorKind of the first databaseError in the
-// chain, and true. Returns 0, false if err is not a databaseError.
 func DatabaseErrorKind(err error) (DBErrorKind, bool) {
 	var de *databaseError
 	if errors.As(err, &de) {
@@ -113,8 +104,6 @@ func DatabaseErrorKind(err error) (DBErrorKind, bool) {
 	return 0, false
 }
 
-// MapDbError translates raw database / driver errors into stable port sentinels.
-// Unknown errors are returned as-is so callers can still inspect them.
 func MapDbError(err error) error {
 	if err == nil {
 		return nil

@@ -77,7 +77,7 @@ func TestAddOnConflictDoNothing_ValidationAndSuccess(t *testing.T) {
 	assert.ErrorIs(t, err, dberrs.ErrInvalidTx)
 
 	err = AddOnConflictDoNothing(gdb)
-	assert.ErrorIs(t, err, dberrs.ErrInvalidConflictColumns)
+	assert.ErrorIs(t, err, dberrs.ErrConflictColumnsMissing)
 
 	err = AddOnConflictDoNothing(gdb, "")
 	assert.ErrorIs(t, err, dberrs.ErrInvalidConflictColumnName)
@@ -96,7 +96,7 @@ func TestAddOnConflictUpdateAll_ValidationAndSuccess(t *testing.T) {
 	assert.ErrorIs(t, err, dberrs.ErrInvalidTx)
 
 	err = AddOnConflictUpdateAll(gdb)
-	assert.ErrorIs(t, err, dberrs.ErrInvalidConflictColumns)
+	assert.ErrorIs(t, err, dberrs.ErrConflictColumnsMissing)
 
 	err = AddOnConflictUpdateAll(gdb, "")
 	assert.ErrorIs(t, err, dberrs.ErrInvalidConflictColumnName)
@@ -115,7 +115,7 @@ func TestAddOnConflict_ValidationAndModes(t *testing.T) {
 	assert.ErrorIs(t, err, dberrs.ErrInvalidTx)
 
 	err = addOnConflict(gdb, conflictActionIgnore)
-	assert.ErrorIs(t, err, dberrs.ErrInvalidConflictColumns)
+	assert.ErrorIs(t, err, dberrs.ErrConflictColumnsMissing)
 
 	err = addOnConflict(gdb, conflictActionIgnore, "")
 	assert.ErrorIs(t, err, dberrs.ErrInvalidConflictColumnName)

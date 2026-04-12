@@ -59,7 +59,7 @@ func addOnConflict(tx *gorm.DB, action conflictAction, columnNames ...string) er
 		return nil
 	}
 	if len(columnNames) == 0 {
-		return dberrs.ErrInvalidConflictColumns
+		return dberrs.ErrConflictColumnsMissing
 	}
 
 	columns := make([]clause.Column, 0, len(columnNames))
