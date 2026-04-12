@@ -39,7 +39,7 @@ func (childEntity) ResourceName() string { return "children" }
 // helpers
 // ---------------------------------------------------------------------------
 
-func newClient(t *testing.T, serverURL string) bffcts.BffClient {
+func newClient(t *testing.T, serverURL string) httpClient {
 	t.Helper()
 	cfg := bffcts.BffClientConfig{BaseURL: serverURL}
 	client, _, err := bffclient.NewNetHttpAdapter(cfg, nil)

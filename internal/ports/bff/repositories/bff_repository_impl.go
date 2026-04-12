@@ -3,12 +3,19 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
 
 	"github.com/brunojet/go-infra-backend/debugassert"
+	bffstreams "github.com/brunojet/go-infra-backend/internal/infra/bffclient/streams"
 	bffcts "github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
 	bffrpocts "github.com/brunojet/go-infra-backend/pkg/ports/bff/repositories/contracts"
 )
+
+// httpClient is the concrete BffClient instantiation used by all BFF repositories.
+// Repositories are always backed by the HTTP adapter; protocol selection happens
+// at the BffRepository boundary, not inside the transport.
+type httpClient = bffcts.BffClient[bffcts.BffHttpRequestStream, bffcts.BffHttpResponseStream]
 
 // Compile-time interface satisfaction checks.
 var (
@@ -24,7 +31,7 @@ var (
 // always pointers — matching the BffRepository contract and the asymmetric
 // shape of upstream APIs.
 type bffRepositoryImpl[CE, RE, UE bffrpocts.BffEntity] struct {
-	client bffcts.BffClient
+	client httpClient
 }
 
 // NewBffRepository creates a BffRepository that delegates all HTTP calls to
@@ -33,7 +40,7 @@ type bffRepositoryImpl[CE, RE, UE bffrpocts.BffEntity] struct {
 // The resource path for each verb is derived at runtime from the upstream
 // entity's ResourceName() method, keeping the repository free of hard-coded
 // path constants.
-func NewBffRepository[CE, RE, UE bffrpocts.BffEntity](client bffcts.BffClient) bffrpocts.BffRepository[CE, RE, UE] {
+func NewBffRepository[CE, RE, UE bffrpocts.BffEntity](client httpClient) bffrpocts.BffRepository[CE, RE, UE] {
 	debugassert.Assert(client != nil, "NewBffRepository: client is nil")
 	return &bffRepositoryImpl[CE, RE, UE]{client: client}
 }
@@ -47,24 +54,56 @@ func resourcePath[E bffrpocts.BffEntity]() string {
 }
 
 func (r *bffRepositoryImpl[CE, RE, UE]) Create(ctx context.Context, upstream CE, downstream *RE) error {
-	return r.client.Post(ctx, upstream.ResourceName(), upstream, downstream)
+	req, err := bffstreams.NewJsonRequest(http.MethodPost, upstream.ResourceName(), nil, upstream)
+	if err != nil {
+		return err
+	}
+	resp := &bffstreams.JsonResponseStream[RE]{}
+	if err := r.client.Emit(ctx, req, resp); err != nil {
+		return err
+	}
+	*downstream = resp.Value
+	return nil
 }
 
 func (r *bffRepositoryImpl[CE, RE, UE]) GetByID(ctx context.Context, id string, downstream *RE) error {
 	path := fmt.Sprintf("%s/%s", resourcePath[RE](), id)
-	return r.client.Get(ctx, path, nil, downstream)
+	req := bffstreams.NewJsonNoBodyRequest(http.MethodGet, path, nil)
+	resp := &bffstreams.JsonResponseStream[RE]{}
+	if err := r.client.Emit(ctx, req, resp); err != nil {
+		return err
+	}
+	*downstream = resp.Value
+	return nil
 }
 
 func (r *bffRepositoryImpl[CE, RE, UE]) List(ctx context.Context, params bffrpocts.BffListParams, downstream *[]RE) error {
-	return r.client.List(ctx, resourcePath[RE](), toQueryParams(params), downstream)
+	req := bffstreams.NewJsonNoBodyRequest(http.MethodGet, resourcePath[RE](), toQueryParams(params))
+	resp := &bffstreams.JsonResponseStream[[]RE]{}
+	if err := r.client.Emit(ctx, req, resp); err != nil {
+		return err
+	}
+	*downstream = resp.Value
+	return nil
 }
 
 func (r *bffRepositoryImpl[CE, RE, UE]) Update(ctx context.Context, id string, upstream UE, downstream *RE) error {
-	return r.client.Patch(ctx, upstream.ResourceName(), id, upstream, downstream)
+	path := fmt.Sprintf("%s/%s", upstream.ResourceName(), id)
+	req, err := bffstreams.NewJsonRequest(http.MethodPatch, path, nil, upstream)
+	if err != nil {
+		return err
+	}
+	resp := &bffstreams.JsonResponseStream[RE]{}
+	if err := r.client.Emit(ctx, req, resp); err != nil {
+		return err
+	}
+	*downstream = resp.Value
+	return nil
 }
 
 func (r *bffRepositoryImpl[CE, RE, UE]) Delete(ctx context.Context, id string) error {
-	return r.client.Delete(ctx, resourcePath[RE](), id)
+	path := fmt.Sprintf("%s/%s", resourcePath[RE](), id)
+	return r.client.Emit(ctx, bffstreams.NewJsonNoBodyRequest(http.MethodDelete, path, nil), bffstreams.NewNoBodyResponseStream())
 }
 
 // ---------------------------------------------------------------------------
@@ -85,7 +124,7 @@ type bffNestedRepositoryImpl[CE, RE, UE bffrpocts.BffEntity] struct {
 // parentResourceName is the URL segment of the parent resource
 // (e.g. "applications" for /applications/{parentID}/profiles).
 func NewBffNestedRepository[CE, RE, UE bffrpocts.BffEntity](
-	client bffcts.BffClient,
+	client httpClient,
 	parentResourceName string,
 ) bffrpocts.BffNestedRepository[CE, RE, UE] {
 	debugassert.Assert(client != nil, "NewBffNestedRepository: client is nil")
@@ -105,11 +144,26 @@ func (r *bffNestedRepositoryImpl[CE, RE, UE]) nestedBasePath(parentID string) st
 }
 
 func (r *bffNestedRepositoryImpl[CE, RE, UE]) CreateNested(ctx context.Context, parentID string, upstream CE, downstream *RE) error {
-	return r.client.Post(ctx, r.nestedBasePath(parentID), upstream, downstream)
+	req, err := bffstreams.NewJsonRequest(http.MethodPost, r.nestedBasePath(parentID), nil, upstream)
+	if err != nil {
+		return err
+	}
+	resp := &bffstreams.JsonResponseStream[RE]{}
+	if err := r.client.Emit(ctx, req, resp); err != nil {
+		return err
+	}
+	*downstream = resp.Value
+	return nil
 }
 
 func (r *bffNestedRepositoryImpl[CE, RE, UE]) ListNested(ctx context.Context, parentID string, params bffrpocts.BffListParams, downstream *[]RE) error {
-	return r.client.List(ctx, r.nestedBasePath(parentID), toQueryParams(params), downstream)
+	req := bffstreams.NewJsonNoBodyRequest(http.MethodGet, r.nestedBasePath(parentID), toQueryParams(params))
+	resp := &bffstreams.JsonResponseStream[[]RE]{}
+	if err := r.client.Emit(ctx, req, resp); err != nil {
+		return err
+	}
+	*downstream = resp.Value
+	return nil
 }
 
 // ---------------------------------------------------------------------------

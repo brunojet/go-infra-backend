@@ -56,3 +56,9 @@ func (HelloWorldBffMapper) ApplyQueryScopes(scopes map[string]any) (map[string]a
 func (HelloWorldBffMapper) ExtractUpstreamTotal(upstream []HelloWorldBffE) int64 {
 	return int64(len(upstream))
 }
+
+// ExtractUpstreamError passes through the error as-is; helloworld has no
+// custom upstream error contract.
+func (HelloWorldBffMapper) ExtractUpstreamError(err error) error {
+	return err
+}

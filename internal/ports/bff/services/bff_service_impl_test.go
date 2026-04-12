@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	svccts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 	bffrpocts "github.com/brunojet/go-infra-backend/pkg/ports/bff/repositories/contracts"
 	bffsvccts "github.com/brunojet/go-infra-backend/pkg/ports/bff/services/contracts"
-	svccts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 )
 
 // ---------------------------------------------------------------------------
@@ -91,6 +91,10 @@ func (m *stubMapper) ExtractUpstreamTotal(upstream []upstreamEntity) int64 {
 		return 0
 	}
 	return upstream[0].Total
+}
+
+func (m *stubMapper) ExtractUpstreamError(err error) error {
+	return err
 }
 
 // ---------------------------------------------------------------------------

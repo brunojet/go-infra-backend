@@ -1,34 +1,27 @@
 package adapters
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
 	backoff "github.com/cenkalti/backoff/v4"
 	"github.com/sony/gobreaker"
 
-	bffctx "github.com/brunojet/go-infra-backend/internal/infra/bffclient"
+	"github.com/brunojet/go-infra-backend/debugassert"
 	bffcts "github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
 )
 
 const (
-	headerTotalCount  = "X-Total-Count"
-	headerContentType = "Content-Type"
-	contentTypeJSON   = "application/json"
-	defaultTimeout    = 30 * time.Second
+	defaultTimeout = 30 * time.Second
 )
 
-// netHttpAdapter implements BffClient and BffHealthChecker using net/http,
-// cenkalti/backoff for exponential-backoff retry, and sony/gobreaker for
-// circuit-breaking.
+// netHttpAdapter implements BffClient[BffHttpRequestStream, BffHttpResponseStream]
+// and BffHealthChecker using net/http, cenkalti/backoff for exponential-backoff
+// retry, and sony/gobreaker for circuit-breaking.
 //
 // OTel tracing is injected via http.RoundTripper (e.g. otelhttp.NewTransport),
 // following the same pattern used by the GORM adapter (gorm.Plugin) and
@@ -39,7 +32,8 @@ type netHttpAdapter struct {
 	breaker *gobreaker.CircuitBreaker // nil when circuit breaker is disabled
 }
 
-// NewNetHttpAdapter creates a new adapter that implements BffClient and BffHealthChecker.
+// NewNetHttpAdapter creates a new adapter implementing
+// BffClient[BffHttpRequestStream, BffHttpResponseStream] and BffHealthChecker.
 //
 // transport is the http.RoundTripper used for every outgoing request.
 // Pass otelhttp.NewTransport(http.DefaultTransport) to enable OTel tracing,
@@ -102,127 +96,43 @@ func (a *netHttpAdapter) IsAvailable() bool {
 }
 
 // ---------------------------------------------------------------------------
-// BffClient
+// BffClient[BffHttpRequestStream, BffHttpResponseStream]
 // ---------------------------------------------------------------------------
 
-func (a *netHttpAdapter) Post(ctx context.Context, path string, upstream, downstream any) error {
-	return a.do(ctx, http.MethodPost, path, "", nil, upstream, downstream, nil)
-}
+// Emit executes the HTTP request described by req and deserialises the
+// response into resp. Both req and resp are required:
+//   - req nil: not valid (method and path are required)
+//   - resp nil: not valid — always provide a stream; use NoBodyResponseStream for body-less operations (e.g. DELETE)
+func (a *netHttpAdapter) Emit(ctx context.Context, bffRequest bffcts.BffHttpRequestStream, bffResponse bffcts.BffHttpResponseStream) error {
+	debugassert.Assert(bffRequest != nil, "bffclient: bffRequest stream is required")
+	debugassert.Assert(bffResponse != nil, "bffclient: bffResponse stream is required")
+	url := a.buildURL(bffRequest.Path())
+	method := bffRequest.Method()
+	rawQuery := bffRequest.RawQuery()
+	headers := a.buildHeaders(ctx, bffRequest)
 
-func (a *netHttpAdapter) Get(ctx context.Context, path string, queryParams map[string]string, downstream any) error {
-	return a.do(ctx, http.MethodGet, path, "", queryParams, nil, downstream, nil)
-}
-
-func (a *netHttpAdapter) List(ctx context.Context, path string, queryParams map[string]string, downstream any) error {
-	return a.do(ctx, http.MethodGet, path, "", queryParams, nil, downstream, nil)
-}
-
-func (a *netHttpAdapter) Patch(ctx context.Context, path, id string, upstream, downstream any) error {
-	return a.do(ctx, http.MethodPatch, path, id, nil, upstream, downstream, nil)
-}
-
-func (a *netHttpAdapter) Delete(ctx context.Context, path, id string) error {
-	return a.do(ctx, http.MethodDelete, path, id, nil, nil, nil, nil)
-}
-
-// ---------------------------------------------------------------------------
-// core executor
-// ---------------------------------------------------------------------------
-
-func (a *netHttpAdapter) do(
-	ctx context.Context,
-	method, path, id string,
-	queryParams map[string]string,
-	upstream, downstream any,
-	totalOut *int64,
-) error {
-	// execute is the atomic unit of work, re-invoked on each retry attempt.
-	// It rebuilds the request body reader each time so retries see a fresh stream.
-	// It returns raw typed errors — the retry wrapper (run) decides what is permanent.
-	// OTel tracing (spans + traceparent header injection) is handled by the
-	// http.RoundTripper supplied at construction (e.g. otelhttp.NewTransport).
 	execute := func() error {
-		body, err := marshalBody(upstream)
+		httpReq, err := http.NewRequestWithContext(ctx, method, url, bffRequest.Reader())
 		if err != nil {
 			return err
 		}
+		httpReq.Header = headers.Clone()
+		httpReq.URL.RawQuery = rawQuery
 
-		httpReq, err := http.NewRequestWithContext(ctx, method, a.buildURL(path, id), body)
+		httpResp, err := a.client.Do(httpReq)
 		if err != nil {
 			return err
 		}
-
-		// Static headers from config (e.g. Content-Type, API keys).
-		for k, v := range a.config.Headers {
-			httpReq.Header.Set(k, v)
-		}
-
-		// Dynamic headers forwarded from the incoming request context
-		// (e.g. Authorization token). Only keys listed in config.HeadersProxy.RequestHeaders
-		// are forwarded; static config.Headers take precedence.
-		if len(a.config.HeadersProxy.RequestHeaders) > 0 {
-			ctxHeaders := bffctx.RequestHeadersFromCtx(ctx)
-			for _, k := range a.config.HeadersProxy.RequestHeaders {
-				if v, ok := ctxHeaders[k]; ok {
-					httpReq.Header.Set(k, v)
-				}
-			}
-		}
-
-		if upstream != nil {
-			httpReq.Header.Set(headerContentType, contentTypeJSON)
-		}
-
-		// Apply caller-supplied query parameters.
-		if len(queryParams) > 0 {
-			q := httpReq.URL.Query()
-			for k, v := range queryParams {
-				q.Set(k, v)
-			}
-			httpReq.URL.RawQuery = q.Encode()
-		}
-
-		resp, err := a.client.Do(httpReq)
-		if err != nil {
-			return err // transport error — retriable
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode >= 400 {
-			msg, _ := io.ReadAll(resp.Body)
-			return &bffcts.BffUpstreamError{
-				StatusCode: resp.StatusCode,
-				Message:    strings.TrimSpace(string(msg)),
-			}
-		}
-
-		// Extract pagination total from the de-facto standard header.
-		if totalOut != nil {
-			if v, parseErr := strconv.ParseInt(resp.Header.Get(headerTotalCount), 10, 64); parseErr == nil {
-				*totalOut = v
-			}
-		}
-
-		// Capture configured upstream response headers into the context bag
-		// so the Gin middleware can write them to the outgoing response.
-		for _, k := range a.config.HeadersProxy.ResponseHeaders {
-			if v := resp.Header.Get(k); v != "" {
-				bffctx.CaptureResponseHeader(ctx, k, v)
-			}
-		}
-
-		if downstream != nil && resp.StatusCode != http.StatusNoContent {
-			if err := json.NewDecoder(resp.Body).Decode(downstream); err != nil {
-				return fmt.Errorf("bffclient: decode response: %w", err)
-			}
-		}
-
-		return nil
+		defer httpResp.Body.Close()
+		return a.buildResponse(httpResp, bffResponse)
 	}
 
-	// Wrap execute with circuit breaker and/or retry.
 	return a.run(execute)
 }
+
+// ---------------------------------------------------------------------------
+// retry + circuit breaker
+// ---------------------------------------------------------------------------
 
 // run wraps execute with the configured retry and circuit-breaker policies.
 // Retry is the outer shell so each probe goes through the circuit breaker.
@@ -277,26 +187,46 @@ func isPermanentCallError(err error) bool {
 	return ok && upErr.StatusCode >= 400 && upErr.StatusCode < 500 && upErr.StatusCode != http.StatusTooManyRequests
 }
 
-// buildURL joins BaseURL, resource path, and optional ID.
-// e.g. ("https://sn.example.com", "incidents", "INC001") → "https://sn.example.com/incidents/INC001"
-func (a *netHttpAdapter) buildURL(path, id string) string {
-	base := strings.TrimRight(a.config.BaseURL, "/")
-	p := strings.TrimLeft(path, "/")
-	if id != "" {
-		return fmt.Sprintf("%s/%s/%s", base, p, id)
+// buildHeaders assembles the outgoing http.Header once — immutable across retries.
+// Static config headers, Content-Type from the stream, and dynamic headers from ctx.
+func (a *netHttpAdapter) buildHeaders(ctx context.Context, bffRequest bffcts.BffHttpRequestStream) http.Header {
+	h := make(http.Header)
+
+	SetBffRequestHeadersFromCtx(ctx, &h)
+
+	for k, v := range a.config.Headers {
+		h.Set(k, v)
 	}
-	return fmt.Sprintf("%s/%s", base, p)
+
+	for k, vals := range bffRequest.Headers() {
+		for _, v := range vals {
+			h.Set(k, v)
+		}
+	}
+
+	return h
 }
 
-// marshalBody serialises v to JSON and returns a fresh reader.
-// Returns nil when v is nil (no-body requests such as GET, DELETE).
-func marshalBody(v any) (io.Reader, error) {
-	if v == nil {
-		return nil, nil
+func (a *netHttpAdapter) buildResponse(httpResp *http.Response, bffResp bffcts.BffHttpResponseStream) error {
+	debugassert.Assert(bffResp != nil, "bffclient: resp stream is required — use NoBodyResponseStream for body-less operations")
+	debugassert.Assert(httpResp != nil, "buildResponse: httpResp must not be nil")
+	bffResp.SetStatusCode(httpResp.StatusCode)
+	bffResp.SetHeaders(httpResp.Header)
+	if httpResp.StatusCode != http.StatusNoContent {
+		if err := bffResp.Decode(httpResp.Body); err != nil {
+			return err
+		}
 	}
-	data, err := json.Marshal(v)
-	if err != nil {
-		return nil, fmt.Errorf("bffclient: marshal request body: %w", err)
+	if httpResp.StatusCode >= http.StatusBadRequest {
+		return &bffcts.BffUpstreamError{StatusCode: httpResp.StatusCode}
 	}
-	return bytes.NewReader(data), nil
+	return nil
+}
+
+// buildURL joins BaseURL and the resource path provided by the request stream.
+// Path is normalised (leading/trailing slashes).
+func (a *netHttpAdapter) buildURL(path string) string {
+	base := strings.TrimRight(a.config.BaseURL, "/")
+	p := strings.TrimLeft(path, "/")
+	return fmt.Sprintf("%s/%s", base, p)
 }

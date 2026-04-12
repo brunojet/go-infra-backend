@@ -18,8 +18,16 @@ type (
 	BffCircuitBreakerConfig = contracts.BffCircuitBreakerConfig
 	BffCircuitState         = contracts.BffCircuitState
 	BffHealthChecker        = contracts.BffHealthChecker
-	BffClient               = contracts.BffClient
 	BffUpstreamError        = contracts.BffUpstreamError
+	BffRequestStream        = contracts.BffRequestStream
+	BffResponseStream       = contracts.BffResponseStream
+	BffHttpRequestStream    = contracts.BffHttpRequestStream
+	BffHttpResponseStream   = contracts.BffHttpResponseStream
+
+	// BffHttpClient is the concrete BffClient instantiation for HTTP transports.
+	// Use this type when wiring the HTTP adapter — BffClient[Req,Resp] itself
+	// is rarely referenced directly outside adapter construction.
+	BffHttpClient = contracts.BffClient[contracts.BffHttpRequestStream, contracts.BffHttpResponseStream]
 )
 
 // ---- Circuit state constants ----
@@ -49,7 +57,7 @@ var (
 // Pass httptransports.NewOtelHttpTransport(nil) to enable OTel tracing —
 // analogous to passing gormplugins.NewOtelGormPlugin() to NewDatabaseManager.
 // Pass nil to use http.DefaultTransport as-is.
-func NewNetHttpAdapter(config contracts.BffClientConfig, transport http.RoundTripper) (contracts.BffClient, contracts.BffHealthChecker, error) {
+func NewNetHttpAdapter(config contracts.BffClientConfig, transport http.RoundTripper) (BffHttpClient, contracts.BffHealthChecker, error) {
 	a, err := internaladapters.NewNetHttpAdapter(config, transport)
 	return a, a, err
 }
@@ -64,8 +72,6 @@ func BffHeadersMiddleware(cfg contracts.BffMiddlewareConfig) gin.HandlerFunc {
 
 var (
 	WithRequestHeaders     = internalbff.WithRequestHeaders
-	RequestHeadersFromCtx  = internalbff.RequestHeadersFromCtx
 	InitResponseCapture    = internalbff.InitResponseCapture
-	CaptureResponseHeader  = internalbff.CaptureResponseHeader
 	ResponseHeadersFromCtx = internalbff.ResponseHeadersFromCtx
 )

@@ -31,22 +31,71 @@ pkg/infra/observability/httptransports/
 
 ## BffClient — Transport Layer
 
-**File**: `pkg/bffclient/contracts/contracts.go`
+**File**: `pkg/infra/bffclient/contracts/contracts.go`
+
+### Stream abstraction
+
+`BffClient` is payload-format agnostic. Callers (BffRepositories) control serialisation
+by implementing stream interfaces:
 
 ```go
-type BffClient interface {
-    Post(ctx context.Context, path string, upstream, downstream any) error
-    Get(ctx context.Context, path string, queryParams map[string]string, downstream any) error
-    List(ctx context.Context, path string, queryParams map[string]string, downstream any) error
-    Patch(ctx context.Context, path, id string, upstream, downstream any) error
-    Delete(ctx context.Context, path, id string) error
+// BffRequestStream — what goes out (format-agnostic)
+type BffRequestStream interface {
+    Reader()      io.Reader // serialised body; nil = no body (GET, DELETE)
+}
+
+// BffResponseStream — what comes in (format-agnostic)
+type BffResponseStream interface {
+    Decode(r io.Reader) error // deserialise response body
+}
+
+// BffHttpRequestStream — HTTP specialisation of BffRequestStream
+// Carries routing and format metadata the HTTP adapter needs.
+type BffHttpRequestStream interface {
+    BffRequestStream
+    Method()      string            // "GET", "POST", "PATCH", "PUT", "DELETE"
+    Path()        string            // resource path, e.g. "/incidents/INC001"
+    Params()      map[string]string // query params; nil = none
+    ContentType() string            // "application/json", "multipart/form-data; boundary=x"
+}
+
+// BffHttpResponseStream — HTTP specialisation of BffResponseStream
+// Currently identical to BffResponseStream; extended when HTTP-specific
+// response metadata is needed (e.g. raw status code for partial content).
+type BffHttpResponseStream interface {
+    BffResponseStream
 }
 ```
 
+**Rationale**: `BffRepository` is the stable port — application code never sees
+`BffClient` directly. `BffClient` is a transport detail internal to the bffclient
+adapter package. The stream abstraction is needed because BFF clients handle more
+than JSON: image downloads, file uploads (multipart), and future binary formats.
+For new protocols (gRPC, events), a new adapter implements `BffClient[Req, Resp]`
+against `BffRepository` — `BffClient` itself does not need to change.
+
+```go
+// BffClient — generic over request/response stream types
+type BffClient[Req BffRequestStream, Resp BffResponseStream] interface {
+    Emit(ctx context.Context, req Req, resp Resp) error
+}
+```
+
+**HTTP adapter** concrete type:
+```go
+var _ BffClient[BffHttpRequestStream, BffHttpResponseStream] = (*netHttpAdapter)(nil)
+```
+
+**Provided implementations** (in `internal/infra/bffclient/streams/`):
+- `JsonStream[T]` — implements both `BffHttpRequestStream` and `BffHttpResponseStream`
+  using `encoding/json`
+- `FileDownloadStream` — implements `BffHttpResponseStream`, writes body to `io.Writer`
+
 **Key decisions**:
-- `List` returns only `error` — total count is part of the response body. Extracting it
-  is the mapper's responsibility (`ExtractTotal`), not the transport's.
-- Path segments are plain strings; the adapter derives full URLs via `BaseURL + path`.
+- `BffHttpRequestStream.Method()` replaces the old per-verb methods (`Post`, `Get`, etc.)
+  — the adapter routes based on the method value, not the Go method name.
+- Path, params, and content-type live in the request stream — not as adapter method params.
+- Headers (auth, correlation IDs) stay in context via `HeadersProxy` — not in the stream.
 - `BffHealthChecker` is separated so callers that only need CRUD don't depend on health.
 
 ## BffClient — Implementation

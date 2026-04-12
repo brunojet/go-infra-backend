@@ -21,6 +21,14 @@ type BffServiceMapper[C, R, U, CE, RE, UE any] interface {
 	// (e.g. a metadata field in the first element), so extraction is delegated here
 	// rather than handled by the repository or transport layers.
 	ExtractUpstreamTotal(upstream []RE) int64
+	// ExtractUpstreamError translates a raw upstream error (e.g. BffUpstreamError)
+	// into a safe domain error. The mapper is the only layer that knows the upstream's
+	// error contract — for example, whether it emits RFC 9457 Problem Details bodies.
+	// Implementations should extract the "detail" field when present and return a new
+	// error whose message contains only the safe, human-readable detail — never the
+	// upstream "instance" URL (which would expose internal topology).
+	// Non-upstream errors (transport failures, mapping errors) must be returned as-is.
+	ExtractUpstreamError(err error) error
 }
 
 // BffNestedServiceMapper extends BffServiceMapper with parent-awareness,

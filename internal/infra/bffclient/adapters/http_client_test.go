@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	bffstreams "github.com/brunojet/go-infra-backend/internal/infra/bffclient/streams"
 	bffcts "github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
 )
 
@@ -35,7 +36,7 @@ func newAdapter(t *testing.T, serverURL string, opts ...func(*bffcts.BffClientCo
 
 func jsonHandler(t *testing.T, status int, body any) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", contentTypeJSON)
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(status)
 		if body != nil {
 			require.NoError(t, json.NewEncoder(w).Encode(body))
@@ -54,43 +55,53 @@ func TestNewNetHttpAdapter_EmptyBaseURL(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Post
+// Emit — POST (with body)
 // ---------------------------------------------------------------------------
 
-func TestPost_Success(t *testing.T) {
+func TestEmit_Post_Success(t *testing.T) {
 	want := testPayload{ID: "1", Name: "test"}
-	srv := httptest.NewServer(jsonHandler(t, http.StatusCreated, want))
+	var capturedMethod, capturedContentType string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedMethod = r.Method
+		capturedContentType = r.Header.Get("Content-Type")
+		jsonHandler(t, http.StatusCreated, want)(w, r)
+	}))
 	t.Cleanup(srv.Close)
 
 	a := newAdapter(t, srv.URL)
-	var got testPayload
-	err := a.Post(context.Background(), "/items", testPayload{Name: "test"}, &got)
-
+	req, err := bffstreams.NewJsonRequest(http.MethodPost, "/items", nil, testPayload{Name: "test"})
 	require.NoError(t, err)
-	assert.Equal(t, want, got)
+	resp := &bffstreams.JsonResponseStream[testPayload]{}
+
+	require.NoError(t, a.Emit(context.Background(), req, resp))
+	assert.Equal(t, http.MethodPost, capturedMethod)
+	assert.Equal(t, "application/json", capturedContentType)
+	assert.Equal(t, want, resp.Value)
 }
 
-func TestPost_UpstreamError(t *testing.T) {
+func TestEmit_Post_UpstreamError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "conflict", http.StatusConflict)
 	}))
 	t.Cleanup(srv.Close)
 
 	a := newAdapter(t, srv.URL)
-	err := a.Post(context.Background(), "/items", testPayload{}, nil)
+	req, err := bffstreams.NewJsonRequest(http.MethodPost, "/items", nil, testPayload{})
+	require.NoError(t, err)
 
-	require.Error(t, err)
+	emitErr := a.Emit(context.Background(), req, bffstreams.NewNoBodyResponseStream())
+	require.Error(t, emitErr)
 	var upErr *bffcts.BffUpstreamError
-	require.ErrorAs(t, err, &upErr)
+	require.ErrorAs(t, emitErr, &upErr)
 	assert.Equal(t, http.StatusConflict, upErr.StatusCode)
-	assert.True(t, bffcts.IsConflict(err))
+	assert.True(t, bffcts.IsConflict(emitErr))
 }
 
 // ---------------------------------------------------------------------------
-// Get
+// Emit — GET (no body, query params)
 // ---------------------------------------------------------------------------
 
-func TestGet_Success(t *testing.T) {
+func TestEmit_Get_Success(t *testing.T) {
 	want := testPayload{ID: "42", Name: "hello"}
 	var capturedQuery string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -100,86 +111,88 @@ func TestGet_Success(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	a := newAdapter(t, srv.URL)
-	var got testPayload
-	err := a.Get(context.Background(), "/items/42", map[string]string{"fields": "id,name"}, &got)
+	req := bffstreams.NewJsonNoBodyRequest(http.MethodGet, "/items/42", map[string]string{"fields": "id,name"})
+	resp := &bffstreams.JsonResponseStream[testPayload]{}
 
-	require.NoError(t, err)
-	assert.Equal(t, want, got)
+	require.NoError(t, a.Emit(context.Background(), req, resp))
+	assert.Equal(t, want, resp.Value)
 	assert.Contains(t, capturedQuery, "fields=id%2Cname")
 }
 
-func TestGet_NotFound(t *testing.T) {
+func TestEmit_Get_NotFound(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
 	}))
 	t.Cleanup(srv.Close)
 
 	a := newAdapter(t, srv.URL)
-	err := a.Get(context.Background(), "/items/99", nil, nil)
+	req := bffstreams.NewJsonNoBodyRequest(http.MethodGet, "/items/99", nil)
 
+	err := a.Emit(context.Background(), req, bffstreams.NewNoBodyResponseStream())
 	require.Error(t, err)
 	assert.True(t, bffcts.IsNotFound(err))
 }
 
 // ---------------------------------------------------------------------------
-// List
+// Emit — GET list
 // ---------------------------------------------------------------------------
 
-func TestList_Success(t *testing.T) {
+func TestEmit_List_Success(t *testing.T) {
 	items := []testPayload{{ID: "1"}, {ID: "2"}}
 	srv := httptest.NewServer(jsonHandler(t, http.StatusOK, items))
 	t.Cleanup(srv.Close)
 
 	a := newAdapter(t, srv.URL)
-	var got []testPayload
-	err := a.List(context.Background(), "/items", nil, &got)
+	req := bffstreams.NewJsonNoBodyRequest(http.MethodGet, "/items", nil)
+	resp := &bffstreams.JsonResponseStream[[]testPayload]{}
 
-	require.NoError(t, err)
-	assert.Len(t, got, 2)
+	require.NoError(t, a.Emit(context.Background(), req, resp))
+	assert.Len(t, resp.Value, 2)
 }
 
 // ---------------------------------------------------------------------------
-// Patch
+// Emit — PATCH
 // ---------------------------------------------------------------------------
 
-func TestPatch_Success(t *testing.T) {
+func TestEmit_Patch_Success(t *testing.T) {
 	updated := testPayload{ID: "1", Name: "updated"}
-	var capturedMethod string
+	var capturedMethod, capturedPath string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedMethod = r.Method
+		capturedPath = r.URL.Path
 		jsonHandler(t, http.StatusOK, updated)(w, r)
 	}))
 	t.Cleanup(srv.Close)
 
 	a := newAdapter(t, srv.URL)
-	var got testPayload
-	err := a.Patch(context.Background(), "/items", "1", testPayload{Name: "updated"}, &got)
-
+	req, err := bffstreams.NewJsonRequest(http.MethodPatch, "/items/1", nil, testPayload{Name: "updated"})
 	require.NoError(t, err)
+	resp := &bffstreams.JsonResponseStream[testPayload]{}
+
+	require.NoError(t, a.Emit(context.Background(), req, resp))
 	assert.Equal(t, http.MethodPatch, capturedMethod)
-	assert.Equal(t, "/items/1", func() string {
-		// patch builds URL as path/id — verified via method capture above
-		return "/items/1"
-	}())
-	assert.Equal(t, updated, got)
+	assert.Equal(t, "/items/1", capturedPath)
+	assert.Equal(t, updated, resp.Value)
 }
 
 // ---------------------------------------------------------------------------
-// Delete
+// Emit — DELETE
 // ---------------------------------------------------------------------------
 
-func TestDelete_Success(t *testing.T) {
-	var capturedURL string
+func TestEmit_Delete_Success(t *testing.T) {
+	var capturedURL, capturedMethod string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedURL = r.URL.Path
+		capturedMethod = r.Method
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	t.Cleanup(srv.Close)
 
 	a := newAdapter(t, srv.URL)
-	err := a.Delete(context.Background(), "/items", "7")
+	req := bffstreams.NewJsonNoBodyRequest(http.MethodDelete, "/items/7", nil)
 
-	require.NoError(t, err)
+	require.NoError(t, a.Emit(context.Background(), req, bffstreams.NewNoBodyResponseStream()))
+	assert.Equal(t, http.MethodDelete, capturedMethod)
 	assert.Equal(t, "/items/7", capturedURL)
 }
 
@@ -206,14 +219,14 @@ func TestHealthChecker_CircuitOpensAfterMaxFailures(t *testing.T) {
 		cfg.CircuitBreaker = bffcts.BffCircuitBreakerConfig{
 			Enabled:          true,
 			MaxFailures:      3,
-			ResetTimeout:     0, // don't test timer behaviour in unit tests
+			ResetTimeout:     0,
 			HalfOpenRequests: 1,
 		}
 	})
 
-	// Trigger enough failures to open the circuit.
+	req := bffstreams.NewJsonNoBodyRequest(http.MethodGet, "/fail", nil)
 	for i := 0; i < 3; i++ {
-		_ = a.Get(context.Background(), "/fail", nil, nil)
+		_ = a.Emit(context.Background(), req, bffstreams.NewNoBodyResponseStream())
 	}
 
 	assert.Equal(t, bffcts.BffCircuitOpen, a.CircuitState())
@@ -242,10 +255,10 @@ func TestCustomTransport_IsUsed(t *testing.T) {
 	a, err := NewNetHttpAdapter(bffcts.BffClientConfig{BaseURL: srv.URL}, cap)
 	require.NoError(t, err)
 
-	var got testPayload
-	_ = a.Get(context.Background(), "/items/1", nil, &got)
+	req := bffstreams.NewJsonNoBodyRequest(http.MethodGet, "/items/1", nil)
+	resp := &bffstreams.JsonResponseStream[testPayload]{}
+	_ = a.Emit(context.Background(), req, resp)
 
-	// Transport was invoked — it captured at least the standard headers.
 	assert.NotNil(t, cap.headers)
 }
 
@@ -256,7 +269,7 @@ func TestCustomTransport_IsUsed(t *testing.T) {
 func TestBuildURL(t *testing.T) {
 	a := &netHttpAdapter{config: bffcts.BffClientConfig{BaseURL: "https://sn.example.com/"}}
 
-	assert.Equal(t, "https://sn.example.com/incidents", a.buildURL("incidents", ""))
-	assert.Equal(t, "https://sn.example.com/incidents/INC001", a.buildURL("incidents", "INC001"))
-	assert.Equal(t, "https://sn.example.com/incidents/INC001", a.buildURL("/incidents", "INC001"))
+	assert.Equal(t, "https://sn.example.com/incidents", a.buildURL("incidents"))
+	assert.Equal(t, "https://sn.example.com/incidents/INC001", a.buildURL("incidents/INC001"))
+	assert.Equal(t, "https://sn.example.com/incidents/INC001", a.buildURL("/incidents/INC001"))
 }

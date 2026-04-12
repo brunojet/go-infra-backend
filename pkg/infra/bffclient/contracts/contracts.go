@@ -2,6 +2,9 @@ package contracts
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"net/http"
 	"time"
 )
 
@@ -106,39 +109,67 @@ type BffHealthChecker interface {
 	IsAvailable() bool
 }
 
+// BffRequestStream is the format-agnostic interface for serialising a request
+// body to send to an upstream. Implementations control the format: JSON,
+// multipart, binary, etc.
+type BffRequestStream interface {
+	Reader() io.Reader // serialised request body; nil = no body (GET, DELETE)
+}
+
+// BffResponseStream is the format-agnostic interface for deserialising a
+// response body received from an upstream.
+type BffResponseStream interface {
+	Decode(r io.Reader) error // deserialise the response body
+}
+
+type BffHttpHeaders interface {
+	SetHeader(key, value string) // extra per-call headers injected by the mapper
+	SetHeaders(http.Header)      // extra per-call headers injected by the mapper
+	Headers() http.Header        // read by the adapter to merge into the outgoing request
+}
+
+// BffHttpRequestStream extends BffRequestStream with HTTP-specific metadata.
+// ContentType is defined here — not in BffRequestStream — because it is an
+// HTTP concept; gRPC and event adapters do not use Content-Type headers.
+type BffHttpRequestStream interface {
+	BffRequestStream
+	BffHttpHeaders
+	Method() string   // HTTP verb: "GET", "POST", "PATCH", "PUT", "DELETE"
+	Path() string     // resource path, e.g. "/incidents/INC001"
+	RawQuery() string // pre-encoded query parameters for direct injection into the URL; mutually exclusive with Params()
+}
+
+// BffHttpResponseStream extends BffResponseStream for HTTP adapters.
+// Currently mirrors BffResponseStream; extended here so future HTTP-specific
+// response metadata (e.g. raw status code for 206 Partial Content) can be
+// added without touching BffResponseStream.
+type BffHttpResponseStream interface {
+	BffResponseStream
+	BffHttpHeaders
+	SetStatusCode(code int)
+}
+
 // ---------------------------------------------------------------------------
 // Client port
 // ---------------------------------------------------------------------------
 
-// BffClient is the port for the upstream transport layer.
+// BffClient is the protocol-agnostic transport port.
 //
-// It operates on raw path segments and serialisable payloads (any).
-// BffRepository adapters are responsible for translating domain types
-// into these primitives before delegating to BffClient.
+// Req carries all outgoing information (routing + serialised body).
+// Resp receives and deserialises the response body.
+// The concrete type of Req determines which adapter handles the call:
+//   - BffHttpRequestStream → net/http adapter
+//   - BffGrpcRequestStream → gRPC adapter (future)
 //
-// All methods propagate ctx for cancellation, deadline propagation,
-// and OpenTelemetry trace-context injection by middleware.
-type BffClient interface {
-	// Post serialises upstream and sends it as POST to path.
-	// The upstream response is deserialised into downstream.
-	Post(ctx context.Context, path string, upstream, downstream any) error
-
-	// Get sends GET to path with the given query parameters and
-	// deserialises the response into downstream.
-	Get(ctx context.Context, path string, queryParams map[string]string, downstream any) error
-
-	// List sends GET to path with pagination query parameters and deserialises
-	// the response body into downstream. Total item count, when available, is
-	// part of the response body — extracting it is the responsibility of the
-	// BffRepository adapter, not the transport client.
-	List(ctx context.Context, path string, queryParams map[string]string, downstream any) error
-
-	// Patch serialises upstream and sends it as PATCH to path/id.
-	// The updated upstream resource is deserialised into downstream.
-	Patch(ctx context.Context, path, id string, upstream, downstream any) error
-
-	// Delete sends DELETE to path/id.
-	Delete(ctx context.Context, path, id string) error
+// BffRepository adapters are responsible for constructing Req/Resp and
+// translating domain types before delegating to BffClient.
+// Application code never imports BffClient directly.
+//
+// ctx propagates cancellation, deadlines, and OTel trace context.
+// Request/response headers are propagated via the context (HeadersProxy) —
+// not via the stream interfaces.
+type BffClient[Req BffRequestStream, Resp BffResponseStream] interface {
+	Emit(ctx context.Context, req Req, resp Resp) error
 }
 
 // ---------------------------------------------------------------------------
@@ -148,13 +179,17 @@ type BffClient interface {
 // BffUpstreamError represents a non-2xx response from the upstream API.
 // BffRepository adapters return this so bffServiceImpl can distinguish
 // upstream business errors (404, 409, 422) from transport failures.
+//
+// Body holds the raw response bytes so that ExtractUpstreamError in the mapper
+// can decode them according to the upstream's error contract (e.g. RFC 9457
+// Problem Details JSON) without the transport layer pre-processing the content.
 type BffUpstreamError struct {
 	StatusCode int
-	Message    string
+	Body       []byte
 }
 
 func (e *BffUpstreamError) Error() string {
-	return e.Message
+	return fmt.Sprintf("upstream error %d", e.StatusCode)
 }
 
 // IsUpstreamError reports whether err is a BffUpstreamError.

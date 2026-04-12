@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupHelloWorldBffModule(client bffclient.BffClient, rg *gin.RouterGroup) error {
+func SetupHelloWorldBffModule(client bffclient.BffHttpClient, rg *gin.RouterGroup) error {
 	repo := bffrepo.NewBffRepository[svc.HelloWorldBffE, svc.HelloWorldBffE, svc.HelloWorldBffE](client)
 	service := bffsvc.NewBffServiceImpl(repo, svc.HelloWorldBffMapper{})
 	hnd.NewHelloWorldBffHandler(rg, service)
