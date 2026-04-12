@@ -35,6 +35,10 @@ func SetShutdownLogger(sm ShutdownManager, logger *slog.Logger) {
 	}
 }
 
+func InitObservability(sm ShutdownManager) error {
+	return internalbootstrap.InitObservability(sm)
+}
+
 // ---- HTTP ----
 
 type HttpServer = internalbootstrap.HttpServer

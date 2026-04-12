@@ -15,6 +15,10 @@ func main() {
 	sm, stop := bootstrap.NewShutdownManagerWithSignals(10 * time.Second)
 	defer stop()
 
+	if err := bootstrap.InitObservability(sm); err != nil {
+		log.Fatalf("failed to setup observability: %v", err)
+	}
+
 	baseURL := config.GetEnv("DEMOAPP_BASE_URL", "http://localhost:8080")
 	bffCfg := bffclient.BffClientConfig{
 		BaseURL: baseURL,

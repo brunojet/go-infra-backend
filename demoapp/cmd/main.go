@@ -14,6 +14,10 @@ func main() {
 	sm, stop := bootstrap.NewShutdownManagerWithSignals(10 * time.Second)
 	defer stop()
 
+	if err := bootstrap.InitObservability(sm); err != nil {
+		log.Fatalf("failed to setup observability: %v", err)
+	}
+
 	db, err := bootstrap.NewDatabaseWithObservability(sm)
 
 	if err != nil {
