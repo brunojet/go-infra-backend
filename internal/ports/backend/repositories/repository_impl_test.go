@@ -8,6 +8,7 @@ import (
 	"time"
 
 	dbadapters "github.com/brunojet/go-infra-backend/internal/infra/database/adapters"
+	dberrs "github.com/brunojet/go-infra-backend/internal/infra/database/errors"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
@@ -75,7 +76,7 @@ func TestGormrepositories_InvalidIDAndNotFound(t *testing.T) {
 	// missing id should return ErrNotFound when using a valid pk map
 	pk := map[string]any{"id": "missing-id"}
 	err = repo.GetByID(ctx, pk, &model)
-	assert.ErrorIs(t, err, ErrNotFound)
+	assert.ErrorIs(t, err, dberrs.ErrNotFound)
 }
 
 func TestGormrepositories_CreateAndGet(t *testing.T) {
@@ -159,7 +160,7 @@ func TestGormrepositories_Delete(t *testing.T) {
 	assert.NoError(t, repo.Delete(ctx, map[string]any{"id": "d-1"}))
 	var model TestEntity
 	err := repo.GetByID(ctx, map[string]any{"id": "d-1"}, &model)
-	assert.ErrorIs(t, err, ErrNotFound)
+	assert.ErrorIs(t, err, dberrs.ErrNotFound)
 
 	// ensure soft-delete: Unscoped query should find the record and DeletedAt should be set
 	var out TestEntity
@@ -196,7 +197,7 @@ func TestGormrepositories_Update_NilInputAndDeletedAfterUpdate(t *testing.T) {
 	// attempt update — Updates will run but First should return ErrNotFound
 	in := &TestEntity{ID: "u-delete", Name: ps("new"), Age: pi(2)}
 	err = repo.Update(ctx, map[string]any{"id": "u-delete"}, in)
-	assert.ErrorIs(t, err, ErrNotFound)
+	assert.ErrorIs(t, err, dberrs.ErrNotFound)
 }
 
 func TestGetListUpdate_DBErrors(t *testing.T) {
@@ -213,7 +214,7 @@ func TestGetListUpdate_DBErrors(t *testing.T) {
 	var model TestEntity
 	err := repo.GetByID(ctx, map[string]any{"id": "any"}, &model)
 	assert.Error(t, err)
-	assert.False(t, errors.Is(err, ErrNotFound))
+	assert.False(t, errors.Is(err, dberrs.ErrNotFound))
 
 	// List should return error
 	items := make([]TestEntity, 0, 10)
@@ -243,7 +244,7 @@ func TestRepositories_ClosedDB_MapsToErrDBUnavailable(t *testing.T) {
 
 	var model TestEntity
 	err = repo.GetByID(ctx, map[string]any{"id": "any"}, &model)
-	assert.ErrorIs(t, err, ErrDBUnavailable)
+	assert.ErrorIs(t, err, dberrs.ErrDBUnavailable)
 
 	items := make([]TestEntity, 0, 1)
 	_, err = repo.List(ctx, repoContracts.ListParams{Page: 1, OrderBy: "", Order: ""}, &items)
@@ -251,14 +252,14 @@ func TestRepositories_ClosedDB_MapsToErrDBUnavailable(t *testing.T) {
 	assert.Error(t, err)
 	assert.True(
 		t,
-		errors.Is(err, ErrDBUnavailable) || strings.Contains(err.Error(), "both orderBy and order must be provided together"),
+		errors.Is(err, dberrs.ErrDBUnavailable) || strings.Contains(err.Error(), "both orderBy and order must be provided together"),
 		"expected ErrDBUnavailable or orderBy validation error, got: %v",
 		err,
 	)
 
 	in := &TestEntity{ID: "x"}
 	err = repo.Update(ctx, map[string]any{"id": "x"}, in)
-	assert.ErrorIs(t, err, ErrDBUnavailable)
+	assert.ErrorIs(t, err, dberrs.ErrDBUnavailable)
 }
 
 type testEntity struct{}
@@ -376,7 +377,7 @@ func TestGormRepository_WithTx_UsesTransactionalContextForCRUD(t *testing.T) {
 	assert.EqualError(t, err, "force rollback")
 	var model TestEntity
 	err = repo.GetByID(ctx, map[string]any{"id": "tx-rollback"}, &model)
-	assert.ErrorIs(t, err, ErrNotFound)
+	assert.ErrorIs(t, err, dberrs.ErrNotFound)
 }
 
 func TestList_Update_Delete_ExtraErrorBranches(t *testing.T) {
@@ -393,14 +394,14 @@ func TestList_Update_Delete_ExtraErrorBranches(t *testing.T) {
 		OrderBy:     "id",
 		Order:       "asc",
 	}, &items)
-	assert.ErrorIs(t, err, ErrInvalidScope)
+	assert.ErrorIs(t, err, dberrs.ErrInvalidScope)
 
 	err = repo.Update(ctx, map[string]any{}, &TestEntity{Name: ps("n")})
-	assert.ErrorIs(t, err, ErrEmptyScopes)
+	assert.ErrorIs(t, err, dberrs.ErrScopesMissing)
 
 	err = repo.Delete(ctx, map[string]any{})
-	assert.ErrorIs(t, err, ErrEmptyScopes)
+	assert.ErrorIs(t, err, dberrs.ErrScopesMissing)
 
 	err = repo.Delete(ctx, map[string]any{"id": "missing"})
-	assert.ErrorIs(t, err, ErrNotFound)
+	assert.ErrorIs(t, err, dberrs.ErrNotFound)
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/brunojet/go-infra-backend/debugassert"
+	dberrs "github.com/brunojet/go-infra-backend/internal/infra/database/errors"
 	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 
@@ -52,19 +53,19 @@ func ContextWithTx(ctx context.Context, tx *gorm.DB) context.Context {
 
 func addOnConflict(tx *gorm.DB, action conflictAction, columnNames ...string) error {
 	if !isTransactionValid(tx) {
-		return ErrInvalidTx
+		return dberrs.ErrInvalidTx
 	}
 	if action == conflictActionError {
 		return nil
 	}
 	if len(columnNames) == 0 {
-		return ErrInvalidConflictColumns
+		return dberrs.ErrInvalidConflictColumns
 	}
 
 	columns := make([]clause.Column, 0, len(columnNames))
 	for _, fieldName := range columnNames {
 		if strings.TrimSpace(fieldName) == "" {
-			return ErrInvalidConflictColumnName
+			return dberrs.ErrInvalidConflictColumnName
 		}
 		columns = append(columns, clause.Column{Name: fieldName})
 	}
@@ -85,7 +86,7 @@ func buildTxWithScopes[E contracts.Entity](db *gorm.DB, scopes map[string]any) (
 	tx := db.Model(new(E))
 	for fieldName, fieldValue := range scopes {
 		if fieldName == "" || fieldValue == nil {
-			return nil, fmt.Errorf("%w: field '%s' has invalid value", ErrInvalidScope, fieldName)
+			return nil, fmt.Errorf("%w: field '%s' has invalid value", dberrs.ErrInvalidScope, fieldName)
 		}
 		tx = tx.Where(fmt.Sprintf("%s = ?", fieldName), fieldValue)
 	}
@@ -94,7 +95,7 @@ func buildTxWithScopes[E contracts.Entity](db *gorm.DB, scopes map[string]any) (
 
 func buildTxWithFilledScopes[E contracts.Entity](db *gorm.DB, scopes map[string]any) (*gorm.DB, error) {
 	if len(scopes) == 0 {
-		return nil, ErrEmptyScopes
+		return nil, dberrs.ErrScopesMissing
 	}
 	return buildTxWithScopes[E](db, scopes)
 }
@@ -111,14 +112,14 @@ func getByScope[E contracts.Entity](db *gorm.DB, scopes map[string]any, out *E) 
 func getExistingWhenConflict[E contracts.Entity](tx *gorm.DB, out *E) error {
 	debugassert.Assert(out != nil, "getExistingWhenConflict: out parameter is nil")
 	if conflictTx := (*out).WhereOnConflict(tx).First(out); conflictTx.Error != nil || conflictTx.RowsAffected == 0 {
-		return gorm.ErrCheckConstraintViolated
+		return dberrs.ErrConflictValidationFailed
 	}
-	return ErrConflictValidationRequired
+	return dberrs.ErrConflictValidationRequired
 }
 
 func setOrderBy(q *gorm.DB, orderBy, order string) error {
 	if len(orderBy) == 0 {
-		return ErrOrderByMissing
+		return dberrs.ErrOrderByMissing
 	}
 	orderClause := clause.OrderByColumn{Column: clause.Column{Name: orderBy}, Desc: (strings.ToLower(order) == "desc")}
 	q.Order(orderClause)
@@ -127,9 +128,9 @@ func setOrderBy(q *gorm.DB, orderBy, order string) error {
 
 func setPagination(q *gorm.DB, page, pageSize int) error {
 	if page < 1 {
-		return ErrInvalidPage
+		return dberrs.ErrInvalidPage
 	} else if pageSize <= 0 {
-		return ErrInvalidPageSize
+		return dberrs.ErrInvalidPageSize
 	}
 	q.Limit(pageSize).Offset((page - 1) * pageSize)
 	return nil
@@ -142,9 +143,8 @@ func TxFromContext(ctx context.Context) (*gorm.DB, error) {
 		if tx, ok := v.(*gorm.DB); ok {
 			return tx, nil
 		}
-		return nil, ErrInvalidTx
 	}
-	return nil, ErrInvalidTx
+	return nil, dberrs.ErrInvalidTx
 }
 
 // ValidateTxWithUpdateLock performs a reusable business-rule validation pattern:
@@ -154,28 +154,26 @@ func TxFromContext(ctx context.Context) (*gorm.DB, error) {
 // 3) returns nil on not found (no conflict)
 // 4) evaluates optional callback for custom blocking rules when a record is found
 func ValidateTxWithUpdateLock[E contracts.Entity](tx *gorm.DB, spec contracts.LockValidationSpec[E]) error {
-	if strings.TrimSpace(spec.WhereSQL) == "" {
-		return ErrLockValidationWhere
+	whereSQL := strings.TrimSpace(spec.WhereSQL)
+	if whereSQL == "" {
+		return dberrs.ErrLockValidationWhere
 	}
 	if !isTransactionAndContextValid(tx) {
-		return ErrRequiresTransaction
-	}
-	if spec.WhereSQL == "" {
-		return ErrLockValidationWhere
+		return dberrs.ErrRequiresTransaction
 	}
 	for _, arg := range spec.WhereArgs {
 		if strArg, ok := arg.(string); ok && strings.TrimSpace(strArg) == "" {
-			return ErrLockValidationWhere
+			return dberrs.ErrLockValidationWhere
 		}
 		if intArg, ok := arg.(int64); ok && intArg == 0 {
-			return ErrLockValidationWhere
+			return dberrs.ErrLockValidationWhere
 		}
 	}
 	q := tx.Session(&gorm.Session{NewDB: true}).Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
 	if len(spec.SelectColumns) > 0 {
 		q = q.Select(spec.SelectColumns)
 	}
-	q = q.Where(spec.WhereSQL, spec.WhereArgs...)
+	q = q.Where(whereSQL, spec.WhereArgs...)
 	var found E
 	err := q.First(&found).Error
 	if err == nil {
@@ -187,7 +185,7 @@ func ValidateTxWithUpdateLock[E contracts.Entity](tx *gorm.DB, spec contracts.Lo
 	if err == gorm.ErrRecordNotFound {
 		return nil
 	}
-	return MapDbError(err)
+	return dberrs.MapDbError(err)
 }
 
 func AddOnConflictDoNothing(tx *gorm.DB, columnNames ...string) error {

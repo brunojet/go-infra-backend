@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/brunojet/go-infra-backend/debugassert"
+	dberrs "github.com/brunojet/go-infra-backend/internal/infra/database/errors"
 	dbcts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	"gorm.io/gorm"
@@ -43,7 +44,7 @@ func (g *gormRepositoryImpl[E]) Create(ctx context.Context, inOut *E) error {
 	db := g.DbFromContext(ctx)
 	tx := db.Model(new(E)).Create(inOut)
 	err := MapTxError(tx)
-	if err == ErrNotFound {
+	if err == dberrs.ErrNotFound {
 		err = getExistingWhenConflict(tx, inOut)
 	}
 	return err

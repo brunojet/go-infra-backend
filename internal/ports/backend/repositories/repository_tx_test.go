@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	dbadapters "github.com/brunojet/go-infra-backend/internal/infra/database/adapters"
+	dberrs "github.com/brunojet/go-infra-backend/internal/infra/database/errors"
 	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
 	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	"github.com/stretchr/testify/assert"
@@ -34,7 +35,7 @@ func TestTxFromContext_AbsentReturnsError(t *testing.T) {
 	ctx := context.Background()
 	tx, err := TxFromContext(ctx)
 	assert.Nil(t, tx)
-	assert.ErrorIs(t, err, ErrInvalidTx)
+	assert.ErrorIs(t, err, dberrs.ErrInvalidTx)
 }
 
 func TestTxFromContext_WithGormDB(t *testing.T) {
@@ -52,7 +53,7 @@ func TestTxFromContext_WrongTypeReturnsError(t *testing.T) {
 	ctx := context.WithValue(context.Background(), ctxKeyTx{}, "not-a-tx")
 	got, err := TxFromContext(ctx)
 	assert.Nil(t, got)
-	assert.ErrorIs(t, err, ErrInvalidTx)
+	assert.ErrorIs(t, err, dberrs.ErrInvalidTx)
 }
 
 // open a minimal in-memory DB for utils tests (reuse logic from other tests)
@@ -73,13 +74,13 @@ func TestAddOnConflictDoNothing_ValidationAndSuccess(t *testing.T) {
 	defer cleanup()
 
 	err := AddOnConflictDoNothing(nil, "id")
-	assert.ErrorIs(t, err, ErrInvalidTx)
+	assert.ErrorIs(t, err, dberrs.ErrInvalidTx)
 
 	err = AddOnConflictDoNothing(gdb)
-	assert.ErrorIs(t, err, ErrInvalidConflictColumns)
+	assert.ErrorIs(t, err, dberrs.ErrInvalidConflictColumns)
 
 	err = AddOnConflictDoNothing(gdb, "")
-	assert.ErrorIs(t, err, ErrInvalidConflictColumnName)
+	assert.ErrorIs(t, err, dberrs.ErrInvalidConflictColumnName)
 
 	err = gdb.Transaction(func(tx *gorm.DB) error {
 		return AddOnConflictDoNothing(tx, "id")
@@ -92,13 +93,13 @@ func TestAddOnConflictUpdateAll_ValidationAndSuccess(t *testing.T) {
 	defer cleanup()
 
 	err := AddOnConflictUpdateAll(nil, "id")
-	assert.ErrorIs(t, err, ErrInvalidTx)
+	assert.ErrorIs(t, err, dberrs.ErrInvalidTx)
 
 	err = AddOnConflictUpdateAll(gdb)
-	assert.ErrorIs(t, err, ErrInvalidConflictColumns)
+	assert.ErrorIs(t, err, dberrs.ErrInvalidConflictColumns)
 
 	err = AddOnConflictUpdateAll(gdb, "")
-	assert.ErrorIs(t, err, ErrInvalidConflictColumnName)
+	assert.ErrorIs(t, err, dberrs.ErrInvalidConflictColumnName)
 
 	err = gdb.Transaction(func(tx *gorm.DB) error {
 		return AddOnConflictUpdateAll(tx, "id")
@@ -111,13 +112,13 @@ func TestAddOnConflict_ValidationAndModes(t *testing.T) {
 	defer cleanup()
 
 	err := addOnConflict(nil, conflictActionIgnore, "id")
-	assert.ErrorIs(t, err, ErrInvalidTx)
+	assert.ErrorIs(t, err, dberrs.ErrInvalidTx)
 
 	err = addOnConflict(gdb, conflictActionIgnore)
-	assert.ErrorIs(t, err, ErrInvalidConflictColumns)
+	assert.ErrorIs(t, err, dberrs.ErrInvalidConflictColumns)
 
 	err = addOnConflict(gdb, conflictActionIgnore, "")
-	assert.ErrorIs(t, err, ErrInvalidConflictColumnName)
+	assert.ErrorIs(t, err, dberrs.ErrInvalidConflictColumnName)
 
 	err = gdb.Transaction(func(tx *gorm.DB) error {
 		return addOnConflict(tx, conflictActionIgnore, "id")
@@ -141,15 +142,15 @@ func TestBuildTxWithScopes_ValidationAndFilledScopes(t *testing.T) {
 
 	// invalid scope: empty field name
 	_, err := buildTxWithScopes[TestEntity](gdb, map[string]any{"": "v"})
-	assert.True(t, errors.Is(err, ErrInvalidScope))
+	assert.True(t, errors.Is(err, dberrs.ErrInvalidScope))
 
 	// nil value
 	_, err = buildTxWithScopes[TestEntity](gdb, map[string]any{"id": nil})
-	assert.True(t, errors.Is(err, ErrInvalidScope))
+	assert.True(t, errors.Is(err, dberrs.ErrInvalidScope))
 
 	// filled scopes empty -> error
 	_, err = buildTxWithFilledScopes[TestEntity](gdb, map[string]any{})
-	assert.ErrorIs(t, err, ErrEmptyScopes)
+	assert.ErrorIs(t, err, dberrs.ErrScopesMissing)
 
 	// valid filled scopes -> success
 	tx, err := buildTxWithFilledScopes[TestEntity](gdb, map[string]any{"id": "x"})
@@ -164,7 +165,7 @@ func TestGetByScope_ErrorsAndSuccess(t *testing.T) {
 	// empty scopes -> ErrEmptyScopes
 	var out TestEntity
 	err := getByScope(gdb, map[string]any{}, &out)
-	assert.ErrorIs(t, err, ErrEmptyScopes)
+	assert.ErrorIs(t, err, dberrs.ErrScopesMissing)
 
 	// create a record and fetch it
 	require.NoError(t, gdb.Create(&TestEntity{ID: "g-1", Name: func() *string { s := "x"; return &s }(), Age: func() *int { i := 1; return &i }()}).Error)
@@ -182,11 +183,11 @@ func TestSetOrderByAndPagination_ErrorsAndSuccess(t *testing.T) {
 	q := gdb.Model(&RepoTestModel{})
 
 	// orderBy missing
-	assert.ErrorIs(t, setOrderBy(q, "", ""), ErrOrderByMissing)
+	assert.ErrorIs(t, setOrderBy(q, "", ""), dberrs.ErrOrderByMissing)
 
 	// pagination invalid
-	assert.ErrorIs(t, setPagination(q, 0, 10), ErrInvalidPage)
-	assert.ErrorIs(t, setPagination(q, 1, 0), ErrInvalidPageSize)
+	assert.ErrorIs(t, setPagination(q, 0, 10), dberrs.ErrInvalidPage)
+	assert.ErrorIs(t, setPagination(q, 1, 0), dberrs.ErrInvalidPageSize)
 
 	// valid
 	assert.NoError(t, setOrderBy(q, "id", "asc"))
@@ -200,7 +201,7 @@ func TestValidateTxWithUpdateLock_RequiresWhereAndTx(t *testing.T) {
 	err := ValidateTxWithUpdateLock(gdb, LockValidationSpec[TestEntity]{
 		WhereSQL: "",
 	})
-	assert.ErrorIs(t, err, ErrLockValidationWhere)
+	assert.ErrorIs(t, err, dberrs.ErrLockValidationWhere)
 
 	err = ValidateTxWithUpdateLock(gdb, LockValidationSpec[TestEntity]{
 		WhereSQL: "id = ?",
@@ -208,7 +209,7 @@ func TestValidateTxWithUpdateLock_RequiresWhereAndTx(t *testing.T) {
 			"x",
 		},
 	})
-	assert.ErrorIs(t, err, ErrRequiresTransaction)
+	assert.ErrorIs(t, err, dberrs.ErrRequiresTransaction)
 }
 
 func TestValidateTxWithUpdateLock_NotFoundReturnsNil(t *testing.T) {
@@ -287,6 +288,6 @@ func TestValidateTxWithUpdateLock_DBErrorPassthrough(t *testing.T) {
 		})
 	})
 	assert.Error(t, err)
-	assert.NotErrorIs(t, err, ErrRequiresTransaction)
+	assert.NotErrorIs(t, err, dberrs.ErrRequiresTransaction)
 	assert.NotErrorIs(t, err, porterrors.ErrBusinessRuleViolation)
 }
