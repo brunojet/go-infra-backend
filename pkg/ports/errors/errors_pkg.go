@@ -1,6 +1,9 @@
 package errors
 
-import internalerrors "github.com/brunojet/go-infra-backend/internal/ports/errors"
+import (
+	infraerrors "github.com/brunojet/go-infra-backend/internal/infra/errors"
+	internalerrors "github.com/brunojet/go-infra-backend/internal/ports/errors"
+)
 
 type BusinessRuleError = internalerrors.BusinessRuleError
 
@@ -18,13 +21,13 @@ func IsBusinessRuleError(err error) bool {
 // code. The handler boundary reads it via HTTPStatusCode without importing any
 // transport or infra package.
 func NewHTTPError(statusCode int) error {
-	return internalerrors.NewHTTPError(statusCode)
+	return infraerrors.NewHTTPError(statusCode)
 }
 
 func IsHTTPError(err error) bool {
-	return internalerrors.IsHTTPError(err)
+	return infraerrors.IsHTTPError(err)
 }
 
 func HTTPStatusCode(err error) (int, bool) {
-	return internalerrors.HTTPStatusCode(err)
+	return infraerrors.HTTPStatusCode(err)
 }

@@ -5,9 +5,9 @@ import (
 	"fmt"
 )
 
-// httpError is an unexported error type that carries an HTTP status code to be
-// forwarded to the final client. Construct via NewHTTPError; inspect via
-// IsHTTPError and HTTPStatusCode — without ever accessing the struct directly.
+// httpError carries an HTTP status code so BFF adapters can forward upstream
+// status codes without importing any transport or handler package directly.
+// Construct via NewHTTPError; inspect via IsHTTPError and HTTPStatusCode.
 type httpError struct {
 	statusCode int
 }
@@ -21,11 +21,14 @@ func NewHTTPError(statusCode int) error {
 	return &httpError{statusCode: statusCode}
 }
 
+// IsHTTPError reports whether err (or any error in its chain) is an httpError.
 func IsHTTPError(err error) bool {
 	var he *httpError
 	return stdErrors.As(err, &he)
 }
 
+// HTTPStatusCode returns the status code carried by the first httpError in the
+// chain, and true. Returns 0, false if err is not an httpError.
 func HTTPStatusCode(err error) (int, bool) {
 	var he *httpError
 	if stdErrors.As(err, &he) {

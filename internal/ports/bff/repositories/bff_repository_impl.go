@@ -8,7 +8,7 @@ import (
 
 	"github.com/brunojet/go-infra-backend/debugassert"
 	bffstreams "github.com/brunojet/go-infra-backend/internal/infra/bffclient/streams"
-	porterrors "github.com/brunojet/go-infra-backend/internal/ports/errors"
+	porterrors "github.com/brunojet/go-infra-backend/internal/infra/errors"
 	bffcts "github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
 	bffrpocts "github.com/brunojet/go-infra-backend/pkg/ports/bff/repositories/contracts"
 )

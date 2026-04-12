@@ -1,23 +1,22 @@
 package repositories
 
 import (
-	"database/sql"
 	"errors"
-	"fmt"
-	"strings"
 
+	infradb "github.com/brunojet/go-infra-backend/internal/infra/database"
+	infraerrors "github.com/brunojet/go-infra-backend/internal/infra/errors"
 	"gorm.io/gorm"
 )
 
 // ErrConstraintViolation is the sentinel for any database constraint violation
 // (UNIQUE, CHECK, FK). Use errors.Is to detect it; the original database error
 // is also preserved in the chain via fmt.Errorf with multiple %%w.
-var ErrConstraintViolation = errors.New("constraint violation")
+var ErrConstraintViolation = infradb.ErrConstraintViolation
 
 var (
-	ErrDBUnavailable = sql.ErrConnDone
-	ErrInvalidTx     = errors.New("invalid transaction")
-	ErrNotFound      = gorm.ErrRecordNotFound
+	ErrDBUnavailable = infradb.ErrDBUnavailable
+	ErrInvalidTx     = infradb.ErrInvalidTx
+	ErrNotFound      = infradb.ErrNotFound
 	// Validation / user-level repository errors
 	ErrInvalidConflictColumns     = errors.New("invalid conflict columns")
 	ErrInvalidConflictColumnName  = errors.New("invalid conflict column: field name cannot be empty")
@@ -29,25 +28,16 @@ var (
 	ErrRequiresTransaction        = errors.New("operation must run inside a transaction")
 	ErrLockValidationWhere        = errors.New("where clause must be provided for lock validation")
 	ErrConflictValidationRequired = errors.New("conflict validation is required for this operation")
-	ErrConflictValidationFailed   = errors.New("conflict validation failed: another transaction has modified the same entity")
+	ErrConflictValidationFailed   = infraerrors.NewDatabaseError(infraerrors.DBErrConflictValidation)
 )
 
-func MapDbError(err error) error {
-	if err == nil {
-		return nil
-	} else if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, sql.ErrNoRows) {
-		return ErrNotFound
-	} else if errors.Is(err, sql.ErrConnDone) || strings.Contains(err.Error(), "database is closed") {
-		return ErrDBUnavailable
-	} else if errors.Is(err, gorm.ErrDuplicatedKey) ||
-		strings.Contains(err.Error(), "UNIQUE constraint failed") ||
-		strings.Contains(err.Error(), "CHECK constraint failed") ||
-		strings.Contains(err.Error(), "FOREIGN KEY constraint failed") {
-		return fmt.Errorf("%w: %w", ErrConstraintViolation, err)
-	}
-	return err
-}
+// MapDbError delegates to the infra layer which owns the GORM/driver mapping logic.
+func MapDbError(err error) error { return infradb.MapDbError(err) }
 
+// MapTxError inspects the GORM transaction result and maps it to a port sentinel.
+// Lives here rather than in infra/database because it is specific to the GORM
+// repository pattern: it interprets *gorm.DB fields (Error, RowsAffected) that
+// are only meaningful in the context of repository operations.
 func MapTxError(tx *gorm.DB) error {
 	if tx == nil {
 		return ErrInvalidTx
@@ -56,6 +46,5 @@ func MapTxError(tx *gorm.DB) error {
 	} else if tx.RowsAffected == 0 {
 		return ErrNotFound
 	}
-
 	return nil
 }

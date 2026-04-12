@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	porterrors "github.com/brunojet/go-infra-backend/internal/ports/errors"
+	porterrors "github.com/brunojet/go-infra-backend/internal/infra/errors"
 	"github.com/brunojet/go-infra-backend/pkg/infra/bffclient"
 	bffcts "github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
 	bffrpocts "github.com/brunojet/go-infra-backend/pkg/ports/bff/repositories/contracts"
