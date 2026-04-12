@@ -6,17 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	backoff "github.com/cenkalti/backoff/v4"
 	"github.com/sony/gobreaker"
 
 	"github.com/brunojet/go-infra-backend/debugassert"
 	bffcts "github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
-)
-
-const (
-	defaultTimeout = 30 * time.Second
 )
 
 // netHttpAdapter implements BffClient[BffHttpRequestStream, BffHttpResponseStream]
@@ -40,11 +35,15 @@ type netHttpAdapter struct {
 // or nil to use http.DefaultTransport as-is.
 func NewNetHttpAdapter(config bffcts.BffClientConfig, transport http.RoundTripper) (*netHttpAdapter, error) {
 	if config.BaseURL == "" {
-		return nil, fmt.Errorf("bffclient: BaseURL is required")
+		return nil, errBaseURLRequired
 	}
 
 	if transport == nil {
 		transport = http.DefaultTransport
+	}
+
+	if config.Headers == nil {
+		config.Headers = make(map[string]string)
 	}
 
 	timeout := config.Timeout
@@ -107,17 +106,15 @@ func (a *netHttpAdapter) Emit(ctx context.Context, bffRequest bffcts.BffHttpRequ
 	debugassert.Assert(bffRequest != nil, "bffclient: bffRequest stream is required")
 	debugassert.Assert(bffResponse != nil, "bffclient: bffResponse stream is required")
 	url := a.buildURL(bffRequest.Path())
-	method := bffRequest.Method()
-	rawQuery := bffRequest.RawQuery()
-	headers := a.buildHeaders(ctx, bffRequest)
+	SetBffClientHeaders(a.config.Headers, bffRequest) // must be last to be not overridden by context headers
 
 	execute := func() error {
-		httpReq, err := http.NewRequestWithContext(ctx, method, url, bffRequest.Reader())
+		httpReq, err := http.NewRequestWithContext(ctx, bffRequest.Method(), url, bffRequest.Reader())
 		if err != nil {
 			return err
 		}
-		httpReq.Header = headers.Clone()
-		httpReq.URL.RawQuery = rawQuery
+		httpReq.Header = bffRequest.Headers().Clone()
+		httpReq.URL.RawQuery = bffRequest.RawQuery()
 
 		httpResp, err := a.client.Do(httpReq)
 		if err != nil {
@@ -178,49 +175,21 @@ func (a *netHttpAdapter) runOnce(execute func() error) error {
 // ---------------------------------------------------------------------------
 
 // isPermanentCallError reports whether err should NOT be retried.
-// 4xx client errors (except 429) and circuit-open states are permanent.
+// Only circuit-breaker state errors are permanent; all other transport
+// errors are retried up to MaxAttempts.
 func isPermanentCallError(err error) bool {
-	if errors.Is(err, gobreaker.ErrOpenState) || errors.Is(err, gobreaker.ErrTooManyRequests) {
-		return true
-	}
-	upErr, ok := err.(*bffcts.BffUpstreamError)
-	return ok && upErr.StatusCode >= 400 && upErr.StatusCode < 500 && upErr.StatusCode != http.StatusTooManyRequests
-}
-
-// buildHeaders assembles the outgoing http.Header once — immutable across retries.
-// Static config headers, Content-Type from the stream, and dynamic headers from ctx.
-func (a *netHttpAdapter) buildHeaders(ctx context.Context, bffRequest bffcts.BffHttpRequestStream) http.Header {
-	h := make(http.Header)
-
-	SetBffRequestHeadersFromCtx(ctx, &h)
-
-	for k, v := range a.config.Headers {
-		h.Set(k, v)
-	}
-
-	for k, vals := range bffRequest.Headers() {
-		for _, v := range vals {
-			h.Set(k, v)
-		}
-	}
-
-	return h
+	return errors.Is(err, gobreaker.ErrOpenState) || errors.Is(err, gobreaker.ErrTooManyRequests)
 }
 
 func (a *netHttpAdapter) buildResponse(httpResp *http.Response, bffResp bffcts.BffHttpResponseStream) error {
 	debugassert.Assert(bffResp != nil, "bffclient: resp stream is required — use NoBodyResponseStream for body-less operations")
 	debugassert.Assert(httpResp != nil, "buildResponse: httpResp must not be nil")
 	bffResp.SetStatusCode(httpResp.StatusCode)
-	bffResp.SetHeaders(httpResp.Header)
-	if httpResp.StatusCode != http.StatusNoContent {
-		if err := bffResp.Decode(httpResp.Body); err != nil {
-			return err
-		}
+	bffResp.MergeHeader(httpResp.Header)
+	if httpResp.StatusCode == http.StatusNoContent || httpResp.StatusCode >= http.StatusBadRequest {
+		return nil
 	}
-	if httpResp.StatusCode >= http.StatusBadRequest {
-		return &bffcts.BffUpstreamError{StatusCode: httpResp.StatusCode}
-	}
-	return nil
+	return bffResp.Decode(httpResp.Body)
 }
 
 // buildURL joins BaseURL and the resource path provided by the request stream.

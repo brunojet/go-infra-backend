@@ -19,3 +19,7 @@ paths:
     $ref: './application-configurations/application-configurations.yaml#/paths/~1application-configurations'
   /application-configurations/{configurationId}:
     $ref: './application-configurations/application-configurations.yaml#/paths/~1application-configurations~1{configurationId}'
+  /hello-worlds:
+    $ref: './hello-worlds/hello-worlds.yaml#/paths/~1hello-worlds'
+  /hello-worlds/{id}:
+    $ref: './hello-worlds/hello-worlds.yaml#/paths/~1hello-worlds~1{id}'

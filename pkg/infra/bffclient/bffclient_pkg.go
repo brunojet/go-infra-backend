@@ -1,10 +1,11 @@
 package bffclient
 
 import (
+	"errors"
 	"net/http"
 
-	internalbff "github.com/brunojet/go-infra-backend/internal/infra/bffclient"
 	internaladapters "github.com/brunojet/go-infra-backend/internal/infra/bffclient/adapters"
+	internalbff "github.com/brunojet/go-infra-backend/internal/infra/bffclient/middlewares"
 	"github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
 	"github.com/gin-gonic/gin"
 )
@@ -18,7 +19,6 @@ type (
 	BffCircuitBreakerConfig = contracts.BffCircuitBreakerConfig
 	BffCircuitState         = contracts.BffCircuitState
 	BffHealthChecker        = contracts.BffHealthChecker
-	BffUpstreamError        = contracts.BffUpstreamError
 	BffRequestStream        = contracts.BffRequestStream
 	BffResponseStream       = contracts.BffResponseStream
 	BffHttpRequestStream    = contracts.BffHttpRequestStream
@@ -40,12 +40,33 @@ const (
 
 // ---- Upstream error helpers ----
 
-var (
-	IsUpstreamError = contracts.IsUpstreamError
-	IsNotFound      = contracts.IsNotFound
-	IsConflict      = contracts.IsConflict
-	IsUnprocessable = contracts.IsUnprocessable
-)
+func IsUpstreamError(err error) bool {
+	var ue *contracts.UpstreamStatusError
+	return errors.As(err, &ue)
+}
+
+func IsNotFound(err error) bool {
+	var ue *contracts.UpstreamStatusError
+	return errors.As(err, &ue) && ue.StatusCode == http.StatusNotFound
+}
+
+func IsConflict(err error) bool {
+	var ue *contracts.UpstreamStatusError
+	return errors.As(err, &ue) && ue.StatusCode == http.StatusConflict
+}
+
+func IsUnprocessable(err error) bool {
+	var ue *contracts.UpstreamStatusError
+	return errors.As(err, &ue) && ue.StatusCode == http.StatusUnprocessableEntity
+}
+
+func StatusCodeOf(err error) (int, bool) {
+	var ue *contracts.UpstreamStatusError
+	if errors.As(err, &ue) {
+		return ue.StatusCode, true
+	}
+	return 0, false
+}
 
 // ---- Constructors ----
 
@@ -72,6 +93,6 @@ func BffHeadersMiddleware(cfg contracts.BffMiddlewareConfig) gin.HandlerFunc {
 
 var (
 	WithRequestHeaders     = internalbff.WithRequestHeaders
-	InitResponseCapture    = internalbff.InitResponseCapture
+	InitResponseHeaders    = internalbff.InitResponseHeaders
 	ResponseHeadersFromCtx = internalbff.ResponseHeadersFromCtx
 )

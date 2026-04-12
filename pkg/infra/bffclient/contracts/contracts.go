@@ -123,9 +123,9 @@ type BffResponseStream interface {
 }
 
 type BffHttpHeaders interface {
-	SetHeader(key, value string) // extra per-call headers injected by the mapper
-	SetHeaders(http.Header)      // extra per-call headers injected by the mapper
-	Headers() http.Header        // read by the adapter to merge into the outgoing request
+	SetHeader(key, value string) // Set a single header key-value pair; used by request streams to set static headers from the config
+	MergeHeader(http.Header)     // Used on response streams to merge upstream headers with the adapter-injected headers; on request streams to merge in headers from the context
+	Headers() http.Header        // returns the underlying http.Header for direct access to header values; used by response streams to capture upstream headers into the context
 }
 
 // BffHttpRequestStream extends BffRequestStream with HTTP-specific metadata.
@@ -140,12 +140,10 @@ type BffHttpRequestStream interface {
 }
 
 // BffHttpResponseStream extends BffResponseStream for HTTP adapters.
-// Currently mirrors BffResponseStream; extended here so future HTTP-specific
-// response metadata (e.g. raw status code for 206 Partial Content) can be
-// added without touching BffResponseStream.
 type BffHttpResponseStream interface {
 	BffResponseStream
 	BffHttpHeaders
+	StatusCode() int // HTTP status code set by the adapter before Decode is called
 	SetStatusCode(code int)
 }
 
@@ -176,42 +174,14 @@ type BffClient[Req BffRequestStream, Resp BffResponseStream] interface {
 // Upstream errors
 // ---------------------------------------------------------------------------
 
-// BffUpstreamError represents a non-2xx response from the upstream API.
-// BffRepository adapters return this so bffServiceImpl can distinguish
-// upstream business errors (404, 409, 422) from transport failures.
-//
-// Body holds the raw response bytes so that ExtractUpstreamError in the mapper
-// can decode them according to the upstream's error contract (e.g. RFC 9457
-// Problem Details JSON) without the transport layer pre-processing the content.
-type BffUpstreamError struct {
+// UpstreamStatusError represents a non-2xx HTTP response from the upstream.
+// It is created by the repository layer after inspecting resp.StatusCode();
+// the transport adapter (Emit) never returns this type — it only returns
+// transport-level errors (network failures, timeouts).
+type UpstreamStatusError struct {
 	StatusCode int
-	Body       []byte
 }
 
-func (e *BffUpstreamError) Error() string {
+func (e *UpstreamStatusError) Error() string {
 	return fmt.Sprintf("upstream error %d", e.StatusCode)
-}
-
-// IsUpstreamError reports whether err is a BffUpstreamError.
-func IsUpstreamError(err error) bool {
-	_, ok := err.(*BffUpstreamError)
-	return ok
-}
-
-// IsNotFound reports whether err represents an upstream 404.
-func IsNotFound(err error) bool {
-	e, ok := err.(*BffUpstreamError)
-	return ok && e.StatusCode == 404
-}
-
-// IsConflict reports whether err represents an upstream 409.
-func IsConflict(err error) bool {
-	e, ok := err.(*BffUpstreamError)
-	return ok && e.StatusCode == 409
-}
-
-// IsUnprocessable reports whether err represents an upstream 422.
-func IsUnprocessable(err error) bool {
-	e, ok := err.(*BffUpstreamError)
-	return ok && e.StatusCode == 422
 }

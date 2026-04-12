@@ -120,7 +120,7 @@ func TestBffRepository_GetByID_NotFound(t *testing.T) {
 	err := repo.GetByID(context.Background(), "99", &got)
 
 	require.Error(t, err)
-	assert.True(t, bffcts.IsNotFound(err))
+	assert.True(t, bffclient.IsNotFound(err))
 }
 
 // ---------------------------------------------------------------------------

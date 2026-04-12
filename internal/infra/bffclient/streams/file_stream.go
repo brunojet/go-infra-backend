@@ -1,7 +1,6 @@
 package streams
 
 import (
-	"fmt"
 	"io"
 )
 
@@ -18,20 +17,20 @@ import (
 // Use this instead of JsonResponseStream when the upstream returns raw bytes
 // (images, PDFs, archives, etc.) rather than a JSON-encoded payload.
 type FileDownloadStream struct {
-	httpResponseBase
+	httpResponse
 	w io.Writer
 }
 
 // NewFileDownloadStream creates a FileDownloadStream that pipes the response
 // body into w. w must not be nil.
 func NewFileDownloadStream(w io.Writer) *FileDownloadStream {
-	return &FileDownloadStream{w: w}
+	return &FileDownloadStream{httpResponse: NewHttpResponse(0), w: w}
 }
 
 // Decode copies the response body to the underlying writer.
 func (s *FileDownloadStream) Decode(r io.Reader) error {
 	if _, err := io.Copy(s.w, r); err != nil {
-		return fmt.Errorf("bffclient/streams: download file: %w", err)
+		return wrapErr(errDownloadFile, err)
 	}
 	return nil
 }

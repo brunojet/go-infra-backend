@@ -62,6 +62,9 @@ func (r *bffRepositoryImpl[CE, RE, UE]) Create(ctx context.Context, upstream CE,
 	if err := r.client.Emit(ctx, req, resp); err != nil {
 		return err
 	}
+	if err := checkStatus(resp); err != nil {
+		return err
+	}
 	*downstream = resp.Value
 	return nil
 }
@@ -73,6 +76,9 @@ func (r *bffRepositoryImpl[CE, RE, UE]) GetByID(ctx context.Context, id string, 
 	if err := r.client.Emit(ctx, req, resp); err != nil {
 		return err
 	}
+	if err := checkStatus(resp); err != nil {
+		return err
+	}
 	*downstream = resp.Value
 	return nil
 }
@@ -81,6 +87,9 @@ func (r *bffRepositoryImpl[CE, RE, UE]) List(ctx context.Context, params bffrpoc
 	req := bffstreams.NewJsonNoBodyRequest(http.MethodGet, resourcePath[RE](), toQueryParams(params))
 	resp := &bffstreams.JsonResponseStream[[]RE]{}
 	if err := r.client.Emit(ctx, req, resp); err != nil {
+		return err
+	}
+	if err := checkStatus(resp); err != nil {
 		return err
 	}
 	*downstream = resp.Value
@@ -97,13 +106,20 @@ func (r *bffRepositoryImpl[CE, RE, UE]) Update(ctx context.Context, id string, u
 	if err := r.client.Emit(ctx, req, resp); err != nil {
 		return err
 	}
+	if err := checkStatus(resp); err != nil {
+		return err
+	}
 	*downstream = resp.Value
 	return nil
 }
 
 func (r *bffRepositoryImpl[CE, RE, UE]) Delete(ctx context.Context, id string) error {
 	path := fmt.Sprintf("%s/%s", resourcePath[RE](), id)
-	return r.client.Emit(ctx, bffstreams.NewJsonNoBodyRequest(http.MethodDelete, path, nil), bffstreams.NewNoBodyResponseStream())
+	resp := bffstreams.NewNoBodyResponseStream()
+	if err := r.client.Emit(ctx, bffstreams.NewJsonNoBodyRequest(http.MethodDelete, path, nil), resp); err != nil {
+		return err
+	}
+	return checkStatus(resp)
 }
 
 // ---------------------------------------------------------------------------
@@ -152,6 +168,9 @@ func (r *bffNestedRepositoryImpl[CE, RE, UE]) CreateNested(ctx context.Context, 
 	if err := r.client.Emit(ctx, req, resp); err != nil {
 		return err
 	}
+	if err := checkStatus(resp); err != nil {
+		return err
+	}
 	*downstream = resp.Value
 	return nil
 }
@@ -162,6 +181,9 @@ func (r *bffNestedRepositoryImpl[CE, RE, UE]) ListNested(ctx context.Context, pa
 	if err := r.client.Emit(ctx, req, resp); err != nil {
 		return err
 	}
+	if err := checkStatus(resp); err != nil {
+		return err
+	}
 	*downstream = resp.Value
 	return nil
 }
@@ -169,6 +191,16 @@ func (r *bffNestedRepositoryImpl[CE, RE, UE]) ListNested(ctx context.Context, pa
 // ---------------------------------------------------------------------------
 // helpers
 // ---------------------------------------------------------------------------
+
+// checkStatus returns an UpstreamStatusError when the response stream carries
+// a non-2xx status code. Emit only returns transport errors; HTTP-level errors
+// are communicated exclusively through the response stream's StatusCode().
+func checkStatus(resp bffcts.BffHttpResponseStream) error {
+	if resp.StatusCode() >= http.StatusBadRequest {
+		return &bffcts.UpstreamStatusError{StatusCode: resp.StatusCode()}
+	}
+	return nil
+}
 
 // toQueryParams converts BffListParams to the flat string map expected by
 // BffClient. The Scopes map should already contain upstream-translated filter

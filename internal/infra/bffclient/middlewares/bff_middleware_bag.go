@@ -1,10 +1,6 @@
-package types
+package middlewares
 
 import "sync"
-
-type BffRequestHeadersKey struct{}
-
-type BffResponseHeadersKey struct{}
 
 type ResponseHeadersBag struct {
 	mu sync.Mutex

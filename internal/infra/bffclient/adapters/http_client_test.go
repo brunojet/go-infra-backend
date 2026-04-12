@@ -89,12 +89,9 @@ func TestEmit_Post_UpstreamError(t *testing.T) {
 	req, err := bffstreams.NewJsonRequest(http.MethodPost, "/items", nil, testPayload{})
 	require.NoError(t, err)
 
-	emitErr := a.Emit(context.Background(), req, bffstreams.NewNoBodyResponseStream())
-	require.Error(t, emitErr)
-	var upErr *bffcts.BffUpstreamError
-	require.ErrorAs(t, emitErr, &upErr)
-	assert.Equal(t, http.StatusConflict, upErr.StatusCode)
-	assert.True(t, bffcts.IsConflict(emitErr))
+	resp := bffstreams.NewNoBodyResponseStream()
+	require.NoError(t, a.Emit(context.Background(), req, resp))
+	assert.Equal(t, http.StatusConflict, resp.StatusCode())
 }
 
 // ---------------------------------------------------------------------------
@@ -127,10 +124,9 @@ func TestEmit_Get_NotFound(t *testing.T) {
 
 	a := newAdapter(t, srv.URL)
 	req := bffstreams.NewJsonNoBodyRequest(http.MethodGet, "/items/99", nil)
-
-	err := a.Emit(context.Background(), req, bffstreams.NewNoBodyResponseStream())
-	require.Error(t, err)
-	assert.True(t, bffcts.IsNotFound(err))
+	resp := bffstreams.NewNoBodyResponseStream()
+	require.NoError(t, a.Emit(context.Background(), req, resp))
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode())
 }
 
 // ---------------------------------------------------------------------------
@@ -210,12 +206,13 @@ func TestHealthChecker_NoBreakerAlwaysClosed(t *testing.T) {
 }
 
 func TestHealthChecker_CircuitOpensAfterMaxFailures(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "server error", http.StatusInternalServerError)
-	}))
-	t.Cleanup(srv.Close)
+	// Use a server that is closed before requests — all calls get a transport
+	// error (connection refused), which is the only kind that trips the breaker.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	srvURL := srv.URL
+	srv.Close()
 
-	a := newAdapter(t, srv.URL, func(cfg *bffcts.BffClientConfig) {
+	a := newAdapter(t, srvURL, func(cfg *bffcts.BffClientConfig) {
 		cfg.CircuitBreaker = bffcts.BffCircuitBreakerConfig{
 			Enabled:          true,
 			MaxFailures:      3,

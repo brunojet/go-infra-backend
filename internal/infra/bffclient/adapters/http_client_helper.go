@@ -1,28 +1,14 @@
 package adapters
 
 import (
-	"context"
-	"net/http"
-	"strings"
-
 	"github.com/brunojet/go-infra-backend/debugassert"
-	"github.com/brunojet/go-infra-backend/internal/infra/bffclient/types"
+	"github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
 )
 
-func SetBffRequestHeadersFromCtx(ctx context.Context, headers *http.Header) {
-	debugassert.Assert(headers != nil, "SetBffRequestHeadersFromCtx: headers must not be nil")
-	if m, ok := ctx.Value(types.BffRequestHeadersKey{}).(map[string]string); ok {
-		for k, v := range m {
-			headers.Set(k, v)
-		}
-	}
-}
-
-func SetBffResponseHeadersInCtx(ctx context.Context, headers http.Header) {
-	debugassert.Assert(headers != nil, "SetBffResponseHeadersInCtx: headers must not be nil")
-	if bag, ok := ctx.Value(types.BffResponseHeadersKey{}).(*types.ResponseHeadersBag); ok {
-		for k, v := range headers {
-			bag.SetKnown(k, strings.Join(v, ", "))
-		}
+func SetBffClientHeaders(clientHeaders map[string]string, requestStream contracts.BffHttpRequestStream) {
+	debugassert.Assert(clientHeaders != nil, "SetBffClientHeaders: clientHeaders must not be nil")
+	debugassert.Assert(requestStream != nil, "SetBffClientHeaders: requestStream must not be nil")
+	for key, value := range clientHeaders {
+		requestStream.SetHeader(key, value)
 	}
 }

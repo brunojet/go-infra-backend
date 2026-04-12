@@ -3,11 +3,9 @@ package streams
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
-
-	bffcts "github.com/brunojet/go-infra-backend/pkg/infra/bffclient/contracts"
+	"strings"
 )
 
 // ---------------------------------------------------------------------------
@@ -21,7 +19,7 @@ import (
 // Use NewJsonRequest when the request carries a body (POST, PATCH, PUT).
 // Use NewJsonNoBodyRequest for body-less requests (GET, DELETE).
 type JsonRequestStream struct {
-	httpRequestBase
+	httpRequest
 	body []byte // nil = no body
 }
 
@@ -30,23 +28,17 @@ type JsonRequestStream struct {
 func NewJsonRequest[T any](method, path string, params map[string]string, body T) (*JsonRequestStream, error) {
 	data, err := json.Marshal(body)
 	if err != nil {
-		return nil, fmt.Errorf("bffclient/streams: marshal request body: %w", err)
+		return nil, wrapErr(errMarshalRequestBody, err)
 	}
-	return &JsonRequestStream{httpRequestBase: newHttpRequestBase(method, path, params), body: data}, nil
+	req := &JsonRequestStream{httpRequest: NewHttpRequest(method, path, params), body: data}
+	req.SetHeader(headerContentType, contentTypeJSON)
+	return req, nil
 }
 
 // NewJsonNoBodyRequest creates a JsonRequestStream without a body.
 // Use for GET and DELETE requests.
 func NewJsonNoBodyRequest(method, path string, params map[string]string) *JsonRequestStream {
-	return &JsonRequestStream{httpRequestBase: newHttpRequestBase(method, path, params)}
-}
-
-// ContentType returns "application/json" when a body is present, empty otherwise.
-func (s *JsonRequestStream) ContentType() string {
-	if s.body == nil {
-		return ""
-	}
-	return "application/json"
+	return &JsonRequestStream{httpRequest: NewHttpRequest(method, path, params)}
 }
 
 // Reader returns a fresh bytes.Reader on each call.
@@ -66,21 +58,28 @@ func (s *JsonRequestStream) Reader() io.Reader {
 //
 // After a successful Emit call, Value holds the deserialised response body.
 // T may be a slice (e.g. JsonResponseStream[[]MyEntity]) for list responses.
+// RawBody is populated when the upstream responds with a non-JSON Content-Type
+// on a 2xx response; Value will be zero in that case.
 type JsonResponseStream[T any] struct {
-	httpResponseBase
-	Value T
+	httpResponse
+	Value   T
+	RawBody []byte
 }
 
 // Decode deserialises the JSON response body into Value.
-// If the injected status code indicates an upstream error (>= 400),
-// the body is read raw and returned as *BffUpstreamError — never decoded as T.
+// Returns errUnexpectedNoContent if statusCode is 204 — use NoBodyResponseStream instead.
+// If the upstream responds with a non-JSON Content-Type on a 2xx, the raw body
+// is stored in RawBody and Value is left as its zero value.
 func (s *JsonResponseStream[T]) Decode(r io.Reader) error {
-	if s.statusCode >= http.StatusBadRequest {
-		body, _ := io.ReadAll(r)
-		return &bffcts.BffUpstreamError{StatusCode: s.statusCode, Body: body}
+	if s.statusCode == http.StatusNoContent {
+		return errUnexpectedNoContent
+	}
+	if ct := s.Headers().Get(headerContentType); !strings.HasPrefix(ct, contentTypeJSON) {
+		s.RawBody, _ = io.ReadAll(r)
+		return nil
 	}
 	if err := json.NewDecoder(r).Decode(&s.Value); err != nil {
-		return fmt.Errorf("bffclient/streams: decode response: %w", err)
+		return wrapErr(errDecodeResponse, err)
 	}
 	return nil
 }

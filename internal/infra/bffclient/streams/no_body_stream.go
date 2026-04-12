@@ -12,12 +12,12 @@ import "io"
 // Decode discards any body the upstream sends; HTTP-level errors are detected
 // by the adapter through the status code check after Decode returns.
 type NoBodyResponseStream struct {
-	httpResponseBase
+	httpResponse
 }
 
 // NewNoBodyResponseStream creates a NoBodyResponseStream.
 func NewNoBodyResponseStream() *NoBodyResponseStream {
-	return &NoBodyResponseStream{}
+	return &NoBodyResponseStream{httpResponse: NewHttpResponse(0)}
 }
 
 // Decode discards the response body and always returns nil.
