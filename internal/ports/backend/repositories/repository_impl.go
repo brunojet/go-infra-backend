@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/brunojet/go-infra-backend/debugassert"
-	dberrs "github.com/brunojet/go-infra-backend/internal/infra/database/errors"
+	rpoerrs "github.com/brunojet/go-infra-backend/internal/ports/backend/repositories/errors"
 	dbcts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	"gorm.io/gorm"
@@ -43,8 +43,8 @@ func (g *gormRepositoryImpl[E]) DbFromContext(ctx context.Context) *gorm.DB {
 func (g *gormRepositoryImpl[E]) Create(ctx context.Context, inOut *E) error {
 	db := g.DbFromContext(ctx)
 	tx := db.Model(new(E)).Create(inOut)
-	err := MapTxError(tx)
-	if err == dberrs.ErrNotFound {
+	err := rpoerrs.MapTxError(tx)
+	if rpoerrs.IsDatabaseErrorKind(err, rpoerrs.DBErrNotFound) {
 		err = getExistingWhenConflict(tx, inOut)
 	}
 	return err
@@ -69,7 +69,7 @@ func (g *gormRepositoryImpl[E]) List(ctx context.Context, listParams contracts.L
 		return 0, err
 	}
 	tx := q.Count(&total)
-	if err := MapTxError(tx); err != nil {
+	if err := rpoerrs.MapTxError(tx); err != nil {
 		return 0, err
 	}
 	if err := setOrderBy(q, listParams.OrderBy, listParams.Order); err != nil {
@@ -79,7 +79,7 @@ func (g *gormRepositoryImpl[E]) List(ctx context.Context, listParams contracts.L
 		return 0, err
 	}
 	tx = q.Find(out)
-	if err := MapTxError(tx); err != nil {
+	if err := rpoerrs.MapTxError(tx); err != nil {
 		return 0, err
 	}
 	return total, nil
@@ -93,7 +93,7 @@ func (g *gormRepositoryImpl[E]) Update(ctx context.Context, scopes map[string]an
 		return err
 	}
 	if tx = tx.Updates(inOut); tx.Error != nil {
-		return MapTxError(tx)
+		return rpoerrs.MapTxError(tx)
 	}
 	return getByScope(db, scopes, inOut)
 }
@@ -106,7 +106,7 @@ func (g *gormRepositoryImpl[E]) Delete(ctx context.Context, scopes map[string]an
 		return err
 	}
 	tx = tx.Delete(new(E))
-	return MapTxError(tx)
+	return rpoerrs.MapTxError(tx)
 }
 
 // WithTx executes the given function within a database transaction, propagating the transaction in the context.

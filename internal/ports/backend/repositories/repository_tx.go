@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/brunojet/go-infra-backend/debugassert"
-	dberrs "github.com/brunojet/go-infra-backend/internal/infra/database/errors"
+	rpoerrs "github.com/brunojet/go-infra-backend/internal/ports/backend/repositories/errors"
 	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
-	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
+	prterrs "github.com/brunojet/go-infra-backend/pkg/ports/errors"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -53,19 +53,19 @@ func ContextWithTx(ctx context.Context, tx *gorm.DB) context.Context {
 
 func addOnConflict(tx *gorm.DB, action conflictAction, columnNames ...string) error {
 	if !isTransactionValid(tx) {
-		return dberrs.ErrInvalidTx
+		return rpoerrs.ErrInvalidTx
 	}
 	if action == conflictActionError {
 		return nil
 	}
 	if len(columnNames) == 0 {
-		return dberrs.ErrConflictColumnsMissing
+		return rpoerrs.ErrConflictColumnsMissing
 	}
 
 	columns := make([]clause.Column, 0, len(columnNames))
 	for _, fieldName := range columnNames {
 		if strings.TrimSpace(fieldName) == "" {
-			return dberrs.ErrInvalidConflictColumnName
+			return rpoerrs.ErrConflictColumnNameMissing
 		}
 		columns = append(columns, clause.Column{Name: fieldName})
 	}
@@ -86,7 +86,7 @@ func buildTxWithScopes[E contracts.Entity](db *gorm.DB, scopes map[string]any) (
 	tx := db.Model(new(E))
 	for fieldName, fieldValue := range scopes {
 		if fieldName == "" || fieldValue == nil {
-			return nil, fmt.Errorf("%w: field '%s' has invalid value", dberrs.ErrInvalidScope, fieldName)
+			return nil, fmt.Errorf("%w: field '%s' has invalid value", rpoerrs.ErrScopeFieldMissing, fieldName)
 		}
 		tx = tx.Where(fmt.Sprintf("%s = ?", fieldName), fieldValue)
 	}
@@ -95,7 +95,7 @@ func buildTxWithScopes[E contracts.Entity](db *gorm.DB, scopes map[string]any) (
 
 func buildTxWithFilledScopes[E contracts.Entity](db *gorm.DB, scopes map[string]any) (*gorm.DB, error) {
 	if len(scopes) == 0 {
-		return nil, dberrs.ErrScopesMissing
+		return nil, rpoerrs.ErrScopesMissing
 	}
 	return buildTxWithScopes[E](db, scopes)
 }
@@ -106,20 +106,20 @@ func getByScope[E contracts.Entity](db *gorm.DB, scopes map[string]any, out *E) 
 		return err
 	}
 	tx = tx.First(out)
-	return MapTxError(tx)
+	return rpoerrs.MapTxError(tx)
 }
 
 func getExistingWhenConflict[E contracts.Entity](tx *gorm.DB, out *E) error {
 	debugassert.Assert(out != nil, "getExistingWhenConflict: out parameter is nil")
 	if conflictTx := (*out).WhereOnConflict(tx).First(out); conflictTx.Error != nil || conflictTx.RowsAffected == 0 {
-		return dberrs.ErrConflictValidationFailed
+		return rpoerrs.ErrConflictValidationFailed
 	}
-	return dberrs.ErrConflictValidationRequired
+	return rpoerrs.ErrConflictValidationRequired
 }
 
 func setOrderBy(q *gorm.DB, orderBy, order string) error {
 	if len(orderBy) == 0 {
-		return dberrs.ErrOrderByMissing
+		return rpoerrs.ErrOrderByMissing
 	}
 	orderClause := clause.OrderByColumn{Column: clause.Column{Name: orderBy}, Desc: (strings.ToLower(order) == "desc")}
 	q.Order(orderClause)
@@ -128,9 +128,9 @@ func setOrderBy(q *gorm.DB, orderBy, order string) error {
 
 func setPagination(q *gorm.DB, page, pageSize int) error {
 	if page < 1 {
-		return dberrs.ErrInvalidPage
+		return rpoerrs.ErrInvalidPage
 	} else if pageSize <= 0 {
-		return dberrs.ErrInvalidPageSize
+		return rpoerrs.ErrInvalidPageSize
 	}
 	q.Limit(pageSize).Offset((page - 1) * pageSize)
 	return nil
@@ -144,7 +144,7 @@ func TxFromContext(ctx context.Context) (*gorm.DB, error) {
 			return tx, nil
 		}
 	}
-	return nil, dberrs.ErrInvalidTx
+	return nil, rpoerrs.ErrInvalidTx
 }
 
 // ValidateTxWithUpdateLock performs a reusable business-rule validation pattern:
@@ -156,17 +156,17 @@ func TxFromContext(ctx context.Context) (*gorm.DB, error) {
 func ValidateTxWithUpdateLock[E contracts.Entity](tx *gorm.DB, spec contracts.LockValidationSpec[E]) error {
 	whereSQL := strings.TrimSpace(spec.WhereSQL)
 	if whereSQL == "" {
-		return dberrs.ErrLockValidationWhere
+		return rpoerrs.ErrLockValidationWhere
 	}
 	if !isTransactionAndContextValid(tx) {
-		return dberrs.ErrRequiresTransaction
+		return rpoerrs.ErrRequiresTransaction
 	}
 	for _, arg := range spec.WhereArgs {
 		if strArg, ok := arg.(string); ok && strings.TrimSpace(strArg) == "" {
-			return dberrs.ErrLockValidationWhere
+			return rpoerrs.ErrLockValidationWhereArgument
 		}
 		if intArg, ok := arg.(int64); ok && intArg == 0 {
-			return dberrs.ErrLockValidationWhere
+			return rpoerrs.ErrLockValidationWhereArgument
 		}
 	}
 	q := tx.Session(&gorm.Session{NewDB: true}).Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
@@ -180,12 +180,12 @@ func ValidateTxWithUpdateLock[E contracts.Entity](tx *gorm.DB, spec contracts.Lo
 		if spec.BlockIfFound != nil {
 			return spec.BlockIfFound(&found)
 		}
-		return porterrors.ErrBusinessRuleViolation
+		return prterrs.ErrBusinessRuleViolation
 	}
-	if err == gorm.ErrRecordNotFound {
-		return nil
+	if err = rpoerrs.MapDbError(err); err != nil && err != rpoerrs.ErrNotFound {
+		return err
 	}
-	return dberrs.MapDbError(err)
+	return nil
 }
 
 func AddOnConflictDoNothing(tx *gorm.DB, columnNames ...string) error {

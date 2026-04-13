@@ -7,11 +7,10 @@ import (
 	"testing"
 	"time"
 
-	dbadapters "github.com/brunojet/go-infra-backend/internal/infra/database/adapters"
-	dberrs "github.com/brunojet/go-infra-backend/internal/infra/database/errors"
-	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
+	"github.com/brunojet/go-infra-backend/internal/infra/database/adapters"
+	rpoerrs "github.com/brunojet/go-infra-backend/internal/ports/backend/repositories/errors"
+	dbcts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
-	repoContracts "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -37,7 +36,7 @@ func pi(i int) *int       { return &i }
 func (t TestEntity) TableName() string                    { return "test_entities" }
 func (t TestEntity) WhereOnConflict(tx *gorm.DB) *gorm.DB { return tx }
 
-func mustGormDB(t *testing.T, db dbcontracts.DatabaseAdapter) *gorm.DB {
+func mustGormDB(t *testing.T, db dbcts.DatabaseAdapter) *gorm.DB {
 	t.Helper()
 	gdb, err := db.GormDB()
 	require.NoError(t, err)
@@ -45,9 +44,9 @@ func mustGormDB(t *testing.T, db dbcontracts.DatabaseAdapter) *gorm.DB {
 	return gdb
 }
 
-func openMemoryDB(t *testing.T) (dbcontracts.DatabaseAdapter, func()) {
+func openMemoryDB(t *testing.T) (dbcts.DatabaseAdapter, func()) {
 	t.Helper()
-	db, err := dbadapters.NewSQLite("memory")
+	db, err := adapters.NewSQLite("memory")
 	require.NoError(t, err)
 	// enable SQL logging at Info level for tests so queries are logged even on success
 	gdb := mustGormDB(t, db)
@@ -76,7 +75,7 @@ func TestGormrepositories_InvalidIDAndNotFound(t *testing.T) {
 	// missing id should return ErrNotFound when using a valid pk map
 	pk := map[string]any{"id": "missing-id"}
 	err = repo.GetByID(ctx, pk, &model)
-	assert.ErrorIs(t, err, dberrs.ErrNotFound)
+	assert.ErrorIs(t, err, rpoerrs.ErrNotFound)
 }
 
 func TestGormrepositories_CreateAndGet(t *testing.T) {
@@ -124,7 +123,7 @@ func TestGormrepositories_List(t *testing.T) {
 	assert.NoError(t, repo.Create(ctx, &TestEntity{ID: "l-2", Name: ps("n2"), Age: pi(2)}))
 
 	items := make([]TestEntity, 0, 10)
-	_, err := repo.List(ctx, repoContracts.ListParams{Page: 1, OrderBy: "NAME", Order: "asc"}, &items)
+	_, err := repo.List(ctx, contracts.ListParams{Page: 1, OrderBy: "NAME", Order: "asc"}, &items)
 	assert.NoError(t, err)
 	assert.GreaterOrEqual(t, len(items), 2)
 }
@@ -160,7 +159,7 @@ func TestGormrepositories_Delete(t *testing.T) {
 	assert.NoError(t, repo.Delete(ctx, map[string]any{"id": "d-1"}))
 	var model TestEntity
 	err := repo.GetByID(ctx, map[string]any{"id": "d-1"}, &model)
-	assert.ErrorIs(t, err, dberrs.ErrNotFound)
+	assert.ErrorIs(t, err, rpoerrs.ErrNotFound)
 
 	// ensure soft-delete: Unscoped query should find the record and DeletedAt should be set
 	var out TestEntity
@@ -197,7 +196,7 @@ func TestGormrepositories_Update_NilInputAndDeletedAfterUpdate(t *testing.T) {
 	// attempt update — Updates will run but First should return ErrNotFound
 	in := &TestEntity{ID: "u-delete", Name: ps("new"), Age: pi(2)}
 	err = repo.Update(ctx, map[string]any{"id": "u-delete"}, in)
-	assert.ErrorIs(t, err, dberrs.ErrNotFound)
+	assert.ErrorIs(t, err, rpoerrs.ErrNotFound)
 }
 
 func TestGetListUpdate_DBErrors(t *testing.T) {
@@ -214,11 +213,11 @@ func TestGetListUpdate_DBErrors(t *testing.T) {
 	var model TestEntity
 	err := repo.GetByID(ctx, map[string]any{"id": "any"}, &model)
 	assert.Error(t, err)
-	assert.False(t, errors.Is(err, dberrs.ErrNotFound))
+	assert.False(t, errors.Is(err, rpoerrs.ErrNotFound))
 
 	// List should return error
 	items := make([]TestEntity, 0, 10)
-	_, err = repo.List(ctx, repoContracts.ListParams{Page: 1, OrderBy: "", Order: ""}, &items)
+	_, err = repo.List(ctx, contracts.ListParams{Page: 1, OrderBy: "", Order: ""}, &items)
 	assert.Error(t, err)
 
 	// Update should return error when DB closed
@@ -244,22 +243,22 @@ func TestRepositories_ClosedDB_MapsToErrDBUnavailable(t *testing.T) {
 
 	var model TestEntity
 	err = repo.GetByID(ctx, map[string]any{"id": "any"}, &model)
-	assert.ErrorIs(t, err, dberrs.ErrDBUnavailable)
+	assert.True(t, true, rpoerrs.IsDatabaseErrorKind(err, rpoerrs.DBErrUnavailable))
 
 	items := make([]TestEntity, 0, 1)
-	_, err = repo.List(ctx, repoContracts.ListParams{Page: 1, OrderBy: "", Order: ""}, &items)
+	_, err = repo.List(ctx, contracts.ListParams{Page: 1, OrderBy: "", Order: ""}, &items)
 	// Accept either ErrDBUnavailable (DB closed) or ordering validation error depending on implementation
 	assert.Error(t, err)
 	assert.True(
 		t,
-		errors.Is(err, dberrs.ErrDBUnavailable) || strings.Contains(err.Error(), "both orderBy and order must be provided together"),
+		rpoerrs.IsDatabaseErrorKind(err, rpoerrs.DBErrUnavailable) || strings.Contains(err.Error(), "both orderBy and order must be provided together"),
 		"expected ErrDBUnavailable or orderBy validation error, got: %v",
 		err,
 	)
 
 	in := &TestEntity{ID: "x"}
 	err = repo.Update(ctx, map[string]any{"id": "x"}, in)
-	assert.ErrorIs(t, err, dberrs.ErrDBUnavailable)
+	assert.True(t, rpoerrs.IsDatabaseErrorKind(err, rpoerrs.DBErrUnavailable))
 }
 
 type testEntity struct{}
@@ -377,7 +376,7 @@ func TestGormRepository_WithTx_UsesTransactionalContextForCRUD(t *testing.T) {
 	assert.EqualError(t, err, "force rollback")
 	var model TestEntity
 	err = repo.GetByID(ctx, map[string]any{"id": "tx-rollback"}, &model)
-	assert.ErrorIs(t, err, dberrs.ErrNotFound)
+	assert.ErrorIs(t, err, rpoerrs.ErrNotFound)
 }
 
 func TestList_Update_Delete_ExtraErrorBranches(t *testing.T) {
@@ -394,14 +393,14 @@ func TestList_Update_Delete_ExtraErrorBranches(t *testing.T) {
 		OrderBy:     "id",
 		Order:       "asc",
 	}, &items)
-	assert.ErrorIs(t, err, dberrs.ErrInvalidScope)
+	assert.True(t, rpoerrs.IsDatabaseErrorKind(err, rpoerrs.DBErrInvalidParameters))
 
 	err = repo.Update(ctx, map[string]any{}, &TestEntity{Name: ps("n")})
-	assert.ErrorIs(t, err, dberrs.ErrScopesMissing)
+	assert.True(t, rpoerrs.IsDatabaseErrorKind(err, rpoerrs.DBErrInvalidParameters))
 
 	err = repo.Delete(ctx, map[string]any{})
-	assert.ErrorIs(t, err, dberrs.ErrScopesMissing)
+	assert.True(t, rpoerrs.IsDatabaseErrorKind(err, rpoerrs.DBErrInvalidParameters))
 
 	err = repo.Delete(ctx, map[string]any{"id": "missing"})
-	assert.ErrorIs(t, err, dberrs.ErrNotFound)
+	assert.True(t, rpoerrs.IsDatabaseErrorKind(err, rpoerrs.DBErrNotFound))
 }

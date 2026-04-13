@@ -22,21 +22,20 @@ const (
 )
 
 var (
-	ErrDBUnavailable              = NewDatabaseError(DBErrUnavailable)
-	ErrConflictColumnsMissing     = NewDatabaseError(DBErrInvalidParameters, errors.New("conflict columns missing"))
-	ErrInvalidConflictColumnName  = NewDatabaseError(DBErrInvalidParameters, errors.New("invalid conflict column name"))
-	ErrInvalidScope               = NewDatabaseError(DBErrInvalidParameters, errors.New("scope field has invalid value"))
-	ErrScopesMissing              = NewDatabaseError(DBErrInvalidParameters, errors.New("scopes is missing"))
-	ErrOrderByMissing             = NewDatabaseError(DBErrInvalidParameters, errors.New("orderBy is missing"))
-	ErrInvalidPage                = NewDatabaseError(DBErrInvalidParameters, errors.New("page must be greater than zero"))
-	ErrInvalidPageSize            = NewDatabaseError(DBErrInvalidParameters, errors.New("pageSize must be greater than zero"))
-	ErrRequiresTransaction        = NewDatabaseError(DbErrRuntime, errors.New("operation must run inside a transaction"))
-	ErrLockValidationWhere        = NewDatabaseError(DbErrRuntime, errors.New("where clause must be provided for lock validation"))
-	ErrInvalidTx                  = NewDatabaseError(DbErrRuntime, errors.New("invalid transaction"))
-	ErrConflictValidationRequired = NewDatabaseError(DBErrConstraint, errors.New("validation is required for this operation"))
-	ErrConflictValidationFailed   = NewDatabaseError(DBErrConstraint, errors.New("another transaction has modified the same entity"))
-	ErrConstraintViolation        = NewDatabaseError(DBErrConstraint)
-	ErrNotFound                   = NewDatabaseError(DBErrNotFound)
+	ErrConflictColumnsMissing      = NewDatabaseError(DBErrInvalidParameters, errors.New("conflict columns missing"))
+	ErrConflictColumnNameMissing   = NewDatabaseError(DBErrInvalidParameters, errors.New("invalid conflict column name"))
+	ErrScopeFieldMissing           = NewDatabaseError(DBErrInvalidParameters, errors.New("scope field has invalid value"))
+	ErrScopesMissing               = NewDatabaseError(DBErrInvalidParameters, errors.New("scopes is missing"))
+	ErrOrderByMissing              = NewDatabaseError(DBErrInvalidParameters, errors.New("orderBy is missing"))
+	ErrInvalidPage                 = NewDatabaseError(DBErrInvalidParameters, errors.New("page must be greater than zero"))
+	ErrInvalidPageSize             = NewDatabaseError(DBErrInvalidParameters, errors.New("pageSize must be greater than zero"))
+	ErrInvalidTx                   = NewDatabaseError(DbErrRuntime, errors.New("invalid transaction"))
+	ErrRequiresTransaction         = NewDatabaseError(DbErrRuntime, errors.New("operation must run inside a transaction"))
+	ErrLockValidationWhere         = NewDatabaseError(DbErrRuntime, errors.New("where clause must be provided for lock validation"))
+	ErrLockValidationWhereArgument = NewDatabaseError(DbErrRuntime, errors.New("where clause arguments must be valid"))
+	ErrConflictValidationRequired  = NewDatabaseError(DBErrConstraint, errors.New("validation is required for this operation"))
+	ErrConflictValidationFailed    = NewDatabaseError(DBErrConstraint, errors.New("another transaction has modified the same entity"))
+	ErrNotFound                    = NewDatabaseError(DBErrNotFound)
 )
 
 type databaseError struct {
@@ -91,6 +90,11 @@ func IsDatabaseError(err error) bool {
 	return errors.As(err, &de)
 }
 
+func IsDatabaseErrorKind(err error, kind DBErrorKind) bool {
+	var de *databaseError
+	return errors.As(err, &de) && de.kind == kind
+}
+
 func DatabaseErrorKind(err error) (DBErrorKind, bool) {
 	var de *databaseError
 	if errors.As(err, &de) {
@@ -103,9 +107,9 @@ func MapDbError(err error) error {
 	if err == nil {
 		return nil
 	} else if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, sql.ErrNoRows) {
-		return ErrNotFound
+		return NewDatabaseError(DBErrNotFound, err)
 	} else if errors.Is(err, sql.ErrConnDone) || strings.Contains(err.Error(), "database is closed") {
-		return ErrDBUnavailable
+		return NewDatabaseError(DBErrUnavailable, err)
 	} else if errors.Is(err, gorm.ErrDuplicatedKey) ||
 		strings.Contains(err.Error(), "UNIQUE constraint failed") ||
 		strings.Contains(err.Error(), "CHECK constraint failed") ||
@@ -113,4 +117,15 @@ func MapDbError(err error) error {
 		return NewDatabaseError(DBErrConstraint, err)
 	}
 	return err
+}
+
+func MapTxError(tx *gorm.DB) error {
+	if tx == nil {
+		return ErrInvalidTx
+	} else if tx.Error != nil {
+		return MapDbError(tx.Error)
+	} else if tx.RowsAffected == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
