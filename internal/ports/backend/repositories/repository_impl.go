@@ -44,10 +44,11 @@ func (g *gormRepositoryImpl[E]) DbFromContext(ctx context.Context) *gorm.DB {
 // returns nil if the original intent is a subset of the existing record, ErrConflictValidationFailed otherwise.
 func (g *gormRepositoryImpl[E]) Create(ctx context.Context, inOut *E) error {
 	db := g.DbFromContext(ctx)
+	original := *inOut
 	tx := db.Model(new(E)).Create(inOut)
 	err := rpoerrs.MapTxError(tx)
 	if rpoerrs.IsDatabaseErrorKind(err, rpoerrs.DBErrNotFound) {
-		err = getExistingWhenConflict(tx, inOut)
+		err = getExistingWhenConflict(tx, &original, inOut)
 	}
 	return err
 }

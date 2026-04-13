@@ -114,7 +114,7 @@ func getByScope[E contracts.Entity](db *gorm.DB, scopes map[string]any, out *E) 
 // getExistingWhenConflict fetches the existing conflicting record into *out and verifies
 // that the original intent is a subset of what is already persisted (idempotency check).
 // Returns nil when the conflict is idempotent, ErrConflictValidationFailed otherwise.
-func getExistingWhenConflict[E contracts.Entity](tx *gorm.DB, out *E) error {
+func getExistingWhenConflict[E contracts.Entity](tx *gorm.DB, original *E, out *E) error {
 	debugassert.Assert(out != nil, "getExistingWhenConflict: out parameter is nil")
 	// ON CONFLICT DO NOTHING means no rows were inserted and GORM does not write
 	// auto-fields back into *out, so *out still holds the caller's original intent.
@@ -123,10 +123,13 @@ func getExistingWhenConflict[E contracts.Entity](tx *gorm.DB, out *E) error {
 	selectTx := tx.Session(&gorm.Session{NewDB: true})
 	intent := *out
 	var fresh E
-	if conflictTx := intent.WhereOnConflict(selectTx).First(&fresh); conflictTx.Error != nil || conflictTx.RowsAffected == 0 {
-		return rpoerrs.NewDatabaseError(rpoerrs.DBErrConstraint, conflictTx.Error)
+	if conflictTx := intent.WhereOnConflict(selectTx).First(&fresh); conflictTx.RowsAffected == 0 {
+		if conflictTx.Error != nil {
+			return rpoerrs.NewDatabaseError(rpoerrs.DBErrConstraint, conflictTx.Error)
+		}
+		return rpoerrs.ErrConflictValidationFailed
 	}
-	if !isModelSubset(intent, fresh) {
+	if !isModelSubset(original, &fresh) {
 		return rpoerrs.ErrConflictValidationFailed
 	}
 	*out = fresh
