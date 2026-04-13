@@ -1,4 +1,4 @@
-﻿package repositories
+package repositories
 
 import (
 	"github.com/brunojet/go-infra-backend/demoapp/models"

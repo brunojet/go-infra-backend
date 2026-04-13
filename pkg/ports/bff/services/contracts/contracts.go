@@ -1,4 +1,4 @@
-﻿package contracts
+package contracts
 
 import svccts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 

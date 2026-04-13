@@ -1,12 +1,13 @@
-﻿package repositories
+package repositories
 
 import (
 	"context"
 
 	"github.com/brunojet/go-infra-backend/internal/ports/backend/repositories"
+	rpoerrs "github.com/brunojet/go-infra-backend/internal/ports/backend/repositories/errors"
 	"github.com/brunojet/go-infra-backend/pkg/infra/database"
-	"github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	"gorm.io/gorm"
 )
 
@@ -20,21 +21,26 @@ type (
 	BusinessRuleError            = errors.BusinessRuleError
 )
 
-// ---- Errors ----
-var (
-	ErrDBUnavailable              = repositories.ErrDBUnavailable
-	ErrInvalidTx                  = repositories.ErrInvalidTx
-	ErrNotFound                   = repositories.ErrNotFound
-	ErrRequiresTransaction        = repositories.ErrRequiresTransaction
-	ErrLockValidationWhere        = repositories.ErrLockValidationWhere
-	ErrConflictValidationRequired = repositories.ErrConflictValidationRequired
-	ErrConstraintViolation        = repositories.ErrConstraintViolation
+// ---- Error kinds ----
+type DBErrorKind = rpoerrs.DBErrorKind
+
+const (
+	DBErrUnavailable       = rpoerrs.DBErrUnavailable
+	DBErrInvalidParameters = rpoerrs.DBErrInvalidParameters
+	DBErrConstraint        = rpoerrs.DBErrConstraint
+	DBErrNotFound          = rpoerrs.DBErrNotFound
 )
 
 // ---- Helpers (delegating to internal) ----
-func MapDbError(err error) error { return repositories.MapDbError(err) }
+func MapDbError(err error) error { return rpoerrs.MapDbError(err) }
 
-func MapTxError(tx *gorm.DB) error { return repositories.MapTxError(tx) }
+func MapTxError(tx *gorm.DB) error { return rpoerrs.MapTxError(tx) }
+
+func IsDatabaseErrorKind(err error, kind DBErrorKind) bool {
+	return rpoerrs.IsDatabaseErrorKind(err, kind)
+}
+
+func DatabaseErrorKind(err error) (DBErrorKind, bool) { return rpoerrs.DatabaseErrorKind(err) }
 
 // ContextWithTx is a convenience wrapper that annotates a context with a
 // *gorm.DB transaction so downstream code can retrieve it via TxFromContext.

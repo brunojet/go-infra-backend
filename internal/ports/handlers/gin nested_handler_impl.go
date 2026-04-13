@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	hndcontracts "github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
 	svccontracts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
+	hndcontracts "github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
 )
 
 type nestedGinHandler[C, R, U any] struct {

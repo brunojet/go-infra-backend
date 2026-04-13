@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"bytes"
@@ -7,16 +7,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	httpserver "github.com/brunojet/go-infra-backend/internal/infra/http_server"
-	repoerrs "github.com/brunojet/go-infra-backend/internal/ports/backend/repositories"
+	"github.com/brunojet/go-infra-backend/internal/infra/http_server"
+	"github.com/brunojet/go-infra-backend/internal/ports/backend/repositories/errors"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMapErrorToStatus(t *testing.T) {
 	a := assert.New(t)
-	a.Equal(http.StatusNotFound, MapErrorToStatus(repoerrs.ErrNotFound))
-	a.Equal(http.StatusServiceUnavailable, MapErrorToStatus(repoerrs.ErrDBUnavailable))
+	a.Equal(http.StatusNotFound, MapErrorToStatus(errors.ErrNotFound))
+	a.Equal(http.StatusServiceUnavailable, MapErrorToStatus(errors.ErrDBUnavailable))
 }
 
 func TestSetResponseFromError_WritesJSON(t *testing.T) {
@@ -24,9 +24,9 @@ func TestSetResponseFromError_WritesJSON(t *testing.T) {
 	w := httptest.NewRecorder()
 	// Wire ProblemDetailsMiddleware so it writes the body, mirroring production.
 	router := gin.New()
-	router.Use(httpserver.ProblemDetailsMiddleware())
+	router.Use(http_server.ProblemDetailsMiddleware())
 	router.GET("/test", func(c *gin.Context) {
-		SetResponseFromError(c, repoerrs.ErrNotFound)
+		SetResponseFromError(c, errors.ErrNotFound)
 	})
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	router.ServeHTTP(w, req)

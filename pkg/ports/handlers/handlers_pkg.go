@@ -1,9 +1,9 @@
-﻿package handlers
+package handlers
 
 import (
 	"github.com/brunojet/go-infra-backend/internal/ports/handlers"
-	hndcontracts "github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
 	svccontracts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
+	hndcontracts "github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
 	"github.com/gin-gonic/gin"
 )
 

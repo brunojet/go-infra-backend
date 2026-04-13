@@ -1,10 +1,8 @@
-﻿package services
+package services
 
 import (
 	"context"
 
-	rpoerrs "github.com/brunojet/go-infra-backend/internal/ports/backend/repositories/errors"
-	"github.com/brunojet/go-infra-backend/internal/utils"
 	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 )
@@ -23,23 +21,12 @@ func (s *serviceImpl[C, R, U, E]) Create(ctx context.Context, request C, respons
 	if err := s.mapper.ToPostModel(request, &model); err != nil {
 		return err
 	}
-	conflictValidationNeeded := false
-	err := s.rpo.WithTx(ctx, func(txCtx context.Context) error {
+	return s.rpo.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.rpo.Create(txCtx, &model); err != nil {
-			if err != rpoerrs.ErrConflictValidationRequired {
-				return err
-			}
-			conflictValidationNeeded = true
-		}
-		if err := s.mapper.ToDTO(&model, response); err != nil {
 			return err
 		}
-		return nil
+		return s.mapper.ToDTO(&model, response)
 	})
-	if conflictValidationNeeded && !utils.IsSubSetInterface(request, response) {
-		err = rpoerrs.ErrConflictValidationFailed
-	}
-	return err
 }
 
 func (s *serviceImpl[C, R, U, E]) GetByID(ctx context.Context, id string, response *R) error {

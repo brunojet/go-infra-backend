@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/brunojet/go-infra-backend/pkg/infra/database"
-	porterrors "github.com/brunojet/go-infra-backend/pkg/ports/errors"
+	"github.com/brunojet/go-infra-backend/pkg/ports/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -45,7 +45,7 @@ func TestValidateTxWithUpdateLock_ExposedForPkgConsumers(t *testing.T) {
 				if found.Name == "alpha" {
 					return nil
 				}
-				return porterrors.ErrBusinessRuleViolation
+				return errors.ErrBusinessRuleViolation
 			},
 		})
 	})
@@ -61,7 +61,7 @@ func TestValidateTxWithUpdateLock_ExposedForPkgConsumers(t *testing.T) {
 			WhereArgs: []any{"1"},
 		})
 	})
-	assert.ErrorIs(t, err, porterrors.ErrBusinessRuleViolation)
+	assert.ErrorIs(t, err, errors.ErrBusinessRuleViolation)
 }
 
 func TestPkgFacade_AddOnConflictWrappers(t *testing.T) {
@@ -73,10 +73,10 @@ func TestPkgFacade_AddOnConflictWrappers(t *testing.T) {
 	require.NoError(t, err)
 
 	err = AddOnConflictDoNothing(nil, "id")
-	assert.ErrorIs(t, err, ErrInvalidTx)
+	assert.True(t, IsDatabaseErrorKind(err, DBErrInvalidParameters))
 
 	err = AddOnConflictUpdateAll(nil, "id")
-	assert.ErrorIs(t, err, ErrInvalidTx)
+	assert.True(t, IsDatabaseErrorKind(err, DBErrInvalidParameters))
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		if txErr := AddOnConflictDoNothing(tx, "id"); txErr != nil {

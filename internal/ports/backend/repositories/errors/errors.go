@@ -33,7 +33,6 @@ var (
 	ErrRequiresTransaction         = NewDatabaseError(DBErrInvalidParameters, errors.New("operation must run inside a transaction"))
 	ErrLockValidationWhereClause   = NewDatabaseError(DBErrInvalidParameters, errors.New("where clause must be provided for lock validation"))
 	ErrLockValidationWhereArgument = NewDatabaseError(DBErrInvalidParameters, errors.New("where arguments must be valid"))
-	ErrConflictValidationRequired  = NewDatabaseError(DBErrConstraint, errors.New("validation is required for this operation"))
 	ErrConflictValidationFailed    = NewDatabaseError(DBErrConstraint, errors.New("another transaction has modified the same entity"))
 	ErrNotFound                    = NewDatabaseError(DBErrNotFound)
 	// Sentinel errors for callers that need a typed value without inspecting DBErrorKind.

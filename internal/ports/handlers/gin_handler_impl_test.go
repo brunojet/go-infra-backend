@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"bytes"
@@ -9,9 +9,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	rpo "github.com/brunojet/go-infra-backend/internal/ports/backend/repositories"
-	"github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
+	rpo "github.com/brunojet/go-infra-backend/internal/ports/backend/repositories/errors"
 	svccts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
+	"github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"

@@ -1,10 +1,10 @@
-﻿package models
+package models
 
 import (
 	"database/sql"
 	"testing"
 
-	portsrepos "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories"
+	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories"
 	"github.com/brunojet/go-infra-backend/pkg/testutil/dbtest"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -66,7 +66,7 @@ func TestApplicationUpdate_RejectsNameCollisionWithOtherCustomer(t *testing.T) {
 	err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
 		return tx.Save(&app1).Error, nil
 	})
-	require.ErrorIs(t, portsrepos.MapDbError(err), portsrepos.ErrConstraintViolation)
+	require.True(t, repositories.IsDatabaseErrorKind(repositories.MapDbError(err), repositories.DBErrConstraint))
 }
 
 func TestApplicationConfiguration_PackageCanRepeatInsideSameApp(t *testing.T) {
@@ -141,5 +141,5 @@ func TestApplicationConfigurationUpdate_SuccessAndErrorBranches(t *testing.T) {
 	err := RunInTransaction(t, gdb, func(tx *gorm.DB) (error, error) {
 		return tx.Save(&ac2).Error, nil
 	})
-	require.ErrorIs(t, portsrepos.MapDbError(err), portsrepos.ErrConstraintViolation)
+	require.True(t, repositories.IsDatabaseErrorKind(repositories.MapDbError(err), repositories.DBErrConstraint))
 }

@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"github.com/brunojet/go-infra-backend/demobff/services"

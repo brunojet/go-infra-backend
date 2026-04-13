@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"net/http"
@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	hndcts "github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
 	svccts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
+	hndcts "github.com/brunojet/go-infra-backend/pkg/ports/handlers/contracts"
 )
 
 type ginHandler[C, R, U any] struct {

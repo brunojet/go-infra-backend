@@ -1,4 +1,4 @@
-﻿package repositories
+package repositories
 
 import (
 	"bytes"
@@ -124,7 +124,7 @@ func getExistingWhenConflict[E contracts.Entity](tx *gorm.DB, out *E) error {
 	intent := *out
 	var fresh E
 	if conflictTx := intent.WhereOnConflict(selectTx).First(&fresh); conflictTx.Error != nil || conflictTx.RowsAffected == 0 {
-		return rpoerrs.NewDatabaseError(DBErrConstraint, conflictTx.Error)
+		return rpoerrs.NewDatabaseError(rpoerrs.DBErrConstraint, conflictTx.Error)
 	}
 	if !isModelSubset(intent, fresh) {
 		return rpoerrs.ErrConflictValidationFailed

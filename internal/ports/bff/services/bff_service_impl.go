@@ -1,12 +1,12 @@
-﻿package services
+package services
 
 import (
 	"context"
 	"strings"
 
+	svccts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 	bffrpocts "github.com/brunojet/go-infra-backend/pkg/ports/bff/repositories/contracts"
 	bffsvccts "github.com/brunojet/go-infra-backend/pkg/ports/bff/services/contracts"
-	svccts "github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 )
 
 // ---------------------------------------------------------------------------

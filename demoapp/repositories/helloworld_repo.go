@@ -1,11 +1,12 @@
-﻿package repositories
+package repositories
 
 import (
 	"context"
 	"database/sql"
 
 	"github.com/brunojet/go-infra-backend/internal/ports/backend/repositories"
-	dbcontracts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
+	rpoerrs "github.com/brunojet/go-infra-backend/internal/ports/backend/repositories/errors"
+	dbcts "github.com/brunojet/go-infra-backend/pkg/infra/database/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -35,12 +36,12 @@ type HelloWorldRepo struct {
 	contracts.Repository[HelloWorld]
 }
 
-func NewHelloWorldRepo(db dbcontracts.DatabaseAdapter) contracts.Repository[HelloWorld] {
+func NewHelloWorldRepo(db dbcts.DatabaseAdapter) contracts.Repository[HelloWorld] {
 	return &HelloWorldRepo{
 		Repository: repositories.NewGormRepository[HelloWorld](db),
 	}
 }
 
 func (h *HelloWorldRepo) FindByMessage(ctx context.Context, message string, out *HelloWorld) error {
-	return repositories.MapDbError(h.GormDB().WithContext(ctx).Where("message = ?", message).First(out).Error)
+	return rpoerrs.MapDbError(h.GormDB().WithContext(ctx).Where("message = ?", message).First(out).Error)
 }
