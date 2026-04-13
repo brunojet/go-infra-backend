@@ -2,6 +2,7 @@
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"strings"
 	"testing"
@@ -273,6 +274,26 @@ type RepoTestModel struct {
 func (r RepoTestModel) TableName() string                    { return "repo_test_models" }
 func (r RepoTestModel) WhereOnConflict(tx *gorm.DB) *gorm.DB { return tx }
 
+// NullConflictEntity uses sql.Null* fields to exercise the JSON-based idempotency check
+// in getExistingWhenConflict. Name is the unique business key; Extra distinguishes payloads.
+type NullConflictEntity struct {
+	ID        int64          `gorm:"primaryKey;autoIncrement"`
+	Name      sql.NullString `gorm:"size:64;uniqueIndex:ux_nce_name;not null"`
+	Extra     sql.NullString `gorm:"size:64"`
+	CreatedAt sql.NullTime   `gorm:"autoCreateTime"`
+	UpdatedAt sql.NullTime   `gorm:"autoUpdateTime"`
+}
+
+func (NullConflictEntity) TableName() string { return "null_conflict_entities" }
+
+func (e *NullConflictEntity) BeforeCreate(tx *gorm.DB) error {
+	return AddOnConflictDoNothing(tx, "name")
+}
+
+func (e NullConflictEntity) WhereOnConflict(tx *gorm.DB) *gorm.DB {
+	return tx.Where("name = ?", e.Name.String)
+}
+
 func TestSetPagination_ErrorsAndSuccess(t *testing.T) {
 	db, close := openMemoryDB(t) // ensure DB can be opened before proceeding with List tests
 	defer close()
@@ -403,4 +424,38 @@ func TestList_Update_Delete_ExtraErrorBranches(t *testing.T) {
 
 	err = repo.Delete(ctx, map[string]any{"id": "missing"})
 	assert.True(t, rpoerrs.IsDatabaseErrorKind(err, rpoerrs.DBErrNotFound))
+}
+
+func TestCreate_ConflictIdempotent_NullStringModel(t *testing.T) {
+	db, cleanup := openMemoryDB(t)
+	defer cleanup()
+
+	gdb := mustGormDB(t, db)
+	require.NoError(t, gdb.AutoMigrate(&NullConflictEntity{}))
+
+	repo := NewGormRepository[NullConflictEntity](db)
+	ctx := context.Background()
+
+	// First create: GORM populates ID, CreatedAt, UpdatedAt in *e1.
+	e1 := &NullConflictEntity{Name: sql.NullString{String: "foo", Valid: true}}
+	require.NoError(t, repo.Create(ctx, e1))
+	assert.NotZero(t, e1.ID)
+	assert.True(t, e1.CreatedAt.Valid)
+
+	// Same name, no Extra → idempotent: returns nil and *e2 carries the existing record.
+	// out must contain everything from in: ID, Name, CreatedAt, UpdatedAt all filled.
+	e2 := &NullConflictEntity{Name: sql.NullString{String: "foo", Valid: true}}
+	err := repo.Create(ctx, e2)
+	assert.NoError(t, err)
+	assert.Equal(t, e1.ID, e2.ID)
+	assert.True(t, e2.CreatedAt.Valid)
+	assert.Equal(t, e1.Name.String, e2.Name.String)
+
+	// Same name but different Extra → conflict with divergent data → ErrConflictValidationFailed.
+	e3 := &NullConflictEntity{
+		Name:  sql.NullString{String: "foo", Valid: true},
+		Extra: sql.NullString{String: "different", Valid: true},
+	}
+	err = repo.Create(ctx, e3)
+	assert.ErrorIs(t, err, rpoerrs.ErrConflictValidationFailed)
 }

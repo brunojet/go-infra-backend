@@ -1,7 +1,9 @@
 ﻿package repositories
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -109,12 +111,81 @@ func getByScope[E contracts.Entity](db *gorm.DB, scopes map[string]any, out *E) 
 	return rpoerrs.MapTxError(tx)
 }
 
-func getExistingWhenConflict[E contracts.Entity](tx *gorm.DB, out *E) error {
+// getExistingWhenConflict fetches the existing conflicting record into *out and verifies
+// that the original intent is a subset of what is already persisted (idempotency check).
+// Returns nil when the conflict is idempotent, ErrConflictValidationFailed otherwise.
+func getExistingWhenConflict[E contracts.Entity](tx *gorm.DB, original E, out *E) error {
 	debugassert.Assert(out != nil, "getExistingWhenConflict: out parameter is nil")
-	if conflictTx := (*out).WhereOnConflict(tx).First(out); conflictTx.Error != nil || conflictTx.RowsAffected == 0 {
+	if conflictTx := original.WhereOnConflict(tx).First(out); conflictTx.Error != nil || conflictTx.RowsAffected == 0 {
 		return rpoerrs.ErrConflictValidationFailed
 	}
-	return rpoerrs.ErrConflictValidationRequired
+	if !isModelSubset(original, *out) {
+		return rpoerrs.ErrConflictValidationFailed
+	}
+	return nil
+}
+
+// isModelSubset reports whether all non-null/non-zero fields in original exist with
+// equal values in existing. Uses JSON encoding to avoid direct reflect usage.
+func isModelSubset[E any](original, existing E) bool {
+	ma, err := toJSONMap(original)
+	if err != nil {
+		return false
+	}
+	mb, err := toJSONMap(existing)
+	if err != nil {
+		return false
+	}
+	return isSubsetMapNonNull(ma, mb)
+}
+
+func toJSONMap(v any) (map[string]any, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var m map[string]any
+	return m, json.Unmarshal(b, &m)
+}
+
+// isSubsetMapNonNull checks that every non-null, non-zero field in a exists in b with the same value.
+func isSubsetMapNonNull(a, b map[string]any) bool {
+	for k, va := range a {
+		if isNullOrZero(va) {
+			continue
+		}
+		vb, ok := b[k]
+		if !ok {
+			return false
+		}
+		if ma, ok := va.(map[string]any); ok {
+			if mb, ok := vb.(map[string]any); ok {
+				if !isSubsetMapNonNull(ma, mb) {
+					return false
+				}
+				continue
+			}
+			return false
+		}
+		ba, _ := json.Marshal(va)
+		bb, _ := json.Marshal(vb)
+		if !bytes.Equal(ba, bb) {
+			return false
+		}
+	}
+	return true
+}
+
+// isNullOrZero returns true for JSON null (nil) and numeric zero (float64(0)),
+// treating those as "not intentionally set" by the caller.
+func isNullOrZero(v any) bool {
+	if v == nil {
+		return true
+	}
+	if f, ok := v.(float64); ok && f == 0 {
+		return true
+	}
+	return false
 }
 
 func setOrderBy(q *gorm.DB, orderBy, order string) error {

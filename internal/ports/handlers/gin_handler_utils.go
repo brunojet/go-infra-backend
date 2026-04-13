@@ -8,7 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	porterrors "github.com/brunojet/go-infra-backend/internal/infra/errors"
+	inframanagers "github.com/brunojet/go-infra-backend/internal/infra/errors"
+	rpoerrs "github.com/brunojet/go-infra-backend/internal/ports/backend/repositories/errors"
 	"github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
 	"github.com/gin-gonic/gin"
 )
@@ -23,17 +24,19 @@ var (
 )
 
 func MapErrorToStatus(err error) int {
-	if code, ok := porterrors.HTTPStatusCode(err); ok {
+	if code, ok := inframanagers.HTTPStatusCode(err); ok {
 		return code
 	}
-	if kind, ok := porterrors.DatabaseErrorKind(err); ok {
+	if kind, ok := rpoerrs.DatabaseErrorKind(err); ok {
 		switch kind {
-		case porterrors.DBErrNotFound:
+		case rpoerrs.DBErrNotFound:
 			return http.StatusNotFound
-		case porterrors.DBErrUnavailable:
+		case rpoerrs.DBErrUnavailable:
 			return http.StatusServiceUnavailable
-		case porterrors.DBErrConstraintViolation, porterrors.DBErrConflictValidation:
+		case rpoerrs.DBErrConstraint:
 			return http.StatusConflict
+		default:
+			return http.StatusInternalServerError
 		}
 	}
 	switch err {

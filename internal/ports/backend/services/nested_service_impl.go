@@ -3,7 +3,7 @@
 import (
 	"context"
 
-	dberrs "github.com/brunojet/go-infra-backend/internal/infra/database/errors"
+	rpoerrs "github.com/brunojet/go-infra-backend/internal/ports/backend/repositories/errors"
 	"github.com/brunojet/go-infra-backend/internal/utils"
 	rpocts "github.com/brunojet/go-infra-backend/pkg/ports/backend/repositories/contracts"
 	"github.com/brunojet/go-infra-backend/pkg/ports/backend/services/contracts"
@@ -33,7 +33,7 @@ func (s *nestedServiceImpl[C, R, U, E]) CreateNested(ctx context.Context, parent
 	conflictValidationNeeded := false
 	err := s.rpo.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.rpo.Create(txCtx, &model); err != nil {
-			if err != dberrs.ErrConflictValidationRequired {
+			if err != rpoerrs.ErrConflictValidationRequired {
 				return err
 			}
 			conflictValidationNeeded = true
@@ -44,7 +44,7 @@ func (s *nestedServiceImpl[C, R, U, E]) CreateNested(ctx context.Context, parent
 		return nil
 	})
 	if conflictValidationNeeded && !utils.IsSubSetInterface(request, response) {
-		err = dberrs.ErrConflictValidationFailed
+		err = rpoerrs.ErrConflictValidationFailed
 	}
 	return err
 }

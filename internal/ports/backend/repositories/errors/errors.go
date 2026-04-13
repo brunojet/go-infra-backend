@@ -36,6 +36,11 @@ var (
 	ErrConflictValidationRequired  = NewDatabaseError(DBErrConstraint, errors.New("validation is required for this operation"))
 	ErrConflictValidationFailed    = NewDatabaseError(DBErrConstraint, errors.New("another transaction has modified the same entity"))
 	ErrNotFound                    = NewDatabaseError(DBErrNotFound)
+	// Sentinel errors for callers that need a typed value without inspecting DBErrorKind.
+	ErrDBUnavailable       = NewDatabaseError(DBErrUnavailable)
+	ErrConstraintViolation = NewDatabaseError(DBErrConstraint)
+	// ErrLockValidationWhere is an alias kept for backward compatibility.
+	ErrLockValidationWhere = ErrLockValidationWhereClause
 )
 
 type databaseError struct {

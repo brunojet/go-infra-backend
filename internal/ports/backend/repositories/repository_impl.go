@@ -39,13 +39,16 @@ func (g *gormRepositoryImpl[E]) DbFromContext(ctx context.Context) *gorm.DB {
 	return g.db.WithContext(ctx)
 }
 
-// Create inserts a new entity into the database. If a conflict occurs, attempts to retrieve the existing entity.
+// Create inserts a new entity into the database.
+// On ON CONFLICT DO NOTHING (0 rows affected), fetches the existing record and checks idempotency:
+// returns nil if the original intent is a subset of the existing record, ErrConflictValidationFailed otherwise.
 func (g *gormRepositoryImpl[E]) Create(ctx context.Context, inOut *E) error {
+	original := *inOut // copy before GORM/DB populates auto-fields
 	db := g.DbFromContext(ctx)
 	tx := db.Model(new(E)).Create(inOut)
 	err := rpoerrs.MapTxError(tx)
 	if rpoerrs.IsDatabaseErrorKind(err, rpoerrs.DBErrNotFound) {
-		err = getExistingWhenConflict(tx, inOut)
+		err = getExistingWhenConflict(tx, original, inOut)
 	}
 	return err
 }
