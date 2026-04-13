@@ -114,14 +114,22 @@ func getByScope[E contracts.Entity](db *gorm.DB, scopes map[string]any, out *E) 
 // getExistingWhenConflict fetches the existing conflicting record into *out and verifies
 // that the original intent is a subset of what is already persisted (idempotency check).
 // Returns nil when the conflict is idempotent, ErrConflictValidationFailed otherwise.
-func getExistingWhenConflict[E contracts.Entity](tx *gorm.DB, original E, out *E) error {
+func getExistingWhenConflict[E contracts.Entity](tx *gorm.DB, out *E) error {
 	debugassert.Assert(out != nil, "getExistingWhenConflict: out parameter is nil")
-	if conflictTx := original.WhereOnConflict(tx).First(out); conflictTx.Error != nil || conflictTx.RowsAffected == 0 {
+	// ON CONFLICT DO NOTHING means no rows were inserted and GORM does not write
+	// auto-fields back into *out, so *out still holds the caller's original intent.
+	// Use a zeroed-out fresh value for the SELECT so GORM does not treat *out's
+	// non-zero fields as implicit WHERE conditions.
+	selectTx := tx.Session(&gorm.Session{NewDB: true})
+	intent := *out
+	var fresh E
+	if conflictTx := intent.WhereOnConflict(selectTx).First(&fresh); conflictTx.Error != nil || conflictTx.RowsAffected == 0 {
+		return rpoerrs.NewDatabaseError(DBErrConstraint, conflictTx.Error)
+	}
+	if !isModelSubset(intent, fresh) {
 		return rpoerrs.ErrConflictValidationFailed
 	}
-	if !isModelSubset(original, *out) {
-		return rpoerrs.ErrConflictValidationFailed
-	}
+	*out = fresh
 	return nil
 }
 
@@ -176,16 +184,29 @@ func isSubsetMapNonNull(a, b map[string]any) bool {
 	return true
 }
 
-// isNullOrZero returns true for JSON null (nil) and numeric zero (float64(0)),
-// treating those as "not intentionally set" by the caller.
+// isNullOrZero returns true when v is considered "not intentionally set" by the caller:
+//   - JSON null  (nil)
+//   - numeric zero  (float64(0))
+//   - sql.Null* pattern: a map with a "Valid" key set to false.
+//     database/sql types (NullString, NullTime, NullInt*, etc.) marshal as
+//     {"Valid": <bool>, ...} when there is no MarshalJSON implementation,
+//     and {"Valid": false} means the value was not provided.
 func isNullOrZero(v any) bool {
-	if v == nil {
+	switch val := v.(type) {
+	case nil:
 		return true
+	case float64:
+		return val == 0
+	case map[string]any:
+		if valid, ok := val["Valid"]; ok {
+			if b, ok := valid.(bool); ok {
+				return !b
+			}
+		}
+		return false
+	default:
+		return false
 	}
-	if f, ok := v.(float64); ok && f == 0 {
-		return true
-	}
-	return false
 }
 
 func setOrderBy(q *gorm.DB, orderBy, order string) error {
@@ -253,7 +274,7 @@ func ValidateTxWithUpdateLock[E contracts.Entity](tx *gorm.DB, spec contracts.Lo
 		}
 		return prterrs.ErrBusinessRuleViolation
 	}
-	if err = rpoerrs.MapDbError(err); err != nil && err != rpoerrs.ErrNotFound {
+	if err = rpoerrs.MapDbError(err); err != nil && !rpoerrs.IsDatabaseErrorKind(err, rpoerrs.DBErrNotFound) {
 		return err
 	}
 	return nil
