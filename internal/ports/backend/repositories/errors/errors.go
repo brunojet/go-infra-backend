@@ -116,7 +116,7 @@ func MapDbError(err error) error {
 		strings.Contains(err.Error(), "FOREIGN KEY constraint failed") {
 		return NewDatabaseError(DBErrConstraint, err)
 	}
-	return err
+	return NewDatabaseError(DBErrUnavailable, err)
 }
 
 func MapTxError(tx *gorm.DB) error {
