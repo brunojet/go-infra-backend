@@ -156,7 +156,7 @@ func TxFromContext(ctx context.Context) (*gorm.DB, error) {
 func ValidateTxWithUpdateLock[E contracts.Entity](tx *gorm.DB, spec contracts.LockValidationSpec[E]) error {
 	whereSQL := strings.TrimSpace(spec.WhereSQL)
 	if whereSQL == "" {
-		return rpoerrs.ErrLockValidationWhere
+		return rpoerrs.ErrLockValidationWhereClause
 	}
 	if !isTransactionAndContextValid(tx) {
 		return rpoerrs.ErrRequiresTransaction

@@ -201,7 +201,7 @@ func TestValidateTxWithUpdateLock_RequiresWhereAndTx(t *testing.T) {
 	err := ValidateTxWithUpdateLock(gdb, LockValidationSpec[TestEntity]{
 		WhereSQL: "",
 	})
-	assert.ErrorIs(t, err, rpoerrs.ErrLockValidationWhere)
+	assert.ErrorIs(t, err, rpoerrs.ErrLockValidationWhereClause)
 
 	err = ValidateTxWithUpdateLock(gdb, LockValidationSpec[TestEntity]{
 		WhereSQL: "id = ?",
