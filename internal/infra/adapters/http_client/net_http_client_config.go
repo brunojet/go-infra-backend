@@ -14,22 +14,17 @@ type httpClientConfig struct {
 	headers           http.Header
 	connectTimeoutMs  int
 	responseTimeoutMs int
-	rountTrippers     []http.RoundTripper
-	// middlewares are RoundTripper decorators applied by the client when
-	// assembling the final transport chain. Each middleware receives the
-	// next RoundTripper and must return a RoundTripper wrapping it.
-	middlewares []func(http.RoundTripper) http.RoundTripper
+	roundTrippers     []http.RoundTripper
 }
 
 // defaultHttpClientConfig returns a sensible default configuration.
 func defaultHttpClientConfig() httpClientConfig {
 	return httpClientConfig{
 		baseURL:           "",
-		headers:           make(http.Header),
 		connectTimeoutMs:  DefaultConnectTimeoutMs,
 		responseTimeoutMs: DefaultResponseTimeoutMs,
-		rountTrippers:     []http.RoundTripper{http.DefaultTransport},
-		middlewares:       nil,
+		headers:           make(http.Header),
+		roundTrippers:     make([]http.RoundTripper, 0),
 	}
 }
 
@@ -71,9 +66,6 @@ func WithTimeout(connectionTimeoutMs, responseTimeoutMs int) HttpClientOption {
 // WithHeader sets a single header key/value.
 func WithHeader(key, value string) HttpClientOption {
 	return func(c *httpClientConfig) {
-		if c.headers == nil {
-			c.headers = make(http.Header)
-		}
 		c.headers.Set(key, value)
 	}
 }
@@ -81,15 +73,6 @@ func WithHeader(key, value string) HttpClientOption {
 // WithRoundTripper adds a custom http.RoundTripper to the client's transport chain.
 func WithRoundTripper(rt http.RoundTripper) HttpClientOption {
 	return func(c *httpClientConfig) {
-		c.rountTrippers = append(c.rountTrippers, rt)
-	}
-}
-
-// WithRoundTripperMiddleware appends a RoundTripper middleware builder that
-// will be applied by the client when assembling the final transport chain.
-// Middleware builders have signature `func(next http.RoundTripper) http.RoundTripper`.
-func WithRoundTripperMiddleware(mw func(http.RoundTripper) http.RoundTripper) HttpClientOption {
-	return func(c *httpClientConfig) {
-		c.middlewares = append(c.middlewares, mw)
+		c.roundTrippers = append(c.roundTrippers, rt)
 	}
 }

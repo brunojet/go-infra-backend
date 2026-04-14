@@ -13,18 +13,10 @@ type circuitBreakerConfig struct {
 // BreakerOption configures a CircuitBreakerConfig.
 type BreakerOption func(cfg *circuitBreakerConfig)
 
-func defaultCircuitBreakerConfig() circuitBreakerConfig {
-	return circuitBreakerConfig{
-		MaxFailures:      5,
-		ResetTimeout:     60 * time.Second,
-		HalfOpenRequests: 1,
-	}
-}
-
 // newCircuitBreakerConfig builds a CircuitBreakerConfig applying provided
 // functional options.
 func newCircuitBreakerConfig(opts ...BreakerOption) circuitBreakerConfig {
-	cfg := defaultCircuitBreakerConfig()
+	cfg := circuitBreakerConfig{}
 	for _, o := range opts {
 		if o == nil {
 			continue

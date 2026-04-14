@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/sony/gobreaker"
@@ -35,23 +34,15 @@ func NewBreakerMiddleware(opts ...BreakerOption) func(next http.RoundTripper) ht
 }
 
 func (b *breakerRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	if b.next == nil {
-		return nil, errors.New("breaker middleware: next RoundTripper is nil; ensure client provides base transport")
-	}
-	if b.cb == nil {
-		return b.next.RoundTrip(req)
-	}
-	var resp *http.Response
-	_, err := b.cb.Execute(func() (any, error) {
-		r, err := b.next.RoundTrip(req)
+	resp, err := b.cb.Execute(func() (any, error) {
+		resp, err := b.next.RoundTrip(req)
 		if err != nil {
 			return nil, err
 		}
-		resp = r
 		return resp, nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return resp, nil
+	return resp.(*http.Response), nil
 }
