@@ -149,7 +149,7 @@ func TestList_Handler(t *testing.T) {
 	c, _ = gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
 	ExpectServiceList(ms, func(_ context.Context, _ svccts.ListParams, _ *[]SimpleDTO) (int64, error) {
-		return 0, rpo.ErrDBUnavailable
+		return 0, rpo.NewDatabaseError(rpo.DBErrUnavailable)
 	})
 	h.List(c)
 	require.Equal(t, http.StatusServiceUnavailable, rec.Code)

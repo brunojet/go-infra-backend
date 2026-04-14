@@ -16,7 +16,7 @@ import (
 func TestMapErrorToStatus(t *testing.T) {
 	a := assert.New(t)
 	a.Equal(http.StatusNotFound, MapErrorToStatus(errors.ErrNotFound))
-	a.Equal(http.StatusServiceUnavailable, MapErrorToStatus(errors.ErrDBUnavailable))
+	a.Equal(http.StatusServiceUnavailable, MapErrorToStatus(errors.NewDatabaseError(errors.DBErrUnavailable)))
 }
 
 func TestSetResponseFromError_WritesJSON(t *testing.T) {
