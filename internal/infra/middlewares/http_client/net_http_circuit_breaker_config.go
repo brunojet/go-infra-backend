@@ -1,6 +1,10 @@
 package middlewares
 
-import "time"
+import (
+	"fmt"
+	"log"
+	"time"
+)
 
 // circuitBreakerConfig configures the circuit breaker used by the
 // Breaker middleware.
@@ -11,7 +15,9 @@ type circuitBreakerConfig struct {
 }
 
 // BreakerOption configures a CircuitBreakerConfig.
-type BreakerOption func(cfg *circuitBreakerConfig)
+// BreakerOption configures a CircuitBreakerConfig and may return an error
+// when the provided value is invalid.
+type BreakerOption func(cfg *circuitBreakerConfig) error
 
 // newCircuitBreakerConfig builds a CircuitBreakerConfig applying provided
 // functional options.
@@ -21,7 +27,9 @@ func newCircuitBreakerConfig(opts ...BreakerOption) circuitBreakerConfig {
 		if o == nil {
 			continue
 		}
-		o(&cfg)
+		if err := o(&cfg); err != nil {
+			log.Panicf("invalid circuit breaker configuration: %v", err)
+		}
 	}
 	return cfg
 }
@@ -29,16 +37,34 @@ func newCircuitBreakerConfig(opts ...BreakerOption) circuitBreakerConfig {
 // WithCircuitBreakerMaxFailures sets the number of consecutive failures
 // required to open the circuit.
 func WithCircuitBreakerMaxFailures(n int) BreakerOption {
-	return func(c *circuitBreakerConfig) { c.MaxFailures = n }
+	return func(c *circuitBreakerConfig) error {
+		if n <= 0 {
+			return fmt.Errorf("max failures must be > 0")
+		}
+		c.MaxFailures = n
+		return nil
+	}
 }
 
 // WithCircuitBreakerResetTimeout sets the reset timeout for the breaker.
 func WithCircuitBreakerResetTimeout(d time.Duration) BreakerOption {
-	return func(c *circuitBreakerConfig) { c.ResetTimeout = d }
+	return func(c *circuitBreakerConfig) error {
+		if d <= 0 {
+			return fmt.Errorf("reset timeout must be > 0")
+		}
+		c.ResetTimeout = d
+		return nil
+	}
 }
 
 // WithCircuitBreakerHalfOpenRequests sets how many probe requests are
 // allowed while the breaker is half-open.
 func WithCircuitBreakerHalfOpenRequests(n int) BreakerOption {
-	return func(c *circuitBreakerConfig) { c.HalfOpenRequests = n }
+	return func(c *circuitBreakerConfig) error {
+		if n < 0 {
+			return fmt.Errorf("half-open requests cannot be negative")
+		}
+		c.HalfOpenRequests = n
+		return nil
+	}
 }

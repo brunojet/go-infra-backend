@@ -18,16 +18,8 @@ type netHttpClient struct {
 func NewNetHttpClient(opts ...HttpClientOption) (*netHttpClient, error) {
 	cfg := newHttpClientConfig(opts...)
 
-	// choose the last non-nil transport (callers typically append instrumentation)
-	var transport http.RoundTripper
-	for i := len(cfg.roundTrippers) - 1; i >= 0; i-- {
-		if cfg.roundTrippers[i] != nil {
-			transport = cfg.roundTrippers[i]
-		}
-	}
-
 	client := &http.Client{
-		Transport: transport,
+		Transport: cfg.roundTripper,
 		Timeout:   time.Duration(cfg.responseTimeoutMs) * time.Millisecond,
 	}
 
