@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -22,15 +23,24 @@ func (c PathConfig) Validate() {
 	}
 }
 
-type EnvelopConfig struct {
-	dataField string
-	metaField string
+type DefaultEnvelopeSpec struct {
+	Data json.RawMessage `json:"data"`
+	Meta json.RawMessage `json:"meta"`
 }
 
+func (e *DefaultEnvelopeSpec) GetData() json.RawMessage { return e.Data }
+func (e *DefaultEnvelopeSpec) GetMeta() json.RawMessage { return e.Meta }
+func (e *DefaultEnvelopeSpec) New() EnvelopeSpec        { return &DefaultEnvelopeSpec{} }
+
+type EnvelopeSpec interface {
+	New() EnvelopeSpec
+	GetData() json.RawMessage
+	GetMeta() json.RawMessage
+}
 type restRepositoryConfig struct {
 	URL              url.URL
 	pathConfig       PathConfig
-	envelopConfig    EnvelopConfig
+	envelopeSpec     EnvelopeSpec
 	messageExtractor RestMessageExtractorFunc
 }
 
@@ -67,18 +77,6 @@ func WithPathConfig(instancePath string, collectionParents ...string) RestReposi
 	}
 }
 
-func WithEnvelopConfig(dataField string, metaField string) RestRepositoryOption {
-	return func(cfg *restRepositoryConfig) {
-		if dataField == "" && metaField != "" {
-			panic("data field name must be provided if meta field is set")
-		}
-		cfg.envelopConfig = EnvelopConfig{
-			dataField: dataField,
-			metaField: metaField,
-		}
-	}
-}
-
 // WithMessageExtractor configures a callback to extract a human-readable message
 // from upstream non-success response bodies.
 // The callback receives the full HTTP response and owns body consumption.
@@ -86,6 +84,14 @@ func WithEnvelopConfig(dataField string, metaField string) RestRepositoryOption 
 func WithMessageExtractor(extractor RestMessageExtractorFunc) RestRepositoryOption {
 	return func(cfg *restRepositoryConfig) {
 		cfg.messageExtractor = extractor
+	}
+}
+
+// WithEnvelopeSpec allows configuring a custom envelope structure for responses. When configured, the
+// decode will use this type to unmarshal and extract Data/Meta fields.
+func WithEnvelopeSpec(spec EnvelopeSpec) RestRepositoryOption {
+	return func(cfg *restRepositoryConfig) {
+		cfg.envelopeSpec = spec
 	}
 }
 

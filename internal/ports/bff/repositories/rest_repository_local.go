@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -42,31 +43,21 @@ func (r *restRepositoryImpl[DS, MS]) makeInstanceURL(id string) url.URL {
 	return r.makeURL(r.pathConfig.instancePath+"/%s", "", 1, id)
 }
 
-func (r *restRepositoryImpl[DS, MS]) setDataFromEnvelop(envelop map[string]any, target *DS) error {
-	return setFieldFromEnvelop(envelop, r.envelopConfig.dataField, target)
-}
-
-func (r *restRepositoryImpl[DS, MS]) setMetaFromEnvelop(envelop map[string]any, target *MS) error {
-	if target == nil {
-		return nil
-	}
-	return setFieldFromEnvelop(envelop, r.envelopConfig.metaField, target)
-}
-
-func (r *restRepositoryImpl[DS, MS]) extractFromEnvelop(response *contracts.RestResponse[DS], meta *MS, httpResponse *http.Response) error {
-	debugassert.Assert(r.envelopConfig.dataField != "", "envelop config must have at least one of dataField or metaField set")
+func (r *restRepositoryImpl[DS, MS]) extractFromEnvelope(response *contracts.RestResponse[DS], meta *MS, httpResponse *http.Response) error {
+	debugassert.Assert(r.envelopeSpec != nil, "EnvelopeSpec must be configured for repository to extract from envelop")
 	debugassert.Assert(response != nil, "response must not be nil")
 	debugassert.Assert(httpResponse != nil, "httpResponse must not be nil")
-
-	envelop := make(map[string]any)
-	if err := jsonDecoder(httpResponse.Body, &envelop); err != nil {
+	spec := r.envelopeSpec.New()
+	if err := jsonDecoder(httpResponse.Body, spec); err != nil {
 		return err
 	}
-	if err := r.setDataFromEnvelop(envelop, &response.Body); err != nil {
-		return err
+	if err := json.Unmarshal(spec.GetData(), &response.Body); err != nil {
+		return newEncoderError("failed to unmarshal Data field into target struct: %w", err)
 	}
-	if err := r.setMetaFromEnvelop(envelop, meta); err != nil {
-		return err
+	if meta != nil {
+		if err := json.Unmarshal(spec.GetMeta(), meta); err != nil {
+			return newEncoderError("failed to unmarshal Meta field into target struct: %w", err)
+		}
 	}
 	return nil
 }
@@ -75,8 +66,8 @@ func (r *restRepositoryImpl[DS, MS]) setRestResponse(response *contracts.RestRes
 	if httpResponse.StatusCode == http.StatusNoContent {
 		return nil
 	}
-	if r.envelopConfig.dataField != "" {
-		return r.extractFromEnvelop(response, nil, httpResponse)
+	if r.envelopeSpec != nil {
+		return r.extractFromEnvelope(response, nil, httpResponse)
 	}
 	if err := jsonDecoder(httpResponse.Body, &response.Body); err != nil {
 		return err
@@ -85,8 +76,8 @@ func (r *restRepositoryImpl[DS, MS]) setRestResponse(response *contracts.RestRes
 }
 
 func (r *restRepositoryImpl[DS, MS]) setRestResponses(response *contracts.RestResponse[DS], meta *MS, httpResponse *http.Response) error {
-	if r.envelopConfig.dataField != "" {
-		return r.extractFromEnvelop(response, meta, httpResponse)
+	if r.envelopeSpec != nil {
+		return r.extractFromEnvelope(response, meta, httpResponse)
 	}
 	if err := jsonDecoder(httpResponse.Body, &response.Bodies); err != nil {
 		return err

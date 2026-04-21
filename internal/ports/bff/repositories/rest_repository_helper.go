@@ -44,6 +44,9 @@ func makeRestRequestURL(method string, url url.URL) http.Request {
 
 func setRestRequestOptions(httpReq *http.Request, opts *contracts.RestRequestOptions) {
 	debugassert.Assert(httpReq != nil, "httpReq must not be nil")
+	if httpReq.Header == nil {
+		httpReq.Header = make(http.Header)
+	}
 	if opts == nil {
 		return
 	}
@@ -74,21 +77,6 @@ func setRestRequestBody(httpReq *http.Request, body any) error {
 	}
 	httpReq.Body = io.NopCloser(reader)
 	httpReq.ContentLength = int64(bodyLen)
-	return nil
-}
-
-func setFieldFromEnvelop(envelop map[string]any, fieldName string, target any) error {
-	data, ok := envelop[fieldName]
-	if !ok {
-		return newEncoderError("field '%s' not found in response envelop", fieldName)
-	}
-	dataBytes, err := json.Marshal(data)
-	if err != nil {
-		return newEncoderError("failed to marshal field '%s': %w", fieldName, err)
-	}
-	if err := json.Unmarshal(dataBytes, target); err != nil {
-		return newEncoderError("failed to unmarshal field '%s' into target struct: %w", fieldName, err)
-	}
 	return nil
 }
 
