@@ -142,3 +142,39 @@ func TestRestRepository_Delete_204ReturnsNoContentMessage(t *testing.T) {
 		t.Fatalf("expected status 204, got %d", resp.Opts.StatusCode)
 	}
 }
+
+func TestRestRepository_Create_WithNestedParents_GeneratesExpectedPath(t *testing.T) {
+	var gotMethod, gotPath string
+
+	adapter := &stubHTTPAdapter{do: func(_ context.Context, req *http.Request) (*http.Response, error) {
+		gotMethod = req.Method
+		gotPath = req.URL.Path
+		payload, _ := json.Marshal(sampleEntity{ID: "42", Name: "nested"})
+		return &http.Response{
+			StatusCode: http.StatusCreated,
+			Header:     make(http.Header),
+			Body:       io.NopCloser(strings.NewReader(string(payload))),
+		}, nil
+	}}
+
+	repo := NewRestRepository[sampleEntity, map[string]any](adapter,
+		WithBaseURL("https://example.com/api"),
+		WithPathConfig("comments", "users", "posts"),
+	)
+
+	resp := &contracts.RestResponse[sampleEntity]{}
+	err := repo.Create(context.Background(), contracts.RestRequest{Body: map[string]any{"content": "x"}}, resp, "u-1", "p-9")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if gotMethod != http.MethodPost {
+		t.Fatalf("expected method POST, got %s", gotMethod)
+	}
+	if gotPath != "/api/comments/users/u-1/posts/p-9" {
+		t.Fatalf("expected path /api/comments/users/u-1/posts/p-9, got %s", gotPath)
+	}
+	if resp.Body.ID != "42" || resp.Body.Name != "nested" {
+		t.Fatalf("unexpected response body: %+v", resp.Body)
+	}
+}

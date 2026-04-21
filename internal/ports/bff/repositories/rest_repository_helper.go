@@ -35,12 +35,12 @@ func jsonDecoder(r io.Reader, target any) error {
 	return nil
 }
 
-func makeRestRequestURL(method string, url url.URL, header http.Header) http.Request {
+func makeRestRequestURL(method string, url url.URL, opts *contracts.RestRequestOptions) http.Request {
 	httpReq := http.Request{}
 	httpReq.Method = method
 	httpReq.URL = &url
-	if header != nil {
-		httpReq.Header = header
+	if opts != nil && opts.Header != nil {
+		httpReq.Header = opts.Header
 	}
 	if httpReq.Header == nil {
 		httpReq.Header = make(http.Header)

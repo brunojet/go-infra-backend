@@ -11,9 +11,9 @@ type RestRepositoryOption func(*restRepositoryConfig)
 type RestMessageExtractorFunc func(httpResponse *http.Response) (string, error)
 
 type PathConfig struct {
-	instancePath         string // path for a single resource instance, e.g. "orders/{id}" or "orders/{id}?include=details"; used for GetById, Update, Save, Delete; {id} is replaced with the actual ID value
-	collectionParentsFmt string // fmt string for collection operations with parents, e.g. "users/%s/orders"; if set, baseURL is used as the base for instance URLs, e.g. "https://api.example.com/orders/{id}"; if not set, baseURL is used directly for collection operations and instance URLs are derived by replacing {id} in baseURL with the actual ID value
-	collectionParents    int    // number of parent IDs expected for collection operations; if collectionParentsFmt is set, parent IDs are formatted into collectionParentsFmt; if collectionParentsFmt is not set and collectionParentsCount>0, parent IDs are joined and appended to baseURL for collection operations
+	instancePath         string // resource path segment used by instance and collection operations, e.g. "orders"
+	collectionParentsFmt string // internal fmt path generated from collection parent resource segments, e.g. "users/%s/projects/%s"
+	collectionParents    int    // number of parent IDs expected for collection operations
 }
 
 func (c PathConfig) Validate() {

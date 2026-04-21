@@ -27,12 +27,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create BFF client: %v", err)
 	}
+	_ = client
 
 	httpServer := bootstrap.NewHttpServerWithObservability(sm,
 		bffclient.BffHeadersMiddleware(bffCfg.HeadersProxy),
 	)
 
 	api := httpServer.Router.Group("/")
+	_ = api
 
 	// if err := demobff.SetupHelloWorldBffModule(client, api); err != nil {
 	// 	log.Fatalf("failed to setup demobff module: %v", err)

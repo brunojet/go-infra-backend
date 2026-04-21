@@ -5,13 +5,23 @@ import (
 	"testing"
 	"time"
 
+	bootcontracts "github.com/brunojet/go-infra-backend/pkg/bootstrap/contracts"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestInitObservability_All_NoErrors(t *testing.T) {
-	// For these unit tests, force exporters to use noop behavior.
-	// internal/config.GetEnv treats empty values as unset.
-	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+	oldTracer := newOTLPTracerFromEnv
+	oldMetric := newOTLPMetricFromEnv
+	oldLogger := newOTLPLoggerFromEnv
+	t.Cleanup(func() {
+		newOTLPTracerFromEnv = oldTracer
+		newOTLPMetricFromEnv = oldMetric
+		newOTLPLoggerFromEnv = oldLogger
+	})
+
+	newOTLPTracerFromEnv = func(ctx context.Context) (bootcontracts.Shutdown, error) { return nil, nil }
+	newOTLPMetricFromEnv = func(ctx context.Context) (bootcontracts.Shutdown, error) { return nil, nil }
+	newOTLPLoggerFromEnv = func(ctx context.Context) (bootcontracts.Shutdown, error) { return nil, nil }
 
 	sm := NewShutdownManager(context.Background())
 

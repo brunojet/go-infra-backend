@@ -16,7 +16,7 @@ const (
 	defaultErrorLenLimit = 4 * 1024 // 4KB
 )
 
-func (r *restRepositoryImpl[DS, MS]) makeURL(instancePath string, parentsPath string, pathParents int, opts *contracts.RestRequestOptions, parentIds ...string) url.URL {
+func (r *restRepositoryImpl[DS, MS]) makeURL(instancePath string, parentsPath string, pathParents int, parentIds ...string) url.URL {
 	debugassert.Assert(instancePath != "", "instancePath must not be empty")
 	debugassert.Assert(len(parentIds) == pathParents, "number of parent IDs must match pathParents")
 	pathFmt := path.Join(instancePath, parentsPath)
@@ -30,17 +30,16 @@ func (r *restRepositoryImpl[DS, MS]) makeURL(instancePath string, parentsPath st
 	return u
 }
 
-func (r *restRepositoryImpl[DS, MS]) makeCollectionURL(opts *contracts.RestRequestOptions, parentIds ...string) url.URL {
+func (r *restRepositoryImpl[DS, MS]) makeCollectionURL(parentIds ...string) url.URL {
 	return r.makeURL(
 		r.pathConfig.instancePath,
 		r.pathConfig.collectionParentsFmt,
 		r.pathConfig.collectionParents,
-		opts,
 		parentIds...)
 }
 
-func (r *restRepositoryImpl[DS, MS]) makeInstanceURL(opts *contracts.RestRequestOptions, id string) url.URL {
-	return r.makeURL(r.pathConfig.instancePath+"/%s", "", 1, opts, id)
+func (r *restRepositoryImpl[DS, MS]) makeInstanceURL(id string) url.URL {
+	return r.makeURL(r.pathConfig.instancePath+"/%s", "", 1, id)
 }
 
 func (r *restRepositoryImpl[DS, MS]) setDataFromEnvelop(envelop map[string]any, target *DS) error {
@@ -146,23 +145,15 @@ func (r *restRepositoryImpl[DS, MS]) handleRestResponses(response *contracts.Res
 }
 
 func (r *restRepositoryImpl[DS, MS]) makeCollectionRestRequest(method string, opts *contracts.RestRequestOptions, parentIds ...string) http.Request {
-	url := r.makeCollectionURL(opts, parentIds...)
-	var header http.Header
-	if opts != nil {
-		header = opts.Header
-	}
-	httpReq := makeRestRequestURL(method, url, header)
+	url := r.makeCollectionURL(parentIds...)
+	httpReq := makeRestRequestURL(method, url, opts)
 	setRestRequestOptions(&httpReq, opts)
 	return httpReq
 }
 
 func (r *restRepositoryImpl[DS, MS]) makeInstanceRestRequest(method string, opts *contracts.RestRequestOptions, id string) http.Request {
-	url := r.makeInstanceURL(opts, id)
-	var header http.Header
-	if opts != nil {
-		header = opts.Header
-	}
-	httpReq := makeRestRequestURL(method, url, header)
+	url := r.makeInstanceURL(id)
+	httpReq := makeRestRequestURL(method, url, opts)
 	setRestRequestOptions(&httpReq, opts)
 	return httpReq
 }
