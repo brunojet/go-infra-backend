@@ -260,13 +260,13 @@ func TestCustomTransport_IsUsed(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// buildURL helper
+// makeURL helper
 // ---------------------------------------------------------------------------
 
 func TestBuildURL(t *testing.T) {
 	a := &netHttpAdapter{config: bffcts.BffClientConfig{BaseURL: "https://sn.example.com/"}}
 
-	assert.Equal(t, "https://sn.example.com/incidents", a.buildURL("incidents"))
-	assert.Equal(t, "https://sn.example.com/incidents/INC001", a.buildURL("incidents/INC001"))
-	assert.Equal(t, "https://sn.example.com/incidents/INC001", a.buildURL("/incidents/INC001"))
+	assert.Equal(t, "https://sn.example.com/incidents", a.makeURL("incidents"))
+	assert.Equal(t, "https://sn.example.com/incidents/INC001", a.makeURL("incidents/INC001"))
+	assert.Equal(t, "https://sn.example.com/incidents/INC001", a.makeURL("/incidents/INC001"))
 }

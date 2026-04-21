@@ -105,7 +105,7 @@ func (a *netHttpAdapter) IsAvailable() bool {
 func (a *netHttpAdapter) Emit(ctx context.Context, bffRequest bffcts.BffHttpRequestStream, bffResponse bffcts.BffHttpResponseStream) error {
 	debugassert.Assert(bffRequest != nil, "bffclient: bffRequest stream is required")
 	debugassert.Assert(bffResponse != nil, "bffclient: bffResponse stream is required")
-	url := a.buildURL(bffRequest.Path())
+	url := a.makeURL(bffRequest.Path())
 	SetBffClientHeaders(a.config.Headers, bffRequest) // must be last to be not overridden by context headers
 
 	execute := func() error {
@@ -192,9 +192,9 @@ func (a *netHttpAdapter) buildResponse(httpResp *http.Response, bffResp bffcts.B
 	return bffResp.Decode(httpResp.Body)
 }
 
-// buildURL joins BaseURL and the resource path provided by the request stream.
+// makeURL joins BaseURL and the resource path provided by the request stream.
 // Path is normalised (leading/trailing slashes).
-func (a *netHttpAdapter) buildURL(path string) string {
+func (a *netHttpAdapter) makeURL(path string) string {
 	base := strings.TrimRight(a.config.BaseURL, "/")
 	p := strings.TrimLeft(path, "/")
 	return fmt.Sprintf("%s/%s", base, p)

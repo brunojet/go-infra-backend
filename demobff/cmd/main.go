@@ -4,7 +4,6 @@ import (
 	"log"
 	"time"
 
-	demobff "github.com/brunojet/go-infra-backend/demobff/bootstrap"
 	"github.com/brunojet/go-infra-backend/pkg/bootstrap"
 	"github.com/brunojet/go-infra-backend/pkg/config"
 	"github.com/brunojet/go-infra-backend/pkg/infra/bffclient"
@@ -35,9 +34,9 @@ func main() {
 
 	api := httpServer.Router.Group("/")
 
-	if err := demobff.SetupHelloWorldBffModule(client, api); err != nil {
-		log.Fatalf("failed to setup demobff module: %v", err)
-	}
+	// if err := demobff.SetupHelloWorldBffModule(client, api); err != nil {
+	// 	log.Fatalf("failed to setup demobff module: %v", err)
+	// }
 
 	if err := httpServer.StartAndWaitTermination(); err != nil {
 		log.Printf("http server error: %v", err)
