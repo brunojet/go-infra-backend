@@ -146,14 +146,14 @@ func (r *restRepositoryImpl[DS, MS]) handleRestResponses(response *contracts.Res
 
 func (r *restRepositoryImpl[DS, MS]) makeCollectionRestRequest(method string, opts *contracts.RestRequestOptions, parentIds ...string) http.Request {
 	url := r.makeCollectionURL(parentIds...)
-	httpReq := makeRestRequestURL(method, url, opts)
+	httpReq := makeRestRequestURL(method, url)
 	setRestRequestOptions(&httpReq, opts)
 	return httpReq
 }
 
 func (r *restRepositoryImpl[DS, MS]) makeInstanceRestRequest(method string, opts *contracts.RestRequestOptions, id string) http.Request {
 	url := r.makeInstanceURL(id)
-	httpReq := makeRestRequestURL(method, url, opts)
+	httpReq := makeRestRequestURL(method, url)
 	setRestRequestOptions(&httpReq, opts)
 	return httpReq
 }
